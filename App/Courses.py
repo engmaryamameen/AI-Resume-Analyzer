@@ -53,17 +53,6 @@ uiux_course = [['Google UX Design Professional Certificate','https://www.courser
                ['Adobe XD for Beginners [Free]','https://youtu.be/WEljsc2jorI'],
                ['Adobe XD in Simple Way','https://learnux.io/course/adobe-xd']]
 
-resume_videos = [ 'https://youtu.be/Tt08KmFfIYQ','https://youtu.be/y8YH0Qbu5h4',
-                  'https://youtu.be/u75hUSShvnc','https://youtu.be/BYUy1yvjHxE',
-                  'https://youtu.be/KFaugkGVeNQ','https://youtu.be/3agP4x8LYFM',
-                  'https://youtu.be/GyjzOKdaioU','https://youtu.be/17YZBH_qtmg',
-                  'https://youtu.be/C7pNLIq3kOI','https://youtu.be/xpaz7nrNmXA',
-                  'https://youtu.be/aKjsy-b00QM','https://youtu.be/ciIkiWwZnlc']
+resume_videos = ['https://youtu.be/Tt08KmFfIYQ']
 
-interview_videos = ['https://youtu.be/HG68Ymazo18','https://youtu.be/BOvAAoxM4vg',
-                    'https://youtu.be/KukmClH1KoA','https://youtu.be/7_aAicmPB3A',
-                    'https://youtu.be/1mHjMNZZvFo','https://youtu.be/WfdtKbAJOmE',
-                    'https://youtu.be/IBjM-F56qS0','https://youtu.be/IBjM-F56qS0',
-                    'https://youtu.be/4tYoVx0QoN0','https://youtu.be/Ge0Udbws1kc',
-                    'https://youtu.be/thkuu_FWFD8','https://youtu.be/e0E6-dRPcJA',
-                    'https://youtu.be/htT1bhFSNxo','https://youtu.be/TZ3C_syg9Ow']
+interview_videos = ['https://youtu.be/HG68Ymazo18']
