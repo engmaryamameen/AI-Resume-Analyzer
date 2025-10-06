@@ -1,4 +1,4 @@
-# Developed by dnoobnerd [https://dnoobnerd.netlify.app]    Made with Streamlit
+# Developed by Maryam Ameen [https://github.com/engmaryamameen]    Made with Streamlit
 
 
 ###### Packages Used ######
@@ -120,8 +120,10 @@ def insertf_data(feed_name,feed_email,feed_score,comments,Timestamp):
 
 
 st.set_page_config(
-   page_title="AI Resume Analyzer",
+   page_title="AI Resume Analyzer - Maryam Ameen",
    page_icon='./Logo/recommend.png',
+   layout="wide",
+   initial_sidebar_state="expanded"
 )
 
 
@@ -130,13 +132,98 @@ st.set_page_config(
 
 def run():
     
-    # (Logo, Heading, Sidebar etc)
-    img = Image.open('./Logo/RESUM.png')
-    st.image(img)
-    st.sidebar.markdown("# Choose Something...")
+    # Custom Header with Modern Design
+    st.markdown("""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .main-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 3rem 2rem;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+        }
+        
+        .main-title {
+            color: white;
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: -1px;
+        }
+        
+        .sub-title {
+            color: #e0e7ff;
+            font-size: 1.3rem;
+            font-weight: 300;
+            margin-top: 1rem;
+            letter-spacing: 1px;
+        }
+        
+        .developer-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            display: inline-block;
+            margin-top: 1rem;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        .stButton>button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            border: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .stButton>button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .stTextInput>div>div>input {
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            padding: 0.75rem;
+        }
+        
+        .stTextInput>div>div>input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .uploadedFile {
+            border-radius: 10px;
+        }
+        </style>
+        
+        <div class="main-header">
+            <h1 class="main-title">🎯 AI Resume Analyzer</h1>
+            <p class="sub-title">Powered by Advanced Machine Learning & NLP</p>
+            <div class="developer-badge">
+                👩‍💻 Developed by Maryam Ameen
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.sidebar.markdown("# 🎯 Choose Your Path")
     activities = ["User", "Feedback", "About", "Admin"]
-    choice = st.sidebar.selectbox("Choose among the given options:", activities)
-    link = '<b>Built with 🤍 by <a href="https://dnoobnerd.netlify.app/" style="text-decoration: none; color: #021659;">Deepak Padhi</a></b>' 
+    choice = st.sidebar.selectbox("Select an option:", activities)
+    
+    st.sidebar.markdown("---")
+    link = '<b> Built with 💙 by <a href="https://github.com/engmaryamameen" style="text-decoration: none; color: #2563eb; font-weight: 600;">Maryam Ameen</a></b>' 
     st.sidebar.markdown(link, unsafe_allow_html=True)
     st.sidebar.markdown('''
         <!-- site visitors -->
@@ -234,13 +321,37 @@ def run():
         country = countryy
 
 
-        # Upload Resume
-        st.markdown('''<h5 style='text-align: left; color: #021659;'> Upload Your Resume, And Get Smart Recommendations</h5>''',unsafe_allow_html=True)
+        # Upload Resume Section - Modern Card Design
+        st.markdown('''
+            <div style="background: white; 
+                        padding: 2.5rem; 
+                        border-radius: 20px; 
+                        margin-bottom: 2rem;
+                        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+                        border: 1px solid #e2e8f0;">
+                <h2 style='text-align: center; 
+                           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                           -webkit-background-clip: text;
+                           -webkit-text-fill-color: transparent;
+                           font-size: 2rem;
+                           font-weight: 700;
+                           margin-bottom: 1rem;'>
+                    📊 Get Your Resume Analysis
+                </h2>
+                <p style='text-align: center; 
+                          color: #64748b; 
+                          font-size: 1.1rem;
+                          margin-bottom: 0;'>
+                    Upload your resume and receive instant AI-powered insights, skill recommendations, and career guidance
+                </p>
+            </div>
+        ''', unsafe_allow_html=True)
         
-        ## file upload in pdf format
-        pdf_file = st.file_uploader("Choose your Resume", type=["pdf"])
+        ## file upload in pdf format with enhanced styling
+        st.markdown("### 📎 Upload Your Resume")
+        pdf_file = st.file_uploader("Drop your PDF file here or click to browse", type=["pdf"], label_visibility="collapsed")
         if pdf_file is not None:
-            with st.spinner('Hang On While We Cook Magic For You...'):
+            with st.spinner('🔮 Analyzing your resume with AI... Please wait'):
                 time.sleep(4)
         
             ### saving the uploaded resume to folder
@@ -630,32 +741,84 @@ def run():
     ###### CODE FOR ABOUT PAGE ######
     elif choice == 'About':   
 
-        st.subheader("**About The Tool - AI RESUME ANALYZER**")
+        st.markdown('''
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 2rem; 
+                        border-radius: 20px; 
+                        margin-bottom: 2rem;
+                        text-align: center;">
+                <h1 style="color: white; margin: 0;">ℹ️ About AI Resume Analyzer</h1>
+            </div>
+        ''', unsafe_allow_html=True)
 
         st.markdown('''
+        <div style="background: white; 
+                    padding: 2rem; 
+                    border-radius: 15px; 
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+                    margin-bottom: 2rem;">
+            <h3 style="color: #667eea;">🎯 What is This Tool?</h3>
+            <p align='justify' style="font-size: 1.1rem; line-height: 1.8; color: #475569;">
+                An intelligent resume analysis platform that leverages <b>Natural Language Processing (NLP)</b> 
+                and <b>Machine Learning</b> to parse, analyze, and provide actionable insights on your resume. 
+                The system identifies key skills, predicts career fields, evaluates resume quality, and offers 
+                personalized recommendations to help you land your dream job.
+            </p>
+        </div>
 
-        <p align='justify'>
-            A tool which parses information from a resume using natural language processing and finds the keywords, cluster them onto sectors based on their keywords. And lastly show recommendations, predictions, analytics to the applicant based on keyword matching.
-        </p>
+        <div style="background: white; 
+                    padding: 2rem; 
+                    border-radius: 15px; 
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+                    margin-bottom: 2rem;">
+            <h3 style="color: #667eea;">📖 How to Use</h3>
+            
+            <div style="margin: 1.5rem 0;">
+                <h4 style="color: #764ba2;">👤 User Mode</h4>
+                <p style="line-height: 1.8; color: #475569;">
+                    Select <b>"User"</b> from the sidebar, fill in your details, and upload your resume in PDF format. 
+                    Our AI will analyze your resume and provide instant feedback with skill recommendations, 
+                    course suggestions, and career guidance.
+                </p>
+            </div>
 
-        <p align="justify">
-            <b>How to use it: -</b> <br/><br/>
-            <b>User -</b> <br/>
-            In the Side Bar choose yourself as user and fill the required fields and upload your resume in pdf format.<br/>
-            Just sit back and relax our tool will do the magic on it's own.<br/><br/>
-            <b>Feedback -</b> <br/>
-            A place where user can suggest some feedback about the tool.<br/><br/>
-            <b>Admin -</b> <br/>
-            For login use <b>admin</b> as username and <b>admin@resume-analyzer</b> as password.<br/>
-            It will load all the required stuffs and perform analysis.
-        </p><br/><br/>
+            <div style="margin: 1.5rem 0;">
+                <h4 style="color: #764ba2;">💬 Feedback</h4>
+                <p style="line-height: 1.8; color: #475569;">
+                    Share your experience and help us improve! Your feedback is valuable in making this tool better.
+                </p>
+            </div>
 
-        <p align="justify">
-            Built with 🤍 by 
-            <a href="https://dnoobnerd.netlify.app/" style="text-decoration: none; color: grey;">Deepak Padhi</a> through 
-            <a href="https://www.linkedin.com/in/mrbriit/" style="text-decoration: none; color: grey;">Dr Bright --(Data Scientist)</a>
-        </p>
+            <div style="margin: 1.5rem 0;">
+                <h4 style="color: #764ba2;">🔐 Admin Panel</h4>
+                <p style="line-height: 1.8; color: #475569;">
+                    <b>Username:</b> admin<br/>
+                    <b>Password:</b> admin@resume-analyzer<br/>
+                    Access comprehensive analytics, user data, and system insights.
+                </p>
+            </div>
+        </div>
 
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 2rem; 
+                    border-radius: 15px; 
+                    text-align: center;
+                    color: white;">
+            <h3 style="color: white; margin-bottom: 1rem;">👩‍💻 Developer</h3>
+            <p style="font-size: 1.2rem; margin: 0;">
+                🚀 Built with 💙 by 
+                <a href="https://github.com/engmaryamameen" 
+                   style="color: white; font-weight: 700; text-decoration: none; border-bottom: 2px solid white;">
+                    Maryam Ameen
+                </a>
+            </p>
+            <p style="margin-top: 0.5rem; opacity: 0.9;">
+                Software Engineer | AI & Machine Learning Enthusiast
+            </p>
+            <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                📧 engmaryamameen@gmail.com | 🔗 github.com/engmaryamameen
+            </p>
+        </div>
         ''',unsafe_allow_html=True)  
 
 
@@ -679,7 +842,7 @@ def run():
                 
                 ### Total Users Count with a Welcome Message
                 values = plot_data.Idt.count()
-                st.success("Welcome Deepak ! Total %d " % values + " User's Have Used Our Tool : )")                
+                st.success("Welcome Maryam! 👋 Total %d " % values + " users have used the AI Resume Analyzer ✨")                
                 
                 ### Fetch user data from user_data(table) and convert it into dataframe
                 cursor.execute('''SELECT ID, sec_token, ip_add, act_name, act_mail, act_mob, convert(Predicted_Field using utf8), Timestamp, Name, Email_ID, resume_score, Page_no, pdf_name, convert(User_level using utf8), convert(Actual_skills using utf8), convert(Recommended_skills using utf8), convert(Recommended_courses using utf8), city, state, country, latlong, os_name_ver, host_name, dev_user from user_data''')
