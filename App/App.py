@@ -1,4 +1,4 @@
-# Developed by dnoobnerd [https://dnoobnerd.netlify.app]    Made with Streamlit
+# Developed by Maryam Ameen [https://github.com/engmaryamameen]    Made with Streamlit
 
 
 ###### Packages Used ######
@@ -120,8 +120,10 @@ def insertf_data(feed_name,feed_email,feed_score,comments,Timestamp):
 
 
 st.set_page_config(
-   page_title="AI Resume Analyzer",
+   page_title="AI Resume Analyzer - Maryam Ameen",
    page_icon='./Logo/recommend.png',
+   layout="wide",
+   initial_sidebar_state="expanded"
 )
 
 
@@ -130,14 +132,33 @@ st.set_page_config(
 
 def run():
     
-    # (Logo, Heading, Sidebar etc)
-    img = Image.open('./Logo/RESUM.png')
-    st.image(img)
-    st.sidebar.markdown("# Choose Something...")
+    # Simple header
+    st.markdown("""
+        <style>
+        .stButton>button {
+            background-color: #5B21B6;
+            color: white;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 500;
+        }
+        .stButton>button:hover {
+            background-color: #6D28D9;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.title("🎯 AI Resume Analyzer")
+    st.markdown("**Analyze resumes using Machine Learning and Natural Language Processing**")
+    st.markdown("*by Maryam Ameen*")
+    st.markdown("---")
+    
+    st.sidebar.header("Navigation")
     activities = ["User", "Feedback", "About", "Admin"]
-    choice = st.sidebar.selectbox("Choose among the given options:", activities)
-    link = '<b>Built with 🤍 by <a href="https://dnoobnerd.netlify.app/" style="text-decoration: none; color: #021659;">Deepak Padhi</a></b>' 
-    st.sidebar.markdown(link, unsafe_allow_html=True)
+    choice = st.sidebar.selectbox("Choose:", activities)
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("Built by [Maryam Ameen](https://github.com/engmaryamameen)")
     st.sidebar.markdown('''
         <!-- site visitors -->
 
@@ -234,13 +255,13 @@ def run():
         country = countryy
 
 
-        # Upload Resume
-        st.markdown('''<h5 style='text-align: left; color: #021659;'> Upload Your Resume, And Get Smart Recommendations</h5>''',unsafe_allow_html=True)
+        # Upload section
+        st.subheader("📄 Upload Your Resume")
+        st.write("Upload your resume in PDF format to get instant analysis and recommendations.")
         
-        ## file upload in pdf format
-        pdf_file = st.file_uploader("Choose your Resume", type=["pdf"])
+        pdf_file = st.file_uploader("Choose your resume PDF", type=["pdf"])
         if pdf_file is not None:
-            with st.spinner('Hang On While We Cook Magic For You...'):
+            with st.spinner('🔮 Analyzing your resume with AI... Please wait'):
                 time.sleep(4)
         
             ### saving the uploaded resume to folder
@@ -629,34 +650,34 @@ def run():
     
     ###### CODE FOR ABOUT PAGE ######
     elif choice == 'About':   
-
-        st.subheader("**About The Tool - AI RESUME ANALYZER**")
-
-        st.markdown('''
-
-        <p align='justify'>
-            A tool which parses information from a resume using natural language processing and finds the keywords, cluster them onto sectors based on their keywords. And lastly show recommendations, predictions, analytics to the applicant based on keyword matching.
-        </p>
-
-        <p align="justify">
-            <b>How to use it: -</b> <br/><br/>
-            <b>User -</b> <br/>
-            In the Side Bar choose yourself as user and fill the required fields and upload your resume in pdf format.<br/>
-            Just sit back and relax our tool will do the magic on it's own.<br/><br/>
-            <b>Feedback -</b> <br/>
-            A place where user can suggest some feedback about the tool.<br/><br/>
-            <b>Admin -</b> <br/>
-            For login use <b>admin</b> as username and <b>admin@resume-analyzer</b> as password.<br/>
-            It will load all the required stuffs and perform analysis.
-        </p><br/><br/>
-
-        <p align="justify">
-            Built with 🤍 by 
-            <a href="https://dnoobnerd.netlify.app/" style="text-decoration: none; color: grey;">Deepak Padhi</a> through 
-            <a href="https://www.linkedin.com/in/mrbriit/" style="text-decoration: none; color: grey;">Dr Bright --(Data Scientist)</a>
-        </p>
-
-        ''',unsafe_allow_html=True)  
+        st.header("About AI Resume Analyzer")
+        
+        st.subheader("What is this?")
+        st.write("""
+        This tool uses Natural Language Processing (NLP) and Machine Learning to analyze resumes. 
+        It extracts key information, identifies skills, predicts career fields, and provides 
+        personalized recommendations to improve your resume.
+        """)
+        
+        st.subheader("How to use")
+        st.write("""
+        **User Mode:**  
+        Fill in your details and upload your resume in PDF format. The system will analyze it 
+        and provide skill recommendations, course suggestions, and career guidance.
+        
+        **Feedback:**  
+        Share your experience to help improve the tool.
+        
+        **Admin:**  
+        Username: `admin`  
+        Password: `admin@resume-analyzer`
+        """)
+        
+        st.markdown("---")
+        st.write("**Developer:** Maryam Ameen")
+        st.write("Software Engineer | AI & ML Enthusiast")
+        st.write("📧 engmaryamameen@gmail.com")
+        st.write("🔗 [github.com/engmaryamameen](https://github.com/engmaryamameen)")  
 
 
     ###### CODE FOR ADMIN SIDE (ADMIN) ######
@@ -679,7 +700,7 @@ def run():
                 
                 ### Total Users Count with a Welcome Message
                 values = plot_data.Idt.count()
-                st.success("Welcome Deepak ! Total %d " % values + " User's Have Used Our Tool : )")                
+                st.success("Welcome Maryam! 👋 Total %d " % values + " users have used the AI Resume Analyzer ✨")                
                 
                 ### Fetch user data from user_data(table) and convert it into dataframe
                 cursor.execute('''SELECT ID, sec_token, ip_add, act_name, act_mail, act_mob, convert(Predicted_Field using utf8), Timestamp, Name, Email_ID, resume_score, Page_no, pdf_name, convert(User_level using utf8), convert(Actual_skills using utf8), convert(Recommended_skills using utf8), convert(Recommended_courses using utf8), city, state, country, latlong, os_name_ver, host_name, dev_user from user_data''')

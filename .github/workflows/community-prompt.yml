@@ -1,0 +1,39 @@
+name: Community Prompt
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  nudge:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Post friendly CTA on issues
+        if: github.event_name == 'issues'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Hi @${{ github.actor }} 👋
+            
+            Thanks for opening this issue! If this project helps you, consider ⭐ starring and 👀 watching the repo so you don't miss updates.
+            
+            Repo: https://github.com/engmaryamameen/AI-Resume-Analyzer
+
+      - name: Post friendly CTA on PRs
+        if: github.event_name == 'pull_request_target'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Thank you for your contribution, @${{ github.actor }}! 🙌
+            
+            If you like this project, please ⭐ star and 👀 watch the repository to get updates.
+            
+            Repo: https://github.com/engmaryamameen/AI-Resume-Analyzer
+
