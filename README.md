@@ -1,23 +1,18 @@
 <p><small>Best View in <a href="https://github.com/settings/appearance">Light Mode</a> and Desktop Site (Recommended)</small></p><br/>
 
-![AI Resume Analyzer](./App/Logo/RESUM.png)
-
 <div align="center">
   <h1>🌴 AI RESUME ANALYZER 🌴</h1>
   <p>A Tool for Resume Analysis, Predictions and Recommendations</p>
   <!-- Badges -->
   <p>
-    <img src="https://img.shields.io/github/last-commit/engmaryamameen/AI-Resume-Analyzer" alt="last update" />
     <img src="https://badges.frapsoft.com/os/v2/open-source.svg?v=103" alt="open source" />
-    <img src="https://img.shields.io/github/languages/top/engmaryamameen/AI-Resume-Analyzer?color=red" alt="language" />
-    <img src="https://img.shields.io/github/languages/code-size/engmaryamameen/AI-Resume-Analyzer?color=informational" alt="code size" />
-    <a href="https://github.com/engmaryamameen/AI-Resume-Analyzer/stargazers"><img src="https://img.shields.io/github/stars/engmaryamameen/AI-Resume-Analyzer?style=social" alt="GitHub stars" /></a>
-    <a href="https://github.com/engmaryamameen/AI-Resume-Analyzer/watchers"><img src="https://img.shields.io/github/watchers/engmaryamameen/AI-Resume-Analyzer?style=social" alt="GitHub watchers" /></a>
-    <a href="https://github.com/sponsors/engmaryamameen"><img src="https://img.shields.io/github/sponsors/engmaryamameen?style=social" alt="Sponsor" /></a>
+    <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python" alt="Python" />
+    <img src="https://img.shields.io/badge/Streamlit-1.x-ff4b4b?logo=streamlit&logoColor=white" alt="Streamlit" />
+    <a href="https://github.com/engmaryamameen/AI-Resume-Analyzer/stargazers"><img src="https://img.shields.io/badge/stars-15-yellow?style=social&logo=github" alt="Stars" /></a>
+    <a href="https://github.com/engmaryamameen/AI-Resume-Analyzer/watchers"><img src="https://img.shields.io/badge/watchers-5-blue?style=social&logo=github" alt="Watchers" /></a>
+    <a href="https://github.com/sponsors/engmaryamameen"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4%EF%B8%8F-ff69b4" alt="Sponsor" /></a>
     <a href="https://www.linkedin.com/in/maryam-ameen"><img src="https://img.shields.io/badge/LinkedIn-Maryam%20Ameen-blue?logo=linkedin" alt="LinkedIn" /></a>
-    <a href="./LICENSE">
-      <img src="https://img.shields.io/github/license/engmaryamameen/AI-Resume-Analyzer.svg?color=yellow" alt="license" />
-    </a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" alt="license" /></a>
   </p>
   
   <!--links-->
