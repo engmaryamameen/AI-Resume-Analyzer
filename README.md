@@ -11,6 +11,8 @@
     <img src="https://badges.frapsoft.com/os/v2/open-source.svg?v=103" alt="open source" />
     <img src="https://img.shields.io/github/languages/top/deepakpadhi986/AI-Resume-Analyzer?color=red" alt="language" />
     <img src="https://img.shields.io/github/languages/code-size/deepakpadhi986/AI-Resume-Analyzer?color=informational" alt="code size" />
+    <a href="https://github.com/sponsors/engmaryamameen"><img src="https://img.shields.io/github/sponsors/engmaryamameen?style=social" alt="Sponsor" /></a>
+    <a href="https://www.linkedin.com/in/maryam-ameen"><img src="https://img.shields.io/badge/LinkedIn-Maryam%20Ameen-blue?logo=linkedin" alt="LinkedIn" /></a>
     <a href="https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/LICENSE">
       <img src="https://img.shields.io/github/license/deepakpadhi986/AI-Resume-Analyzer.svg?color=yellow" alt="license" />
     </a>
@@ -237,66 +239,73 @@ If you want the full report of project
 
 ## Preview 👽
 
-### Client Side
+<!-- Tabs implemented via HTML details. 'User' opens by default on GitHub. -->
+<div id="preview"></div>
 
-**Main Screen**
+<details open>
+  <summary><strong>User</strong></summary>
 
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/1-main-screen.png?raw=true)
+  <p><em>Main screens</em></p>
+  
+  <img src="./screenshots/user/1.png" alt="user 1" />
+  <br/>
+  <img src="./screenshots/user/2.png" alt="user 2" />
+  <br/>
+  <img src="./screenshots/user/3.png" alt="user 3" />
+  <br/>
+  <img src="./screenshots/user/4.png" alt="user 4" />
+  <br/>
+  <img src="./screenshots/user/5.png" alt="user 5" />
+</details>
 
-**Resume Analysis**
+<details>
+  <summary><strong>Feedback</strong></summary>
 
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/2-analysis.jpg?raw=true)
+  <img src="./screenshots/feedback/1.png" alt="feedback 1" />
+  <br/>
+  <img src="./screenshots/feedback/2.png" alt="feedback 2" />
+  <br/>
+  <img src="./screenshots/feedback/3.png" alt="feedback 3" />
+  <br/>
+  <img src="./screenshots/feedback/4%20search-comments.png" alt="feedback 4 search comments" />
+  <br/>
+  <img src="./screenshots/feedback/5%20expended%20review%20session.png" alt="feedback 5 expanded review session" />
+  <br/>
+  <img src="./screenshots/feedback/6%20csv%20export.png" alt="feedback 6 csv export" />
+</details>
 
-**Skill Recommendation**
+<details>
+  <summary><strong>Admin</strong></summary>
 
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/3-recom.png?raw=true)
-
-**Course Recommendation**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/4-recom.png?raw=true)
-
-**Tips and Overall Score**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/5-tipsscore.png?raw=true)
-
-**Video Recommendation**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/6-recom.png?raw=true)
-
-### Feedback
-
-**Feedback Form**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/feedback/1-form.png?raw=true)
-
-**Overall Rating Analysis and Comment History**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/feedback/2-analytics.png?raw=true)
-
-### Admin
-
-**Login**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/1-main-screen.png?raw=true)
-
-**User Count and it's data**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/2-user-data.png?raw=true)
-
-**Exported csv file**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/3-user-datacsv.png?raw=true)
-
-**Feedback Data**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/4-feed-data.png?raw=true)
-
-**Pie Chart Analytical Representation of clusters**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/5-pieexp.png?raw=true)
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/6-piescre.jpg?raw=true)
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/7-pielocation.png?raw=true)
+  <img src="./screenshots/admin/1.png" alt="admin 1" />
+  <br/>
+  <img src="./screenshots/admin/2.png" alt="admin 2" />
+  <br/>
+  <img src="./screenshots/admin/3.png" alt="admin 3" />
+  <br/>
+  <img src="./screenshots/admin/4.png" alt="admin 4" />
+  <br/>
+  <img src="./screenshots/admin/5.png" alt="admin 5" />
+  <br/>
+  <img src="./screenshots/admin/6.png" alt="admin 6" />
+  <br/>
+  <img src="./screenshots/admin/7.png" alt="admin 7" />
+  <br/>
+  <img src="./screenshots/admin/8.png" alt="admin 8" />
+  <br/>
+  <img src="./screenshots/admin/9.png" alt="admin 9" />
+  <br/>
+  <img src="./screenshots/admin/10.png" alt="admin 10" />
+</details>
 
 ### Built with 🤍 AI RESUME ANALYZER by <a href="https://dnoobnerd.netlify.app/">Deepak Padhi</a>
+
+## Sponsors 💖
+
+If this project helps you, please consider supporting it.
+
+<p>
+  <a href="https://github.com/sponsors/engmaryamameen"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4%EF%B8%8F-ff69b4" alt="Sponsor on GitHub" /></a>
+  &nbsp; 
+  <a href="mailto:eng.maryamameen@gmail.com?subject=Sponsor%20AI-Resume-Analyzer&body=Hi%2C%20I%27d%20like%20to%20support%20the%20project."><img src="https://img.shields.io/badge/Contact-Email-blue" alt="Email" /></a>
+</p>

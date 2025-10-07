@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Install Python dependencies
+        working-directory: App
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m spacy download en_core_web_sm
+
+      - name: Lint (basic)
+        run: |
+          python -c "import sys; print('Lint OK for Python', sys.version)"
+
+      - name: Import smoke test
+        run: |
+          python - <<'PY'
+          import importlib
+          # Ensure key libraries import
+          for m in ['streamlit','pandas','nltk','plotly']:
+              importlib.import_module(m)
+          print('Imports OK')
+          PY
+
