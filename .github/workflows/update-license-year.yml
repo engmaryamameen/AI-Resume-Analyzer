@@ -1,0 +1,43 @@
+name: Update LICENSE Year
+
+on:
+  schedule:
+    # Monthly on the 1st at 00:15 UTC
+    - cron: '15 0 1 * *'
+  workflow_dispatch: {}
+
+jobs:
+  update-year:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set current year env
+        id: year
+        run: echo "YEAR=$(date +'%Y')" >> $GITHUB_ENV
+
+      - name: Show current year
+        run: echo "Current year is $YEAR"
+
+      - name: Update LICENSE year if needed
+        run: |
+          if [ -f LICENSE ]; then
+            # Replace any 4-digit year after (c) with current year
+            sed -i -E "s/(Copyright \(c\) )[0-9]{4}/\1$YEAR/" LICENSE
+          fi
+
+      - name: Commit changes if any
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add LICENSE
+            git commit -m "chore: update LICENSE year to $YEAR"
+            git push
+          else
+            echo "No changes to commit."
+          fi
+

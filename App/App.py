@@ -132,99 +132,33 @@ st.set_page_config(
 
 def run():
     
-    # Custom Header with Modern Design
+    # Simple header
     st.markdown("""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-        
-        * {
-            font-family: 'Poppins', sans-serif;
-        }
-        
-        .main-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 3rem 2rem;
-            border-radius: 20px;
-            text-align: center;
-            margin-bottom: 2rem;
-            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
-        }
-        
-        .main-title {
-            color: white;
-            font-size: 3.5rem;
-            font-weight: 700;
-            margin: 0;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            letter-spacing: -1px;
-        }
-        
-        .sub-title {
-            color: #e0e7ff;
-            font-size: 1.3rem;
-            font-weight: 300;
-            margin-top: 1rem;
-            letter-spacing: 1px;
-        }
-        
-        .developer-badge {
-            background: rgba(255,255,255,0.2);
-            padding: 0.5rem 1.5rem;
-            border-radius: 50px;
-            display: inline-block;
-            margin-top: 1rem;
-            color: white;
-            font-size: 0.9rem;
-        }
-        
         .stButton>button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #5B21B6;
             color: white;
-            border-radius: 12px;
-            padding: 0.75rem 2rem;
-            font-weight: 600;
-            border: none;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s ease;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 500;
         }
-        
         .stButton>button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-        
-        .stTextInput>div>div>input {
-            border-radius: 10px;
-            border: 2px solid #e2e8f0;
-            padding: 0.75rem;
-        }
-        
-        .stTextInput>div>div>input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .uploadedFile {
-            border-radius: 10px;
+            background-color: #6D28D9;
         }
         </style>
-        
-        <div class="main-header">
-            <h1 class="main-title">🎯 AI Resume Analyzer</h1>
-            <p class="sub-title">Powered by Advanced Machine Learning & NLP</p>
-            <div class="developer-badge">
-                👩‍💻 Developed by Maryam Ameen
-            </div>
-        </div>
     """, unsafe_allow_html=True)
     
-    st.sidebar.markdown("# 🎯 Choose Your Path")
+    st.title("🎯 AI Resume Analyzer")
+    st.markdown("**Analyze resumes using Machine Learning and Natural Language Processing**")
+    st.markdown("*by Maryam Ameen*")
+    st.markdown("---")
+    
+    st.sidebar.header("Navigation")
     activities = ["User", "Feedback", "About", "Admin"]
-    choice = st.sidebar.selectbox("Select an option:", activities)
+    choice = st.sidebar.selectbox("Choose:", activities)
     
     st.sidebar.markdown("---")
-    link = '<b> Built with 💙 by <a href="https://github.com/engmaryamameen" style="text-decoration: none; color: #2563eb; font-weight: 600;">Maryam Ameen</a></b>' 
-    st.sidebar.markdown(link, unsafe_allow_html=True)
+    st.sidebar.markdown("Built by [Maryam Ameen](https://github.com/engmaryamameen)")
     st.sidebar.markdown('''
         <!-- site visitors -->
 
@@ -321,35 +255,11 @@ def run():
         country = countryy
 
 
-        # Upload Resume Section - Modern Card Design
-        st.markdown('''
-            <div style="background: white; 
-                        padding: 2.5rem; 
-                        border-radius: 20px; 
-                        margin-bottom: 2rem;
-                        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-                        border: 1px solid #e2e8f0;">
-                <h2 style='text-align: center; 
-                           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                           -webkit-background-clip: text;
-                           -webkit-text-fill-color: transparent;
-                           font-size: 2rem;
-                           font-weight: 700;
-                           margin-bottom: 1rem;'>
-                    📊 Get Your Resume Analysis
-                </h2>
-                <p style='text-align: center; 
-                          color: #64748b; 
-                          font-size: 1.1rem;
-                          margin-bottom: 0;'>
-                    Upload your resume and receive instant AI-powered insights, skill recommendations, and career guidance
-                </p>
-            </div>
-        ''', unsafe_allow_html=True)
+        # Upload section
+        st.subheader("📄 Upload Your Resume")
+        st.write("Upload your resume in PDF format to get instant analysis and recommendations.")
         
-        ## file upload in pdf format with enhanced styling
-        st.markdown("### 📎 Upload Your Resume")
-        pdf_file = st.file_uploader("Drop your PDF file here or click to browse", type=["pdf"], label_visibility="collapsed")
+        pdf_file = st.file_uploader("Choose your resume PDF", type=["pdf"])
         if pdf_file is not None:
             with st.spinner('🔮 Analyzing your resume with AI... Please wait'):
                 time.sleep(4)
@@ -740,86 +650,34 @@ def run():
     
     ###### CODE FOR ABOUT PAGE ######
     elif choice == 'About':   
-
-        st.markdown('''
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        padding: 2rem; 
-                        border-radius: 20px; 
-                        margin-bottom: 2rem;
-                        text-align: center;">
-                <h1 style="color: white; margin: 0;">ℹ️ About AI Resume Analyzer</h1>
-            </div>
-        ''', unsafe_allow_html=True)
-
-        st.markdown('''
-        <div style="background: white; 
-                    padding: 2rem; 
-                    border-radius: 15px; 
-                    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-                    margin-bottom: 2rem;">
-            <h3 style="color: #667eea;">🎯 What is This Tool?</h3>
-            <p align='justify' style="font-size: 1.1rem; line-height: 1.8; color: #475569;">
-                An intelligent resume analysis platform that leverages <b>Natural Language Processing (NLP)</b> 
-                and <b>Machine Learning</b> to parse, analyze, and provide actionable insights on your resume. 
-                The system identifies key skills, predicts career fields, evaluates resume quality, and offers 
-                personalized recommendations to help you land your dream job.
-            </p>
-        </div>
-
-        <div style="background: white; 
-                    padding: 2rem; 
-                    border-radius: 15px; 
-                    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-                    margin-bottom: 2rem;">
-            <h3 style="color: #667eea;">📖 How to Use</h3>
-            
-            <div style="margin: 1.5rem 0;">
-                <h4 style="color: #764ba2;">👤 User Mode</h4>
-                <p style="line-height: 1.8; color: #475569;">
-                    Select <b>"User"</b> from the sidebar, fill in your details, and upload your resume in PDF format. 
-                    Our AI will analyze your resume and provide instant feedback with skill recommendations, 
-                    course suggestions, and career guidance.
-                </p>
-            </div>
-
-            <div style="margin: 1.5rem 0;">
-                <h4 style="color: #764ba2;">💬 Feedback</h4>
-                <p style="line-height: 1.8; color: #475569;">
-                    Share your experience and help us improve! Your feedback is valuable in making this tool better.
-                </p>
-            </div>
-
-            <div style="margin: 1.5rem 0;">
-                <h4 style="color: #764ba2;">🔐 Admin Panel</h4>
-                <p style="line-height: 1.8; color: #475569;">
-                    <b>Username:</b> admin<br/>
-                    <b>Password:</b> admin@resume-analyzer<br/>
-                    Access comprehensive analytics, user data, and system insights.
-                </p>
-            </div>
-        </div>
-
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    padding: 2rem; 
-                    border-radius: 15px; 
-                    text-align: center;
-                    color: white;">
-            <h3 style="color: white; margin-bottom: 1rem;">👩‍💻 Developer</h3>
-            <p style="font-size: 1.2rem; margin: 0;">
-                🚀 Built with 💙 by 
-                <a href="https://github.com/engmaryamameen" 
-                   style="color: white; font-weight: 700; text-decoration: none; border-bottom: 2px solid white;">
-                    Maryam Ameen
-                </a>
-            </p>
-            <p style="margin-top: 0.5rem; opacity: 0.9;">
-                Software Engineer | AI & Machine Learning Enthusiast
-            </p>
-            <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
-                📧 engmaryamameen@gmail.com | 🔗 github.com/engmaryamameen
-            </p>
-        </div>
-        ''',unsafe_allow_html=True)  
+        st.header("About AI Resume Analyzer")
+        
+        st.subheader("What is this?")
+        st.write("""
+        This tool uses Natural Language Processing (NLP) and Machine Learning to analyze resumes. 
+        It extracts key information, identifies skills, predicts career fields, and provides 
+        personalized recommendations to improve your resume.
+        """)
+        
+        st.subheader("How to use")
+        st.write("""
+        **User Mode:**  
+        Fill in your details and upload your resume in PDF format. The system will analyze it 
+        and provide skill recommendations, course suggestions, and career guidance.
+        
+        **Feedback:**  
+        Share your experience to help improve the tool.
+        
+        **Admin:**  
+        Username: `admin`  
+        Password: `admin@resume-analyzer`
+        """)
+        
+        st.markdown("---")
+        st.write("**Developer:** Maryam Ameen")
+        st.write("Software Engineer | AI & ML Enthusiast")
+        st.write("📧 engmaryamameen@gmail.com")
+        st.write("🔗 [github.com/engmaryamameen](https://github.com/engmaryamameen)")  
 
 
     ###### CODE FOR ADMIN SIDE (ADMIN) ######
