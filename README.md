@@ -8,8 +8,6 @@
     <img src="https://badges.frapsoft.com/os/v2/open-source.svg?v=103" alt="open source" />
     <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python" alt="Python" />
     <img src="https://img.shields.io/badge/Streamlit-1.x-ff4b4b?logo=streamlit&logoColor=white" alt="Streamlit" />
-    <a href="https://github.com/engmaryamameen/AI-Resume-Analyzer/stargazers"><img src="https://img.shields.io/badge/stars-15-yellow?style=social&logo=github" alt="Stars" /></a>
-    <a href="https://github.com/engmaryamameen/AI-Resume-Analyzer/watchers"><img src="https://img.shields.io/badge/watchers-5-blue?style=social&logo=github" alt="Watchers" /></a>
     <a href="https://github.com/sponsors/engmaryamameen"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4%EF%B8%8F-ff69b4" alt="Sponsor" /></a>
     <a href="https://www.linkedin.com/in/maryam-ameen"><img src="https://img.shields.io/badge/LinkedIn-Maryam%20Ameen-blue?logo=linkedin" alt="LinkedIn" /></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" alt="license" /></a>
