@@ -11,6 +11,8 @@
     <img src="https://badges.frapsoft.com/os/v2/open-source.svg?v=103" alt="open source" />
     <img src="https://img.shields.io/github/languages/top/engmaryamameen/AI-Resume-Analyzer?color=red" alt="language" />
     <img src="https://img.shields.io/github/languages/code-size/engmaryamameen/AI-Resume-Analyzer?color=informational" alt="code size" />
+    <a href="https://github.com/engmaryamameen/AI-Resume-Analyzer/stargazers"><img src="https://img.shields.io/github/stars/engmaryamameen/AI-Resume-Analyzer?style=social" alt="GitHub stars" /></a>
+    <a href="https://github.com/engmaryamameen/AI-Resume-Analyzer/watchers"><img src="https://img.shields.io/github/watchers/engmaryamameen/AI-Resume-Analyzer?style=social" alt="GitHub watchers" /></a>
     <a href="https://github.com/sponsors/engmaryamameen"><img src="https://img.shields.io/github/sponsors/engmaryamameen?style=social" alt="Sponsor" /></a>
     <a href="https://www.linkedin.com/in/maryam-ameen"><img src="https://img.shields.io/badge/LinkedIn-Maryam%20Ameen-blue?logo=linkedin" alt="LinkedIn" /></a>
     <a href="./LICENSE">
@@ -304,4 +306,10 @@ If this project helps you, please consider supporting it.
   <a href="https://github.com/sponsors/engmaryamameen"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4%EF%B8%8F-ff69b4" alt="Sponsor on GitHub" /></a>
   &nbsp; 
   <a href="mailto:eng.maryamameen@gmail.com?subject=Sponsor%20AI-Resume-Analyzer&body=Hi%2C%20I%27d%20like%20to%20support%20the%20project."><img src="https://img.shields.io/badge/Contact-Email-blue" alt="Email" /></a>
+</p>
+
+---
+
+<p align="center">
+  If you find this useful, please ⭐ star and 👀 watch the repository to get updates.
 </p>
