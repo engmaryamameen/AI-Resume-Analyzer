@@ -1,0 +1,38 @@
+{
+  "name": "resume-intel-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "~15.1.0",
+    "react": "~19.0.0",
+    "react-dom": "~19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "~1.49.0",
+    "@testing-library/jest-dom": "~6.6.0",
+    "@testing-library/react": "~16.1.0",
+    "@testing-library/user-event": "~14.5.0",
+    "@types/node": "~22.10.0",
+    "@types/react": "~19.0.0",
+    "@types/react-dom": "~19.0.0",
+    "@vitejs/plugin-react": "~4.3.0",
+    "autoprefixer": "~10.4.0",
+    "axe-core": "~4.10.0",
+    "eslint": "~8.57.0",
+    "eslint-config-next": "~15.1.0",
+    "jsdom": "~25.0.0",
+    "postcss": "~8.4.0",
+    "tailwindcss": "~3.4.0",
+    "typescript": "~5.7.0",
+    "vitest": "~2.1.0"
+  }
+}

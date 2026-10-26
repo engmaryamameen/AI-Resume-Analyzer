@@ -1,0 +1,8 @@
+{
+  "_note": "Promotion criteria are a policy choice made by the people responsible for the product. These values are starting points to be reviewed, not results.",
+  "verification": {"min_macro_f1_gain": 0.02, "max_false_support_rate": 0.10, "max_contradiction_read_as_support": 0.05},
+  "extraction": {"min_micro_f1_gain": 0.0, "max_regression_by_tag": 0.03},
+  "retrieval": {"min_mrr_gain": 0.0},
+  "calibration": {"max_ece": 0.05},
+  "latency": {"max_extract_seconds_per_passage": 0.25, "max_verify_seconds_per_pair": 0.25}
+}

@@ -1,0 +1,45 @@
+{
+  "manifest_version": 1,
+  "display_policy": {"max_ece": 0.05, "min_validation_samples": 500},
+  "models": [
+    {
+      "id": "extractor",
+      "directory": "extractor",
+      "origin": "fine_tuned",
+      "base_model": "distilroberta-base",
+      "base_revision": "fb53ab8802853c8e4fbdbcd0529f21fc6f459b2b",
+      "license": "Apache-2.0",
+      "license_notes": "Base weights are Apache-2.0. The base model was pretrained on web text corpora whose own terms are not reviewed here. The fine-tuned weights have not been produced yet: this entry stays unapproved until a training run, its evaluation report and a person's review exist.",
+      "training": null,
+      "files": [],
+      "calibration": {},
+      "approved": false
+    },
+    {
+      "id": "retriever",
+      "directory": "retriever",
+      "origin": "pretrained",
+      "base_model": "BAAI/bge-small-en-v1.5",
+      "base_revision": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "license": "MIT",
+      "license_notes": "Used as published, without further training. Its training data is described by its authors only in general terms; review that description before approving.",
+      "training": null,
+      "files": [],
+      "calibration": {},
+      "approved": false
+    },
+    {
+      "id": "verifier",
+      "directory": "verifier",
+      "origin": "fine_tuned",
+      "base_model": "cross-encoder/nli-distilroberta-base",
+      "base_revision": "b14d131f9d32668a5e6a982729b57ff6ed5dfcbd",
+      "license": "Apache-2.0",
+      "license_notes": "Base weights are Apache-2.0 and were trained on public NLI datasets (SNLI, MultiNLI) that carry their own terms. The fine-tuned weights have not been produced yet: this entry stays unapproved until a training run, its evaluation report and a person's review exist.",
+      "training": null,
+      "files": [],
+      "calibration": {},
+      "approved": false
+    }
+  ]
+}
