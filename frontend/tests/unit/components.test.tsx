@@ -125,7 +125,12 @@ describe("RequirementCard", () => {
     expect(screen.getByRole("heading", { name: "Python" })).toBeInTheDocument();
     expect(screen.getByText(/Backed up/)).toBeInTheDocument();
     expect(screen.getByText(/A bullet describes building something with it/)).toBeInTheDocument();
-    expect(screen.getByText(/Built an API in Python/)).toBeInTheDocument();
+    expect(
+  screen.getByText((_, element) =>
+    element?.tagName.toLowerCase() === "blockquote" &&
+    element.textContent?.includes("Built an API in Python") === true
+  )
+).toBeInTheDocument();
   });
 
   it("flags conflicting passages", () => {
