@@ -3,16 +3,16 @@
 What is protected, how, and what is deliberately not claimed. The user-facing version of the privacy
 section is the `/privacy` page of the app.
 
-**Status.** Everything below is implemented and statically reviewed. None of it has been exercised: no
-penetration test, dependency audit, container test or hostile-file corpus run has been done.
+Automated security/workflow tests cover the controls below. They do not constitute a penetration
+test, compliance certification or guarantee against a determined attacker.
 
 ## Assets and threats
 
 | Asset | Main threats | Main controls |
 | --- | --- | --- |
-| Résumés and job descriptions (personal data) | other users, a compromised parser, log or report leaks, over-retention | ownership predicates, private storage, sandboxed extraction, redaction, retention and deletion |
+| Résumés and job descriptions (personal data) | other users, a compromised parser, log or report leaks, over-retention | ownership predicates, private storage, bounded extraction, redaction, retention and deletion |
 | Accounts and sessions | credential stuffing, session theft, CSRF | Argon2id, rate limits, keyed token hashes, SameSite cookies, CSRF token and Origin check |
-| Model files | tampering, planted code, unsafe deserialisation | manifest checksums, `safetensors` only, no `auto_map`, human approval ([provenance](MODEL_SELECTION_AND_PROVENANCE.md)) |
+| Model files | tampering, planted code, unsafe deserialisation | manifest checksums, `safetensors` only, no `auto_map`, human approval ([provenance](local-models.md)) |
 | Availability | oversized or hostile files, expensive inputs | size and page limits, resource-limited extraction, bounded inference with a time budget, rate limits |
 
 ## Controls
@@ -38,10 +38,10 @@ output limits, no further processes, no privilege gain and an empty environment.
 bombs and XML entity expansion are rejected; PDFs are page-limited. Failures fail closed with a stable
 code and never produce invented text.
 
-**What the sandbox does not do.** It does not restrict which files the child can read, network access or
+**Process-isolation limits.** It does not restrict which files the child can read, network access or
 system calls, so on its own it only limits denial of service. The worker must run in a container with no
 outbound network, a read-only filesystem, no secrets beyond the database credential, a seccomp profile and
-no capabilities ([INFERENCE_AND_DEPLOYMENT.md](INFERENCE_AND_DEPLOYMENT.md#the-workers-container)). The worker
+no capabilities ([deployment.md](deployment.md#the-workers-container)). The worker
 also sets `PR_SET_DUMPABLE=0` so the child cannot read its environment through `/proc`.
 
 **Models.** Local only; checksum-verified; approved by a person; never downloaded by the application;
@@ -55,7 +55,7 @@ content or identifiers.
 
 **Prompt injection.** There is no language model that reads résumé text as instructions, so text inside a
 résumé cannot redirect the system. Keyword stuffing and fabricated claims are not detected
-([AI_LIMITATIONS.md](AI_LIMITATIONS.md)).
+([local-models.md](local-models.md)).
 
 ## Privacy
 
@@ -71,7 +71,7 @@ résumé cannot redirect the system. Keyword stuffing and fabricated claims are 
 | Idempotency keys | safe retries | purged after 24 hours |
 
 Not collected: analytics or advertising scripts, third-party counters, fingerprinting, geolocation, or
-résumé text in logs. IP addresses are used in memory for rate limiting and not stored.
+résumé text in logs. Raw IP addresses are used in memory for rate limiting; guest quotas store only a keyed address hash.
 
 **No third parties.** Documents are never sent to an outside service. Models run on the operator's machine
 from local files. The application has no outbound calls other than to its own database.
@@ -102,5 +102,29 @@ implemented.
 
 No compliance certification (GDPR, SOC 2 or similar) is claimed; operators remain responsible for their
 legal basis, notices and processors. No claim of resistance to a determined attacker is made before the
-container isolation and the checks in [INFERENCE_AND_DEPLOYMENT.md](INFERENCE_AND_DEPLOYMENT.md#checks-that-need-an-authorised-environment)
+container isolation and the checks in [deployment.md](deployment.md#release-checks)
 have been done.
+
+## Guest reviews
+
+One accepted review reserves a network allowance for 24 hours. PostgreSQL advisory locks serialize
+reservations; the allowance survives report deletion, cookie removal and API restarts. Failed processing
+restores it. People sharing a public address share the allowance. Configure trusted proxies and sanitize
+forwarded addresses before public hosting; otherwise the direct proxy peer conservatively shares a quota.
+
+A separate non-login principal owns temporary documents. The HttpOnly, SameSite=Strict `mn_guest` cookie
+is restricted to `/api/v1/guest` and authorizes only its report, never an account session. It is Secure
+in production. Guest mutations require an allowed Origin. Retrying the same file, posting and request
+key recovers the same work while its reservation is active.
+
+Guest access expires after 24 hours. The hourly maintenance service removes expired documents and
+results within the next cleanup interval. Manual deletion removes them sooner without resetting the
+allowance. A guest who registers starts a separate workspace; their temporary report is not migrated.
+
+## Dependency audit policy
+
+CI rejects moderate-or-higher production advisories and high-or-critical advisories anywhere in the
+frontend tree. The pinned ESLint toolchain currently inherits the moderate
+[minimatch advisory](https://github.com/advisories/GHSA-g3hv-75wg-m249). It is development-only; patterns
+come from repository configuration, not résumé uploads. The patched minimatch major changes its API,
+so a compatible lint-tool upgrade remains necessary.

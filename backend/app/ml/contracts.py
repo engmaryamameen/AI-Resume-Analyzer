@@ -53,8 +53,12 @@ class Query(BaseModel):
     id: str
     retrieval_query: str
     hypothesis: str
-    term_ids: list[str] = Field(default_factory=list)  # canonical vocabulary ids, when the requirement has them
-    surface_forms: list[str] = Field(default_factory=list)  # names and aliases used to link mentions
+    term_ids: list[str] = Field(
+        default_factory=list
+    )  # canonical vocabulary ids, when the requirement has them
+    surface_forms: list[str] = Field(
+        default_factory=list
+    )  # names and aliases used to link mentions
 
 
 class Candidate(BaseModel):
@@ -79,8 +83,10 @@ class ModelRef(BaseModel):
 
 
 class EngineInfo(BaseModel):
-    mode: Literal["learned", "rules"]
+    mode: Literal["learned", "semantic", "rules"]
     models: list[ModelRef] = Field(default_factory=list)
     calibrated: bool = False
     fingerprint: str  # "rules", or a hash of the approved model files
-    notes: list[str] = Field(default_factory=list)  # why the learned engine is not in use, if it is not
+    notes: list[str] = Field(
+        default_factory=list
+    )  # why the learned engine is not in use, if it is not

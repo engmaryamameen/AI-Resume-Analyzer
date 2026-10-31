@@ -42,20 +42,33 @@ def seed_everything(seed: int) -> None:
     os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 
-def batches(items: Sequence[T], size: int, rng: random.Random | None = None) -> Iterator[list[T]]:
+def batches(
+    items: Sequence[T], size: int, rng: random.Random | None = None
+) -> Iterator[list[T]]:
     order = list(range(len(items)))
     if rng is not None:
         rng.shuffle(order)
     for i in range(0, len(order), size):
-        yield [items[j] for j in order[i: i + size]]
+        yield [items[j] for j in order[i : i + size]]
 
 
 def make_optimizer(model: torch.nn.Module, config: TrainConfig, total_steps: int):
     no_decay = ("bias", "LayerNorm.weight", "layer_norm.weight")
     groups = [
-        {"params": [p for n, p in model.named_parameters() if not any(k in n for k in no_decay)],
-         "weight_decay": config.weight_decay},
-        {"params": [p for n, p in model.named_parameters() if any(k in n for k in no_decay)], "weight_decay": 0.0},
+        {
+            "params": [
+                p
+                for n, p in model.named_parameters()
+                if not any(k in n for k in no_decay)
+            ],
+            "weight_decay": config.weight_decay,
+        },
+        {
+            "params": [
+                p for n, p in model.named_parameters() if any(k in n for k in no_decay)
+            ],
+            "weight_decay": 0.0,
+        },
     ]
     optimizer = torch.optim.AdamW(groups, lr=config.learning_rate)
     warmup = max(1, int(total_steps * config.warmup_ratio))
@@ -69,15 +82,21 @@ def make_optimizer(model: torch.nn.Module, config: TrainConfig, total_steps: int
 
 
 def fit(
-    model: torch.nn.Module, train_items: Sequence[T], config: TrainConfig,
-    step_loss: Callable[[Sequence[T]], torch.Tensor], validate: Callable[[], float], log: Callable[[dict], None],
+    model: torch.nn.Module,
+    train_items: Sequence[T],
+    config: TrainConfig,
+    step_loss: Callable[[Sequence[T]], torch.Tensor],
+    validate: Callable[[], float],
+    log: Callable[[dict], None],
 ) -> dict[str, torch.Tensor]:
     """Train, keep the weights from the epoch with the best validation score, and return them.
 
     `validate` returns a score where higher is better (macro-F1)."""
     rng = random.Random(config.seed)
     steps_per_epoch = (len(train_items) + config.batch_size - 1) // config.batch_size
-    optimizer, scheduler = make_optimizer(model, config, steps_per_epoch * config.epochs)
+    optimizer, scheduler = make_optimizer(
+        model, config, steps_per_epoch * config.epochs
+    )
     best_score, best_state, stale = float("-inf"), None, 0
     for epoch in range(1, config.epochs + 1):
         model.train()
@@ -93,11 +112,19 @@ def fit(
         model.eval()
         with torch.no_grad():
             score = validate()
-        log({"epoch": epoch, "train_loss": total / max(1, len(train_items)), "validation_score": score,
-             "seconds": time.perf_counter() - started})
+        log(
+            {
+                "epoch": epoch,
+                "train_loss": total / max(1, len(train_items)),
+                "validation_score": score,
+                "seconds": time.perf_counter() - started,
+            }
+        )
         if score > best_score:
             best_score, stale = score, 0
-            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+            best_state = {
+                k: v.detach().cpu().clone() for k, v in model.state_dict().items()
+            }
         else:
             stale += 1
             if stale >= config.patience:
@@ -120,18 +147,31 @@ def environment() -> dict:
     import transformers
 
     try:
-        code = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False, timeout=10)
+        code = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
         code_version = code.stdout.strip() or "unknown"
     except OSError:
         code_version = "unknown"
-    return {"python": platform.python_version(), "torch": torch.__version__, "transformers": transformers.__version__,
-            "cuda": torch.version.cuda, "device": "cuda" if torch.cuda.is_available() else "cpu",
-            "code_version": code_version}
+    return {
+        "python": platform.python_version(),
+        "torch": torch.__version__,
+        "transformers": transformers.__version__,
+        "cuda": torch.version.cuda,
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
+        "code_version": code_version,
+    }
 
 
 def write_run_record(out_dir: Path, name: str, payload: dict) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / name).write_text(json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8")
+    (out_dir / name).write_text(
+        json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8"
+    )
 
 
 def config_dict(config: TrainConfig) -> dict:

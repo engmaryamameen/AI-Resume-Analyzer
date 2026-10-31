@@ -1,14 +1,6 @@
-"""Combining the outputs of verification and extraction into one requirement status.
+"""Reconcile verifier verdicts and mention roles conservatively.
 
-Pure functions, no models: this is the documented decision table, unit-testable without any weights.
-
-Two independent signals describe each candidate passage:
-  * the verifier's label for (requirement, passage), and
-  * the role the extractor gave to mentions of the requirement's term inside that passage.
-When they agree the label stands. When they disagree the weaker claim wins (and the disagreement is
-reported), except that an explicit negation outranks a mere mention. Across passages, supporting and
-contradicting evidence together mean "conflicting", never "supported".
-"""
+Disagreement weakens a claim; supporting and contradicting passages produce a conflict."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -19,8 +11,11 @@ from app.ml.contracts import MentionRole, Verdict, VerdictLabel
 Status = Literal["supported", "mentioned_only", "contradicted", "insufficient", "no_evidence"]
 
 _ROLE_TO_LABEL: dict[str, VerdictLabel] = {
-    "affirmed": "supports", "listed": "mentions_only", "mentioned": "mentions_only",
-    "negated": "contradicts", "hedged": "insufficient",
+    "affirmed": "supports",
+    "listed": "mentions_only",
+    "mentioned": "mentions_only",
+    "negated": "contradicts",
+    "hedged": "insufficient",
 }
 _COMBINED: dict[frozenset[str], VerdictLabel] = {
     frozenset({"supports", "mentions_only"}): "mentions_only",
@@ -31,7 +26,9 @@ _COMBINED: dict[frozenset[str], VerdictLabel] = {
     frozenset({"insufficient", "contradicts"}): "contradicts",
 }
 _STATUS: dict[str, Status] = {
-    "supports": "supported", "mentions_only": "mentioned_only", "contradicts": "contradicted",
+    "supports": "supported",
+    "mentions_only": "mentioned_only",
+    "contradicts": "contradicted",
     "insufficient": "insufficient",
 }
 _PRIORITY = ("supports", "contradicts", "mentions_only", "insufficient")
@@ -67,7 +64,7 @@ def role_label(roles: Sequence[MentionRole]) -> VerdictLabel | None:
     labels = {_ROLE_TO_LABEL[r] for r in roles}
     for label in ("supports", "contradicts", "insufficient", "mentions_only"):
         if label in labels:
-            return label  # type: ignore[return-value]
+            return label
     return None
 
 
@@ -87,19 +84,32 @@ def decide(candidates: Sequence[CandidateEvidence]) -> Decision:
         judged.append(JudgedEvidence(c, label, agreed))
     related = [j for j in judged if j.label != "unrelated"]
     if not related:
-        return Decision("no_evidence", reasons=["No passage in the résumé is related to this requirement."])
+        return Decision(
+            "no_evidence", reasons=["No passage in the résumé is related to this requirement."]
+        )
 
     labels = {j.label for j in related}
     conflict = {"supports", "contradicts"} <= labels
-    chosen: VerdictLabel = "insufficient" if conflict else next(p for p in _PRIORITY if p in labels)  # type: ignore[assignment]
-    ordered = sorted(related, key=lambda j: (j.label != chosen, _PRIORITY.index(j.label), -(j.candidate.retrieval_score or 0)))
+    chosen: VerdictLabel = "insufficient" if conflict else next(p for p in _PRIORITY if p in labels)
+    ordered = sorted(
+        related,
+        key=lambda j: (
+            j.label != chosen,
+            _PRIORITY.index(j.label),
+            -(j.candidate.retrieval_score or 0),
+        ),
+    )
 
     reasons = []
     if conflict:
-        reasons.append("The résumé both supports and contradicts this requirement; review the passages.")
+        reasons.append(
+            "The résumé both supports and contradicts this requirement; review the passages."
+        )
     if any(not j.agreed for j in ordered[:1]):
-        reasons.append("The verifier and the extractor read the strongest passage differently; the more "
-                       "cautious reading was used.")
+        reasons.append(
+            "The verifier and the extractor read the strongest passage differently; the more "
+            "cautious reading was used."
+        )
     best = ordered[0]
     probability = None
     if not conflict and best.agreed and best.label == chosen and best.candidate.verdict.probs:

@@ -1,0 +1,110 @@
+name: margin-notes
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  env_file: ${APP_ENV_FILE:-.env}
+  environment:
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-margin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-margin_notes}
+    STORAGE_DIR: /data/storage
+    MODEL_DIR: /app/models
+    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+  volumes:
+    - uploads:/data/storage
+    - ./models:/app/models:ro
+  networks: [private]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  restart: unless-stopped
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-margin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-margin_notes}
+    volumes: [database:/var/lib/postgresql/data]
+    networks: [private]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+  migrate:
+    <<: *backend
+    command: [alembic, upgrade, head]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: 'no'
+  api:
+    <<: *backend
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  model-setup:
+    profiles: [setup]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    user: "0:0"
+    cap_add: [CHOWN, DAC_OVERRIDE]
+    command: [python, -m, app.ml.provision, --models-dir, /app/models]
+    environment:
+      APP_ENV: development
+    volumes: ["./models:/app/models"]
+    networks: [public]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+  worker:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        ML_RUNTIME: "1"
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-margin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-margin_notes}
+      STORAGE_DIR: /data/storage
+      MODEL_DIR: /app/models
+      SECRET_KEY: worker-does-not-use-session-signing-keys
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HOME: /tmp/huggingface
+      TOKENIZERS_PARALLELISM: "false"
+    command: [python, -m, app.jobs.worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    pids_limit: 128
+    mem_limit: 3g
+  maintenance:
+    <<: *backend
+    command: [python, -m, app.periodic_maintenance]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports: ["127.0.0.1:${WEB_PORT:-3000}:3000"]
+    networks: [private, public]
+    depends_on:
+      api: {condition: service_healthy}
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    restart: unless-stopped
+networks:
+  private: {internal: true}
+  public: {}
+volumes:
+  database: {}
+  uploads: {}

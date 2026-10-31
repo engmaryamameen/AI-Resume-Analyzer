@@ -7,6 +7,7 @@ is a table.
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -40,7 +41,9 @@ def _created() -> Mapped[datetime]:
 
 
 def _user_fk() -> Mapped[uuid.UUID]:
-    return mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    return mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
 
 class User(Base):
@@ -56,7 +59,10 @@ class User(Base):
 
 class Session(Base):
     __tablename__ = "sessions"
-    __table_args__ = (Index("ix_sessions_user", "user_id"), Index("ix_sessions_expires", "expires_at"))
+    __table_args__ = (
+        Index("ix_sessions_user", "user_id"),
+        Index("ix_sessions_expires", "expires_at"),
+    )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     user_id: Mapped[uuid.UUID] = _user_fk()
@@ -87,10 +93,10 @@ class ResumeVersion(Base):
     __tablename__ = "resume_versions"
     __table_args__ = (
         UniqueConstraint("document_id", "version_no", name="uq_resume_versions_doc_no"),
-        CheckConstraint("status IN ('processing','ready','failed')", name="ck_resume_versions_status"),
         CheckConstraint(
-            "source IN ('upload','user_correction')", name="ck_resume_versions_source"
+            "status IN ('processing','ready','failed')", name="ck_resume_versions_status"
         ),
+        CheckConstraint("source IN ('upload','user_correction')", name="ck_resume_versions_source"),
         Index("ix_resume_versions_user", "user_id"),
     )
 
@@ -107,8 +113,8 @@ class ResumeVersion(Base):
     original_ext: Mapped[str | None] = mapped_column(String(8))
     sha256: Mapped[str | None] = mapped_column(String(64))
     size_bytes: Mapped[int | None] = mapped_column(BigInteger)
-    normalized: Mapped[dict | None] = mapped_column(JSONB)
-    parseability: Mapped[dict | None] = mapped_column(JSONB)
+    normalized: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    parseability: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = _created()
     document: Mapped[ResumeDocument] = relationship(back_populates="versions")
 
@@ -122,7 +128,9 @@ class JobDescription(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     created_at: Mapped[datetime] = _created()
     versions: Mapped[list["JobDescriptionVersion"]] = relationship(
-        back_populates="job", cascade="all, delete-orphan", order_by="JobDescriptionVersion.version_no"
+        back_populates="job",
+        cascade="all, delete-orphan",
+        order_by="JobDescriptionVersion.version_no",
     )
 
 
@@ -156,7 +164,9 @@ class JobRequirement(Base):
     __table_args__ = (
         UniqueConstraint("jd_version_id", "ordinal", name="uq_job_requirements_ordinal"),
         CheckConstraint("kind IN ('required','preferred')", name="ck_job_requirements_kind"),
-        CheckConstraint("origin IN ('extracted','inferred','user')", name="ck_job_requirements_origin"),
+        CheckConstraint(
+            "origin IN ('extracted','inferred','user')", name="ck_job_requirements_origin"
+        ),
         CheckConstraint(
             "category IN ('skill','experience_years','education','certification','responsibility','soft_skill')",
             name="ck_job_requirements_category",
@@ -165,16 +175,20 @@ class JobRequirement(Base):
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     jd_version_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("job_description_versions.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("job_description_versions.id", ondelete="CASCADE"),
+        nullable=False,
     )
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     text_: Mapped[str] = mapped_column("text", Text, nullable=False)
     kind: Mapped[str] = mapped_column(String(12), nullable=False)
     category: Mapped[str] = mapped_column(String(24), nullable=False)
     origin: Mapped[str] = mapped_column(String(12), nullable=False)
-    terms: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    terms: Mapped[list[Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb")
+    )
     min_years: Mapped[float | None] = mapped_column(Float)
-    source_span: Mapped[dict | None] = mapped_column(JSONB)
+    source_span: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     jd_version: Mapped[JobDescriptionVersion] = relationship(back_populates="requirements")
 
 
@@ -188,9 +202,12 @@ class AnalysisRun(Base):
     __tablename__ = "analysis_runs"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('queued','running','succeeded','failed','cancelled')", name="ck_analysis_runs_status"
+            "status IN ('queued','running','succeeded','failed','cancelled')",
+            name="ck_analysis_runs_status",
         ),
-        CheckConstraint("(status = 'succeeded') = (assessments IS NOT NULL)", name="ck_analysis_runs_results"),
+        CheckConstraint(
+            "(status = 'succeeded') = (assessments IS NOT NULL)", name="ck_analysis_runs_results"
+        ),
         Index("ix_analysis_runs_user_created", "user_id", "created_at"),
         Index("ix_analysis_runs_resume_version", "resume_version_id"),
         Index("ix_analysis_runs_jd_version", "jd_version_id"),
@@ -202,20 +219,24 @@ class AnalysisRun(Base):
         UUID(as_uuid=True), ForeignKey("resume_versions.id", ondelete="CASCADE"), nullable=False
     )
     jd_version_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("job_description_versions.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("job_description_versions.id", ondelete="CASCADE"),
+        nullable=False,
     )
     status: Mapped[str] = mapped_column(String(12), nullable=False)
     pipeline_version: Mapped[str] = mapped_column(String(32), nullable=False)
     model_fingerprint: Mapped[str | None] = mapped_column(String(64))
-    engine: Mapped[dict | None] = mapped_column(JSONB)  # mode, models, calibration, notes
-    extraction: Mapped[list | None] = mapped_column(JSONB)  # mentions found in the résumé
-    assessments: Mapped[list | None] = mapped_column(JSONB)
-    summary: Mapped[dict | None] = mapped_column(JSONB)
-    warnings: Mapped[list | None] = mapped_column(JSONB)
+    engine: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # mode, models, calibration, notes
+    extraction: Mapped[list[Any] | None] = mapped_column(JSONB)  # mentions found in the résumé
+    assessments: Mapped[list[Any] | None] = mapped_column(JSONB)
+    summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    warnings: Mapped[list[Any] | None] = mapped_column(JSONB)
     error_code: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = _created()
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    matches: Mapped[list["RequirementMatch"]] = relationship(back_populates="run", cascade="all, delete-orphan")
+    matches: Mapped[list["RequirementMatch"]] = relationship(
+        back_populates="run", cascade="all, delete-orphan"
+    )
 
 
 class RequirementMatch(Base):
@@ -226,7 +247,10 @@ class RequirementMatch(Base):
             "status IN ('supported','mentioned_only','contradicted','insufficient','no_evidence')",
             name="ck_matches_status",
         ),
-        CheckConstraint("probability IS NULL OR (probability >= 0 AND probability <= 1)", name="ck_matches_probability"),
+        CheckConstraint(
+            "probability IS NULL OR (probability >= 0 AND probability <= 1)",
+            name="ck_matches_probability",
+        ),
         Index("ix_matches_requirement", "requirement_id"),
     )
 
@@ -238,10 +262,12 @@ class RequirementMatch(Base):
         UUID(as_uuid=True), ForeignKey("job_requirements.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[str] = mapped_column(String(16), nullable=False)
-    probability: Mapped[float | None] = mapped_column(Float)  # calibrated only; NULL means "no calibrated estimate"
+    probability: Mapped[float | None] = mapped_column(
+        Float
+    )  # calibrated only; NULL means "no calibrated estimate"
     conflict: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
-    reasons: Mapped[list] = mapped_column(JSONB, nullable=False)
-    evidence: Mapped[list] = mapped_column(JSONB, nullable=False)
+    reasons: Mapped[list[Any]] = mapped_column(JSONB, nullable=False)
+    evidence: Mapped[list[Any]] = mapped_column(JSONB, nullable=False)
     explanation: Mapped[str | None] = mapped_column(Text)
     run: Mapped[AnalysisRun] = relationship(back_populates="matches")
 
@@ -252,10 +278,16 @@ class ProcessingJob(Base):
     __tablename__ = "processing_jobs"
     __table_args__ = (
         CheckConstraint("kind IN ('extract_resume','run_analysis')", name="ck_jobs_kind"),
-        CheckConstraint("status IN ('queued','running','succeeded','failed','cancelled')", name="ck_jobs_status"),
+        CheckConstraint(
+            "status IN ('queued','running','succeeded','failed','cancelled')", name="ck_jobs_status"
+        ),
         CheckConstraint("max_attempts >= 1", name="ck_jobs_max_attempts"),
         UniqueConstraint("kind", "target_id", name="uq_jobs_kind_target"),
-        Index("ix_jobs_claimable", "next_run_at", postgresql_where=text("status IN ('queued','running')")),
+        Index(
+            "ix_jobs_claimable",
+            "next_run_at",
+            postgresql_where=text("status IN ('queued','running')"),
+        ),
         Index("ix_jobs_user", "user_id"),
     )
 
@@ -266,9 +298,13 @@ class ProcessingJob(Base):
     status: Mapped[str] = mapped_column(String(12), nullable=False, server_default="queued")
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     max_attempts: Mapped[int] = mapped_column(Integer, nullable=False)
-    next_run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    next_run_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    cancel_requested: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
     last_error_code: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = _created()
     updated_at: Mapped[datetime] = mapped_column(
@@ -301,10 +337,43 @@ class AuditEvent(Base):
     __table_args__ = (Index("ix_audit_created", "created_at"), Index("ix_audit_user", "user_id"))
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
     action: Mapped[str] = mapped_column(String(48), nullable=False)
     target_type: Mapped[str | None] = mapped_column(String(32))
     target_id: Mapped[str | None] = mapped_column(String(64))
     request_id: Mapped[str | None] = mapped_column(String(64))
-    detail: Mapped[dict | None] = mapped_column(JSONB)
+    detail: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = _created()
+
+
+class GuestAllowance(Base):
+    """Durable, pseudonymous network quota, independent of document deletion."""
+
+    __tablename__ = "guest_allowances"
+    network_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    next_allowed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class GuestAnalysis(Base):
+    """A short-lived document workspace. Never grants an authenticated account session."""
+
+    __tablename__ = "guest_analyses"
+    __table_args__ = (
+        Index("ix_guest_expires", "expires_at"),
+        Index("ix_guest_network", "network_key"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    network_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    resume_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("resume_versions.id", ondelete="SET NULL")
+    )
+    jd_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_description_versions.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = _created()
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

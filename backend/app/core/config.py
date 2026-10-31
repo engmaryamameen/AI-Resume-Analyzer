@@ -1,5 +1,5 @@
 from functools import lru_cache
-from ipaddress import ip_address, ip_network
+from ipaddress import IPv4Network, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from typing import Literal
 
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     trusted_proxies: str = ""
 
     database_url: str = "postgresql+psycopg://resume_app:CHANGE_ME@localhost:5432/resume_intel"
-    secret_key: str = "CHANGE_ME_LONG_RANDOM_VALUE"
+    secret_key: str = "CHANGE_ME_LONG_RANDOM_VALUE"  # noqa: S105 - rejected in production
     storage_dir: Path = REPO_ROOT / "backend" / "storage"
     model_dir: Path = REPO_ROOT / "models"
 
@@ -56,8 +56,12 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_allowed_origins.split(",") if o.strip()]
 
     @property
-    def trusted_proxy_networks(self) -> list:
-        return [ip_network(p.strip(), strict=False) for p in self.trusted_proxies.split(",") if p.strip()]
+    def trusted_proxy_networks(self) -> list[IPv4Network | IPv6Network]:
+        return [
+            ip_network(p.strip(), strict=False)
+            for p in self.trusted_proxies.split(",")
+            if p.strip()
+        ]
 
     def is_trusted_proxy(self, address: str) -> bool:
         try:
@@ -68,14 +72,20 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _resolve_paths_and_refuse_unsafe_production(self) -> "Settings":
-        self.storage_dir = self.storage_dir if self.storage_dir.is_absolute() else REPO_ROOT / self.storage_dir
-        self.model_dir = self.model_dir if self.model_dir.is_absolute() else REPO_ROOT / self.model_dir
+        self.storage_dir = (
+            self.storage_dir if self.storage_dir.is_absolute() else REPO_ROOT / self.storage_dir
+        )
+        self.model_dir = (
+            self.model_dir if self.model_dir.is_absolute() else REPO_ROOT / self.model_dir
+        )
         if self.is_production:
             if self.secret_key.startswith("CHANGE_ME") or len(self.secret_key) < 32:
                 raise ValueError("SECRET_KEY must be a random value of at least 32 characters")
             if "CHANGE_ME" in self.database_url:
                 raise ValueError("DATABASE_URL still contains a placeholder credential")
-        list(self.trusted_proxy_networks)  # a malformed entry fails at startup, not on the first request
+        list(
+            self.trusted_proxy_networks
+        )  # a malformed entry fails at startup, not on the first request
         return self
 
 

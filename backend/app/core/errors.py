@@ -1,5 +1,7 @@
 """Stable error model. Every client-visible failure is an AppError with a machine code."""
 
+from typing import Any
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -14,7 +16,9 @@ class AppError(Exception):
     status_code = 400
     code = "bad_request"
 
-    def __init__(self, message: str, *, code: str | None = None, details: dict | None = None):
+    def __init__(
+        self, message: str, *, code: str | None = None, details: dict[str, Any] | None = None
+    ):
         super().__init__(message)
         self.message = message
         if code:
@@ -69,7 +73,7 @@ class ServiceUnavailable(AppError):
     code = "service_unavailable"
 
 
-def _body(code: str, message: str, details: dict | None = None) -> dict:
+def _body(code: str, message: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
     return {
         "error": {
             "code": code,
@@ -90,9 +94,7 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:
-        fields = [
-            {"loc": [str(p) for p in e["loc"]], "type": e["type"]} for e in exc.errors()
-        ]
+        fields = [{"loc": [str(p) for p in e["loc"]], "type": e["type"]} for e in exc.errors()]
         return JSONResponse(
             _body("validation_failed", "The request was not valid.", {"fields": fields}),
             status_code=422,
@@ -108,6 +110,8 @@ def install_error_handlers(app: FastAPI) -> None:
         # Exception text can embed document content; log only the type and request id.
         log.error("unhandled_exception", extra={"error_type": type(exc).__name__})
         return JSONResponse(
-            _body("internal_error", "Something went wrong. Quote the request id if you contact us."),
+            _body(
+                "internal_error", "Something went wrong. Quote the request id if you contact us."
+            ),
             status_code=500,
         )

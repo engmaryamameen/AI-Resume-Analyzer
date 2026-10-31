@@ -5,8 +5,19 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 SectionKind = Literal[
-    "header", "summary", "experience", "education", "projects", "skills", "certifications",
-    "awards", "publications", "volunteering", "languages", "interests", "other",
+    "header",
+    "summary",
+    "experience",
+    "education",
+    "projects",
+    "skills",
+    "certifications",
+    "awards",
+    "publications",
+    "volunteering",
+    "languages",
+    "interests",
+    "other",
 ]
 BlockKind = Literal["bullet", "paragraph", "entry_header"]
 Confidence = Literal["high", "medium", "low"]

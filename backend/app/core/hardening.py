@@ -3,7 +3,7 @@
 `PR_SET_DUMPABLE=0` makes /proc/<pid>/environ and /proc/<pid>/mem unreadable to other processes of the
 same user, in particular to the extraction child, which would otherwise be able to read the worker's
 database URL and secret key. This is defence in depth on Linux; the real boundary is the container the
-worker runs in (see docs/INFERENCE_AND_DEPLOYMENT.md).
+worker runs in (see docs/deployment.md).
 """
 
 import ctypes

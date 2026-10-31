@@ -15,28 +15,38 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
 from app.ml.calibration import evaluate_calibration, fit_temperature
 from app.ml.contracts import VERDICT_LABELS
 from app.ml.models import load_extractor
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
 from ml.encode import encode_extraction
 from ml.schema import ExtractionRecord, VerificationRecord
 from ml.split import load_split
 from ml.train_verifier import predict_logits
 
 
-def role_logits(model, tokenizer, records: Sequence[ExtractionRecord], device: torch.device, batch_size: int):
+def role_logits(
+    model,
+    tokenizer,
+    records: Sequence[ExtractionRecord],
+    device: torch.device,
+    batch_size: int,
+):
     """Role logits for the gold spans, so the role head is calibrated independently of span detection."""
     rows: list[list[float]] = []
     targets: list[int] = []
     with torch.no_grad():
         for i in range(0, len(records), batch_size):
-            batch = encode_extraction(records[i: i + batch_size], tokenizer)
+            batch = encode_extraction(records[i : i + batch_size], tokenizer)
             if not len(batch.role_targets):
                 continue
-            hidden = model.encode(batch.input_ids.to(device), batch.attention_mask.to(device))
-            rows += model.role_logits(hidden, batch.role_rows.to(device), batch.role_tokens.to(device)).tolist()
+            hidden = model.encode(
+                batch.input_ids.to(device), batch.attention_mask.to(device)
+            )
+            rows += model.role_logits(
+                hidden, batch.role_rows.to(device), batch.role_tokens.to(device)
+            ).tolist()
             targets += batch.role_targets.tolist()
     return rows, targets
 
@@ -44,8 +54,13 @@ def role_logits(model, tokenizer, records: Sequence[ExtractionRecord], device: t
 def calibration_entry(fit_rows, fit_labels, check_rows, check_labels) -> dict:
     temperature = fit_temperature(fit_rows, fit_labels)
     checked = evaluate_calibration(check_rows, check_labels, temperature)
-    return {"temperature": temperature, "validation_samples": checked.samples, "ece": checked.ece_after,
-            "ece_uncalibrated": checked.ece_before, "fitted_on_samples": len(fit_labels)}
+    return {
+        "temperature": temperature,
+        "validation_samples": checked.samples,
+        "ece": checked.ece_after,
+        "ece_uncalibrated": checked.ece_before,
+        "fitted_on_samples": len(fit_labels),
+    }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -61,26 +76,58 @@ def main(argv: Sequence[str] | None = None) -> int:
     extractor_dir = args.run / "extractor"
     if extractor_dir.is_dir():
         model, tokenizer = load_extractor(extractor_dir, device)
-        fit_rows, fit_labels = role_logits(model, tokenizer, load_split(args.splits, "calibration", "extraction"), device, args.batch_size)
-        check_rows, check_labels = role_logits(model, tokenizer, load_split(args.splits, "validation", "extraction"), device, args.batch_size)
+        fit_rows, fit_labels = role_logits(
+            model,
+            tokenizer,
+            load_split(args.splits, "calibration", "extraction"),
+            device,
+            args.batch_size,
+        )
+        check_rows, check_labels = role_logits(
+            model,
+            tokenizer,
+            load_split(args.splits, "validation", "extraction"),
+            device,
+            args.batch_size,
+        )
         if fit_rows and check_rows:
-            result["role"] = calibration_entry(fit_rows, fit_labels, check_rows, check_labels)
+            result["role"] = calibration_entry(
+                fit_rows, fit_labels, check_rows, check_labels
+            )
 
     verifier_dir = args.run / "verifier"
     if verifier_dir.is_dir():
         tokenizer = AutoTokenizer.from_pretrained(verifier_dir, local_files_only=True)
-        model = AutoModelForSequenceClassification.from_pretrained(
-            verifier_dir, local_files_only=True, use_safetensors=True).to(device).eval()
-        fit_records: list[VerificationRecord] = load_split(args.splits, "calibration", "verification")  # type: ignore[assignment]
-        check_records: list[VerificationRecord] = load_split(args.splits, "validation", "verification")  # type: ignore[assignment]
+        model = (
+            AutoModelForSequenceClassification.from_pretrained(
+                verifier_dir, local_files_only=True, use_safetensors=True
+            )
+            .to(device)
+            .eval()
+        )
+        fit_records: list[VerificationRecord] = load_split(
+            args.splits, "calibration", "verification"
+        )  # type: ignore[assignment]
+        check_records: list[VerificationRecord] = load_split(
+            args.splits, "validation", "verification"
+        )  # type: ignore[assignment]
         if fit_records and check_records:
-            fit_rows = predict_logits(model, tokenizer, fit_records, device, args.batch_size)
-            check_rows = predict_logits(model, tokenizer, check_records, device, args.batch_size)
+            fit_rows = predict_logits(
+                model, tokenizer, fit_records, device, args.batch_size
+            )
+            check_rows = predict_logits(
+                model, tokenizer, check_records, device, args.batch_size
+            )
             result["verdict"] = calibration_entry(
-                fit_rows, [VERDICT_LABELS.index(r.label) for r in fit_records],
-                check_rows, [VERDICT_LABELS.index(r.label) for r in check_records])
+                fit_rows,
+                [VERDICT_LABELS.index(r.label) for r in fit_records],
+                check_rows,
+                [VERDICT_LABELS.index(r.label) for r in check_records],
+            )
 
-    (args.run / "calibration.json").write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
+    (args.run / "calibration.json").write_text(
+        json.dumps(result, indent=2, sort_keys=True), encoding="utf-8"
+    )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 

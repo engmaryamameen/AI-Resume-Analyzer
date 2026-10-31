@@ -1,13 +1,6 @@
-"""Runs the extraction script in a resource-bounded child process.
+"""Run extraction with process, resource, output and wall-clock limits.
 
-Enforced here: wall-clock timeout (the whole process group is killed), CPU seconds, address space,
-descriptors, no further processes or threads (RLIMIT_NPROC=0), no privilege gain, a hard cap on output
-size (the child writes to an unlinked temporary file whose size is rlimit-capped), empty environment.
-
-NOT enforced here: which files the child may read, network access, system calls. A parser exploit would
-run with the worker's file and network reach. Production must therefore run the worker in a container
-with no network, a read-only filesystem, no secrets and a seccomp profile (docs/INFERENCE_AND_DEPLOYMENT.md).
-"""
+Filesystem and network isolation require the worker container; see docs/deployment.md."""
 
 import ctypes
 import json
@@ -17,6 +10,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -48,7 +42,7 @@ class RawExtraction:
     lines: list[RawLine]
 
 
-def _limits(memory_mb: int, cpu_seconds: int):
+def _limits(memory_mb: int, cpu_seconds: int) -> Callable[[], None]:
     def apply() -> None:
         memory = memory_mb * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
@@ -68,7 +62,12 @@ def run_extraction(path: Path, kind: str) -> RawExtraction:
     with tempfile.TemporaryFile() as out:
         try:
             proc = subprocess.Popen(  # noqa: S603 - fixed argv, no shell, no user-controlled argv parts
-                cmd, stdout=out, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, env={}, cwd="/",
+                cmd,
+                stdout=out,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                env={},
+                cwd="/",
                 start_new_session=True,
                 preexec_fn=_limits(settings.parser_memory_mb, settings.parser_timeout_seconds),  # noqa: PLW1509
             )

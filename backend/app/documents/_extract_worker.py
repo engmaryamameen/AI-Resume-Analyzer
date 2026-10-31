@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import zipfile
+from typing import Any
 
 MAX_TOTAL_CHARS = 150_000
 MAX_PAGE_CHARS = 25_000
@@ -18,7 +19,9 @@ MAX_XML_BYTES = 20 * 1024 * 1024
 MAX_PDF_PAGES = int(sys.argv[3]) if len(sys.argv) > 3 else 8
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-_INVISIBLE = re.compile("[" + "".join(chr(c) for c in (0x00, 0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF)) + "]")
+_INVISIBLE = re.compile(
+    "[" + "".join(chr(c) for c in (0x00, 0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF)) + "]"
+)
 
 
 def fail(code: str) -> None:
@@ -30,7 +33,7 @@ def _clean(text: str) -> str:
     return _INVISIBLE.sub("", text)
 
 
-def extract_pdf(path: str) -> dict:
+def extract_pdf(path: str) -> dict[str, Any]:
     from pypdf import PdfReader
 
     try:
@@ -48,7 +51,11 @@ def extract_pdf(path: str) -> dict:
             total += len(text)
             if total > MAX_TOTAL_CHARS:
                 fail("text_too_large")
-            lines += [{"text": raw.strip(), "page": index, "bullet": False} for raw in text.splitlines() if raw.strip()]
+            lines += [
+                {"text": raw.strip(), "page": index, "bullet": False}
+                for raw in text.splitlines()
+                if raw.strip()
+            ]
         return {"ok": True, "page_count": pages, "lines": lines}
     except SystemExit:
         raise
@@ -57,7 +64,7 @@ def extract_pdf(path: str) -> dict:
     return {}
 
 
-def extract_docx(path: str) -> dict:
+def extract_docx(path: str) -> dict[str, Any]:
     from defusedxml import ElementTree as ET
 
     try:
@@ -101,7 +108,9 @@ def extract_docx(path: str) -> dict:
         total += len(text)
         if total > MAX_TOTAL_CHARS:
             fail("text_too_large")
-        lines.append({"text": text, "page": None, "bullet": paragraph.find(f"{W}pPr/{W}numPr") is not None})
+        lines.append(
+            {"text": text, "page": None, "bullet": paragraph.find(f"{W}pPr/{W}numPr") is not None}
+        )
     return {"ok": True, "page_count": None, "lines": lines}
 
 

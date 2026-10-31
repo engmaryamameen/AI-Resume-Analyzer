@@ -2,7 +2,8 @@
 
 import re
 
-ACTION_VERBS = frozenset("""
+ACTION_VERBS = frozenset(
+    """
 accelerated achieved administered analysed analyzed architected assembled audited authored automated
 built championed coached collaborated configured consolidated constructed contributed converted
 coordinated created debugged decreased delivered deployed designed developed diagnosed directed
@@ -14,19 +15,30 @@ planned presented prioritised prioritized produced programmed published rebuilt 
 refactored released remediated replaced researched resolved restructured reviewed revised scaled
 secured selected shipped simplified solved spearheaded standardised standardized streamlined
 supervised supported tested trained transformed troubleshot upgraded used validated wrote
-""".split())
-
-WEAK_OPENERS = (
-    "responsible for", "worked on", "helped with", "helped to", "assisted with", "assisted in",
-    "duties included", "involved in", "tasked with", "in charge of",
+""".split()
 )
 
-_STOPWORDS = frozenset("""
+WEAK_OPENERS = (
+    "responsible for",
+    "worked on",
+    "helped with",
+    "helped to",
+    "assisted with",
+    "assisted in",
+    "duties included",
+    "involved in",
+    "tasked with",
+    "in charge of",
+)
+
+_STOPWORDS = frozenset(
+    """
 a an and are as at be been by for from has have in into is it its of on or our that the their this
 to was were will with you your we they them who which what when where how all any can may must
 should would such than then also more most other some etc including include within across using
 use used able ability strong good great plus well work working experience years year
-""".split())
+""".split()
+)
 
 _TOKEN = re.compile(r"[a-z][a-z0-9+#]*")
 _METRIC = re.compile(

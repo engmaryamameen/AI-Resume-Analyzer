@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -22,7 +22,7 @@ class RequirementDraft(BaseModel):
     terms: list[str] = Field(default_factory=list)
     min_years: float | None = None
     # {"start": int, "end": int, "alt_group": int | None, "inferred_from": [term ids], "reason": str}
-    source_span: dict | None = None
+    source_span: dict[str, Any] | None = None
 
 
 class EvidenceRef(BaseModel):
@@ -33,7 +33,9 @@ class EvidenceRef(BaseModel):
     page: int | None = None
     line: int | None = None
     excerpt: str = Field(max_length=400)
-    highlights: list[tuple[int, int]] = Field(default_factory=list)  # character ranges inside the excerpt
+    highlights: list[tuple[int, int]] = Field(
+        default_factory=list
+    )  # character ranges inside the excerpt
     label: EvidenceLabel | None = None
     roles: list[str] = Field(default_factory=list)  # roles of the matching mentions in this passage
     retrieval_score: float | None = None  # raw similarity, ordering only; not a probability
@@ -45,7 +47,9 @@ class MatchResult(BaseModel):
     ordinal: int
     status: MatchStatus
     conflict: bool = False
-    probability: float | None = None  # calibrated estimate for the strongest passage's label, or None
+    probability: float | None = (
+        None  # calibrated estimate for the strongest passage's label, or None
+    )
     reasons: list[str] = Field(default_factory=list)
     evidence: list[EvidenceRef] = Field(default_factory=list)
     explanation: str | None = None
@@ -59,7 +63,9 @@ class Metric(BaseModel):
 
 
 class Assessment(BaseModel):
-    id: Literal["requirement_evidence", "document_structure", "writing_style", "extraction_reliability"]
+    id: Literal[
+        "requirement_evidence", "document_structure", "writing_style", "extraction_reliability"
+    ]
     label: str
     summary: str
     metrics: list[Metric] = Field(default_factory=list)

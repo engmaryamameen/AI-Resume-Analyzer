@@ -1,126 +1,102 @@
-# Margin Notes
+# Rolemark
 
-Self-hosted résumé feedback that shows its working.
+Self-hosted résumé feedback with source-linked findings. Upload a résumé, add a target role, and review
+what the document demonstrates, merely mentions or leaves unclear. Suggestions help you revise with
+true details; the application does not generate accomplishments or predict hiring outcomes.
 
-Give it a résumé and a job description. For each requirement it tells you whether the résumé *supports*
-it, *only mentions* it, *contradicts* it, says *too little* to count, or never touches it, and it quotes
-the exact lines it relied on. There is no overall score. Everything runs on your own machines: no
-third-party AI service is ever called, and your documents never leave your server.
+![Guest review of a synthetic résumé](docs/images/review.jpg)
 
-> **Status: written, not yet run.** The code was produced and reviewed statically. No dependency was
-> installed, no test, build, migration or server was run, no model was downloaded or trained, and nothing
-> here claims a passing test suite, a benchmark or an accuracy figure. What has to be done before relying
-> on it is listed in [Verification](#verification).
+## Run locally
 
-## What it does
+Docker with Compose is required. Preserve any existing `.env`; otherwise copy the example:
 
-- **Reads résumés** (PDF, DOCX) in a sandboxed child process, finds sections, dates and contact details,
-  and reports where it was unsure instead of guessing. Scans fail with a clear message.
-- **Reads job descriptions** into must-have and nice-to-have requirements, each tied to the sentence it
-  came from, and lets you correct the list.
-- **Judges evidence in context.** Models find skills, degrees and certifications and how each is claimed
-  (used, listed, mentioned, negated, hedged), retrieve the passages that may relate to a requirement, and
-  verify whether a passage supports, only mentions, contradicts or underspecifies it. A fixed, documented
-  decision table combines the two readings; "supported" and "contradicted" together are shown as a
-  conflict, never as support.
-- **Explains itself.** Every result has reasons and verbatim excerpts. Probabilities appear only when
-  calibrated and meeting a stated policy, and raw similarity is never shown as one.
-- **Stays useful without models.** If the learned models are missing, unapproved or too slow, the
-  analysis is redone with a plainly labelled rule-based reading, and says so.
-- **Recommends without inventing.** Suggestions quote your résumé and leave blanks for you to fill with
-  true facts; nothing is generated.
-- **Keeps history.** Immutable versions, staleness detection, comparison, reports (JSON, Markdown, CSV),
-  deletion of a résumé or your whole account.
+```sh
+cp .env.example .env
+docker compose --profile setup run --build --rm model-setup
+docker compose up --build -d
+```
 
-## Design decisions
+Open [localhost:3000](http://localhost:3000). The setup command downloads about 420 MB of pinned,
+checksum-verified pretrained weights once. The CPU worker then runs semantic retrieval and natural
+language inference locally, with rules for entities and dates. No AI API key or hosted inference service
+is used. Allow roughly 3 GB of worker memory; no GPU is required. Setup/build need internet access;
+analysis runs on an internal network. See [setup](docs/quickstart.md).
 
-| Decision | Why |
+For a recording, upload a synthetic PDF/DOCX on the home page or create an account, add a résumé and
+role, then run a review. Open **Document insights → How this was read** to verify the report used local
+semantic models. The `/demo` sample intentionally uses the rule-based reader and does not consume the
+guest allowance. Existing installations must set `ML_ENABLED=true` and restart the worker after setup.
+
+## Features
+
+- One guest review per network every 24 hours, with temporary private report access.
+- PDF/DOCX extraction with visible source text, uncertainties and manual corrections.
+- Editable required/preferred job requirements tied to the original posting.
+- Requirement-level evidence, source excerpts and a focused editing plan.
+- Immutable versions, stale-result notices, comparisons and JSON/Markdown/CSV exports.
+- Account/document deletion, durable worker jobs, bounded retries and retention maintenance.
+- Keyboard-operable controls, locally bundled fonts and responsive layouts.
+
+Guest access expires after 24 hours; failed processing restores the allowance. Deleting a report does
+not reset it. An account provides additional reviews and version history. Guest reports are not moved
+into a new account. The synthetic [demo](http://localhost:3000/demo) is separate from the guest quota.
+
+## How reviews work
+
+The baseline extracts sections and date ranges, identifies job requirements, and checks each one
+against passages in the résumé. It distinguishes a listed skill from a description of using it.
+Supporting and contradictory passages remain a visible conflict. Suggestions quote the original text
+and provide structures you can complete with true details.
+
+The default configured profile combines published embedding/NLI models with deterministic extraction.
+It is not a model trained on your uploads, a hiring predictor or a calibrated match score. If model
+loading or inference fails, a complete rule-based review remains available and the report explicitly
+records that fallback. See [model provenance and limits](docs/local-models.md).
+
+## System
+
+| Directory | Responsibility |
 | --- | --- |
-| Local models only, loaded from checksum-verified, human-approved `safetensors` files; never downloaded by the app | Résumés are personal data; a supply chain you can audit |
-| Three small models with separate jobs (extractor, retriever, verifier) and a rule-based baseline behind one `Engine` interface | Retrieval similarity is not evidence; a baseline keeps the app usable and gives the models something to beat |
-| No overall score, no text generation | A single number invites false precision; generated text can invent claims |
-| Modular monolith, PostgreSQL job queue, one worker | Simple transactions and operations; no Redis, Kafka or vector database |
-| Prepare / compute / commit jobs under a per-user advisory lock | No long transactions, no deadlocks between deletion and results, no overlapping execution |
-| Immutable versions with optimistic concurrency | "Which text produced this result?" is always answerable |
+| `backend/` | FastAPI, PostgreSQL, durable worker, extraction and evidence analysis |
+| `frontend/` | Next.js/TypeScript interface and browser/component tests |
+| `ml/` | Optional local-model training, calibration and evaluation tools |
+| `models/` | Model manifests; pinned weights are provisioned separately |
+| `docs/` | Setup, architecture, API, security and operational guidance |
 
-Reasons and rejected alternatives are in [docs/adr](docs/adr).
+The API accepts requests and stores immutable inputs; a separate worker performs extraction and
+analysis. PostgreSQL also holds the job queue. [Architecture](docs/architecture.md) and
+[decisions](docs/decisions.md) explain the transaction and isolation boundaries.
 
-```mermaid
-flowchart LR
-  B[Browser] --> N[Next.js] --> A[FastAPI API] --> P[(PostgreSQL)]
-  W[Worker] --> P
-  W --> X[Sandboxed extractor]
-  W --> M[Local models]
+## Development checks
+
+```sh
+.venv/bin/ruff check backend/app ml
+.venv/bin/mypy --config-file backend/pyproject.toml backend/app
+TEST_DATABASE_URL=postgresql+psycopg://... .venv/bin/pytest backend/tests -q
+cd frontend
+npm run format:check
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
 
-## Repository
+Use a disposable test database. Browser journeys additionally need a fresh application database, API,
+worker and production frontend. See [testing](docs/testing.md) and `.github/workflows/verify.yml`.
 
-```
-backend/    FastAPI, SQLAlchemy, Alembic: API, documents, analysis, ML runtime, jobs, tests
-frontend/   Next.js, TypeScript, Tailwind: the web app and its tests
-ml/         the ML lab: datasets, synthetic data, training, calibration, evaluation, benchmarking
-models/     manifest of the local models (weights are provisioned offline, never committed)
-docs/       architecture, ML, data, security, API, testing, ADRs
-```
+## Limits and operations
 
-## Running it
+The English models compare text, not truth or qualifications. Scans need OCR, which is not
+implemented. The semantic profile uses published pretrained models; résumé-domain accuracy and hiring
+outcomes have not been validated. The separate custom-training lab remains experimental. The tool does not rank people, reproduce an ATS score or predict interviews.
 
-These commands are for a separate, authorised environment; none has been run. Review and lock
-dependencies first.
+Public operation requires HTTPS, production secrets, trusted proxy configuration, restricted database
+roles, monitored backups and restoration checks. Accounts currently lack email verification and password
+recovery. Resource limits reduce parser risk but are not a complete sandbox.
 
-```bash
-cp .env.example .env                       # replace every CHANGE_ME; APP_ENV=development for local use
+- [Deployment](docs/deployment.md)
+- [Security, privacy and guest retention](docs/security-and-privacy.md)
+- [API](docs/api.md) and [database](docs/database.md)
+- [Analysis and optional local models](docs/local-models.md)
 
-# backend, in a fresh virtualenv (add ,ml to run the learned models)
-pip install -e "backend[dev]"
-alembic -c backend/alembic.ini upgrade head
-uvicorn app.api.main:app --app-dir backend --port 8000
-(cd backend && python -m app.jobs.worker)  # second terminal
-
-# frontend
-cd frontend && npm install --ignore-scripts && npm run dev
-```
-
-Without model files the worker runs the rule-based reading, and every analysis says so. To use the learned
-models you must provision, evaluate and approve them yourself: see
-[docs/MODEL_SELECTION_AND_PROVENANCE.md](docs/MODEL_SELECTION_AND_PROVENANCE.md) and
-[docs/TRAINING_AND_EVALUATION.md](docs/TRAINING_AND_EVALUATION.md). Create an administrator on the server
-with `python -m app.cli grant-admin EMAIL`, and schedule `python -m app.cli maintenance` daily.
-
-Production needs more than the above: TLS and trusted proxies, least-privilege database roles, and a
-worker container with no network, a read-only filesystem and no secrets. See
-[docs/INFERENCE_AND_DEPLOYMENT.md](docs/INFERENCE_AND_DEPLOYMENT.md).
-
-## Verification
-
-Written and statically checked only. Before relying on this you need to, in an authorised environment:
-install from reviewed lockfiles; run the backend and frontend test suites and linters
-([docs/testing.md](docs/testing.md)); run the migration and the drift test; run the ML workflow on real,
-lawfully obtained, annotated data and benchmark on your hardware; test the worker container isolation with
-hostile files; and confirm the model revisions. The full list is in
-[docs/INFERENCE_AND_DEPLOYMENT.md](docs/INFERENCE_AND_DEPLOYMENT.md#checks-that-need-an-authorised-environment).
-
-## Limits
-
-It compares the wording of a résumé with the wording of a posting. It does not verify that claims are true,
-predict interviews or offers, rank or screen people, or emulate applicant-tracking systems; it is
-English-only; and no model has been evaluated yet, so its error rates are unknown. Read
-[docs/AI_LIMITATIONS.md](docs/AI_LIMITATIONS.md) before using results to make a decision about a person.
-
-## Documentation
-
-| | |
-| --- | --- |
-| [architecture](docs/architecture.md) | system shape, jobs, locking, versioning |
-| [LOCAL_ML_ARCHITECTURE](docs/LOCAL_ML_ARCHITECTURE.md) | the pipeline, models, decision table, calibration, degradation |
-| [MODEL_SELECTION_AND_PROVENANCE](docs/MODEL_SELECTION_AND_PROVENANCE.md) | which models, why, licences, approval |
-| [DATASET_AND_LABELING_STRATEGY](docs/DATASET_AND_LABELING_STRATEGY.md) | data, annotation guidelines, splits, leakage |
-| [TRAINING_AND_EVALUATION](docs/TRAINING_AND_EVALUATION.md) | training, calibration, evaluation, promotion |
-| [INFERENCE_AND_DEPLOYMENT](docs/INFERENCE_AND_DEPLOYMENT.md) | running, configuring and operating it |
-| [AI_LIMITATIONS](docs/AI_LIMITATIONS.md) | what it cannot be trusted to do |
-| [database](docs/database.md), [api](docs/api.md) | schema and HTTP contract |
-| [security-and-privacy](docs/security-and-privacy.md), [testing](docs/testing.md) | controls, retention, test map |
-
-## Licence
-
-MIT, see [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+MIT. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md). Bundled fonts retain their license notices.

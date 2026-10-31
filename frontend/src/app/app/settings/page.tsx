@@ -33,26 +33,41 @@ export default function Settings() {
 
   return (
     <>
-      <PageHeader title="Account and privacy">You're signed in as {user.email}.</PageHeader>
+      <PageHeader title="Account and privacy">You&apos;re signed in as {user.email}.</PageHeader>
       <div className="space-y-6">
         <Card>
           <h2 className="font-serif text-xl">Where your data goes</h2>
           <p className="mt-1 max-w-prose text-muted">
-            Your documents are analysed on this server by models stored on it. Nothing is sent to an outside AI service.{" "}
-            <Link href="/privacy" className="text-accent underline">Read the full privacy notes</Link>.
+            Your documents are analyzed on this server. The default reader uses local rules;
+            approved local models can be configured separately. No outside AI service receives your
+            documents.{" "}
+            <Link href="/privacy" className="text-accent underline">
+              Read the full privacy notes
+            </Link>
+            .
           </p>
         </Card>
         <ModelStatusPanel />
         <Card>
           <h2 className="font-serif text-xl">Delete everything</h2>
           <p className="mt-1 max-w-prose text-muted">
-            This permanently removes your account, uploaded files, extracted text, job descriptions and all analyses. It can't be undone, and reports you downloaded stay with you.
+            This permanently removes your account, uploaded files, extracted text, job descriptions
+            and all analyses. It can&apos;t be undone, and reports you downloaded stay with you.
           </p>
           <form onSubmit={deleteAccount} className="mt-4 max-w-sm space-y-3">
-            <TextField label="Your password" type="password" autoComplete="current-password" required value={password}
-              hint="We ask for it again before deleting anything." onChange={(e) => setPassword(e.target.value)} />
+            <TextField
+              label="Your password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              hint="We ask for it again before deleting anything."
+              onChange={(e) => setPassword(e.target.value)}
+            />
             <div aria-live="polite">{error && <Notice tone="bad">{error}</Notice>}</div>
-            <Button type="submit" variant="danger" disabled={password === ""} busy={busy}>Delete my account and data</Button>
+            <Button type="submit" variant="danger" disabled={password === ""} busy={busy}>
+              Delete my account and data
+            </Button>
           </form>
         </Card>
       </div>

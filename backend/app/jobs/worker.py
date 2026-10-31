@@ -8,6 +8,7 @@ re-reading the cancel flag, so cancellation and deletion can never interleave wi
 import signal
 import time
 import uuid
+from collections.abc import Callable
 
 from app.core.config import get_settings
 from app.core.errors import AppError
@@ -24,7 +25,7 @@ log = get_logger(__name__)
 _stop = False
 
 
-def _heartbeat(job: ClaimedJob):
+def _heartbeat(job: ClaimedJob) -> Callable[[], None]:
     lock_seconds = get_settings().job_lock_seconds
 
     def beat() -> None:
@@ -39,8 +40,11 @@ def _finish(job: ClaimedJob, kind: JobKind, result: object | None) -> None:
     with session_scope() as db:
         lock_user(db, job.user_id)
         row = queue.lock_job(db, job.id)
-        if row is None or row.status != "running" or row.attempts != job.attempts or (
-            row.locked_until is None or row.locked_until <= queue._now()
+        if (
+            row is None
+            or row.status != "running"
+            or row.attempts != job.attempts
+            or (row.locked_until is None or row.locked_until <= queue._now())
         ):
             return  # deleted meanwhile, or already settled by another attempt
         if row.cancel_requested:
@@ -56,8 +60,11 @@ def _fail_or_retry(job: ClaimedJob, kind: JobKind, code: str, *, retryable: bool
     with session_scope() as db:
         lock_user(db, job.user_id)
         row = queue.lock_job(db, job.id)
-        if row is None or row.status != "running" or row.attempts != job.attempts or (
-            row.locked_until is None or row.locked_until <= queue._now()
+        if (
+            row is None
+            or row.status != "running"
+            or row.attempts != job.attempts
+            or (row.locked_until is None or row.locked_until <= queue._now())
         ):
             return
         if row.cancel_requested:
@@ -75,7 +82,11 @@ def _execute(job: ClaimedJob, engine: Engine) -> None:
     try:
         with session_scope() as db:
             prepared = kind.prepare(db, job.target_id)
-        result = None if prepared is None else kind.compute(prepared, JobContext(engine, _heartbeat(job)))
+        result = (
+            None
+            if prepared is None
+            else kind.compute(prepared, JobContext(engine, _heartbeat(job)))
+        )
         _finish(job, kind, result)
     except Transient as exc:
         _fail_or_retry(job, kind, exc.code, retryable=True)

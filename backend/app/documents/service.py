@@ -5,6 +5,7 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -45,14 +46,25 @@ def ingest_upload(
         db.add(document)
         db.flush()
         version = ResumeVersion(
-            document_id=document.id, user_id=user_id, version_no=1, source="upload", status="processing",
-            storage_key=key, original_ext=upload.kind, sha256=hashlib.sha256(upload.data).hexdigest(),
+            document_id=document.id,
+            user_id=user_id,
+            version_no=1,
+            source="upload",
+            status="processing",
+            storage_key=key,
+            original_ext=upload.kind,
+            sha256=hashlib.sha256(upload.data).hexdigest(),
             size_bytes=len(upload.data),
         )
         db.add(version)
         db.flush()
-        queue.enqueue(db, user_id=user_id, kind="extract_resume", target_id=version.id,
-                      max_attempts=settings.job_max_attempts)
+        queue.enqueue(
+            db,
+            user_id=user_id,
+            kind="extract_resume",
+            target_id=version.id,
+            max_attempts=settings.job_max_attempts,
+        )
         db.commit()
         return document, version
     except Exception:
@@ -69,8 +81,8 @@ class ExtractionWork:
 
 @dataclass(frozen=True)
 class ExtractionOutcome:
-    normalized: dict | None
-    parseability: dict | None
+    normalized: dict[str, Any] | None
+    parseability: dict[str, Any] | None
     error_code: str | None
 
 
@@ -90,7 +102,9 @@ def compute_extraction(work: ExtractionWork, _: JobContext) -> ExtractionOutcome
             raise Transient(exc.code) from exc
         return ExtractionOutcome(None, None, exc.code)
     if not raw.lines:
-        return ExtractionOutcome(None, None, "no_extractable_text")  # scanned/image-only: never invent text
+        return ExtractionOutcome(
+            None, None, "no_extractable_text"
+        )  # scanned/image-only: never invent text
     document = normalize(raw.lines, raw.page_count)
     parse = assess([line.text for line in raw.lines], document)
     return ExtractionOutcome(document.model_dump(mode="json"), parse.model_dump(mode="json"), None)
@@ -121,7 +135,9 @@ def fail_extraction(db: Session, version_id: uuid.UUID, code: str) -> None:
 
 def get_document(db: Session, user_id: uuid.UUID, document_id: uuid.UUID) -> ResumeDocument:
     document = db.execute(
-        select(ResumeDocument).where(ResumeDocument.id == document_id, ResumeDocument.user_id == user_id)
+        select(ResumeDocument).where(
+            ResumeDocument.id == document_id, ResumeDocument.user_id == user_id
+        )
     ).scalar_one_or_none()
     if document is None:
         raise NotFound("Résumé not found.")
@@ -131,9 +147,14 @@ def get_document(db: Session, user_id: uuid.UUID, document_id: uuid.UUID) -> Res
 def get_version(
     db: Session, user_id: uuid.UUID, document_id: uuid.UUID, version_no: int | None = None
 ) -> ResumeVersion:
-    query = select(ResumeVersion).where(ResumeVersion.document_id == document_id, ResumeVersion.user_id == user_id)
-    query = query.where(ResumeVersion.version_no == version_no) if version_no else query.order_by(
-        ResumeVersion.version_no.desc()).limit(1)
+    query = select(ResumeVersion).where(
+        ResumeVersion.document_id == document_id, ResumeVersion.user_id == user_id
+    )
+    query = (
+        query.where(ResumeVersion.version_no == version_no)
+        if version_no
+        else query.order_by(ResumeVersion.version_no.desc()).limit(1)
+    )
     version = db.execute(query).scalar_one_or_none()
     if version is None:
         raise NotFound("Résumé version not found.")
@@ -142,7 +163,9 @@ def get_version(
 
 def get_version_by_id(db: Session, user_id: uuid.UUID, version_id: uuid.UUID) -> ResumeVersion:
     version = db.execute(
-        select(ResumeVersion).where(ResumeVersion.id == version_id, ResumeVersion.user_id == user_id)
+        select(ResumeVersion).where(
+            ResumeVersion.id == version_id, ResumeVersion.user_id == user_id
+        )
     ).scalar_one_or_none()
     if version is None:
         raise NotFound("Résumé version not found.")
@@ -151,7 +174,9 @@ def get_version_by_id(db: Session, user_id: uuid.UUID, version_id: uuid.UUID) ->
 
 def latest_version_no(db: Session, document_id: uuid.UUID) -> int:
     return db.execute(
-        select(func.coalesce(func.max(ResumeVersion.version_no), 0)).where(ResumeVersion.document_id == document_id)
+        select(func.coalesce(func.max(ResumeVersion.version_no), 0)).where(
+            ResumeVersion.document_id == document_id
+        )
     ).scalar_one()
 
 
@@ -169,16 +194,24 @@ def create_corrected_version(
     edited blocks and parseability is re-assessed; nothing derived is carried over stale.
     """
     if base.status != "ready" or base.normalized is None:
-        raise ValidationFailed("Only a successfully read résumé can be corrected.", code="version_not_ready")
+        raise ValidationFailed(
+            "Only a successfully read résumé can be corrected.", code="version_not_ready"
+        )
     document = NormalizedDocument.model_validate(base.normalized)
     edited = derive_structure(_apply_corrections(document, block_edits, contact), date.today())
     parse = assess([b.text for b in edited.blocks], edited)
 
     current = lock_and_check_latest(
-        db, ResumeDocument, document_id, lambda: latest_version_no(db, document_id), base.version_no)
+        db, ResumeDocument, document_id, lambda: latest_version_no(db, document_id), base.version_no
+    )
     version = ResumeVersion(
-        document_id=document_id, user_id=user_id, version_no=current + 1, source="user_correction", status="ready",
-        original_ext=base.original_ext, normalized=edited.model_dump(mode="json"),
+        document_id=document_id,
+        user_id=user_id,
+        version_no=current + 1,
+        source="user_correction",
+        status="ready",
+        original_ext=base.original_ext,
+        normalized=edited.model_dump(mode="json"),
         parseability=parse.model_dump(mode="json"),
     )
     db.add(version)
@@ -192,8 +225,11 @@ def _apply_corrections(
     known = {b.id for b in document.blocks}
     unknown = sorted(set(block_edits) - known)
     if unknown:
-        raise ValidationFailed("Some blocks do not exist in this version.", code="unknown_block",
-                               details={"block_ids": unknown[:10]})
+        raise ValidationFailed(
+            "Some blocks do not exist in this version.",
+            code="unknown_block",
+            details={"block_ids": unknown[:10]},
+        )
     blocks: list[Block] = []
     for block in document.blocks:
         if block.id in block_edits:
@@ -203,12 +239,16 @@ def _apply_corrections(
             block = block.model_copy(update={"text": text[:4000]})
         blocks.append(block)
 
-    fields = {}
+    fields: dict[str, ContactField] = {}
     for key in ("name", "email", "phone"):
         if key not in contact:
             continue
         value = (contact[key] or "").strip()[:200] or None
         if key == "email" and value and not _EMAIL_RE.match(value):
             raise ValidationFailed("Enter a valid email address.", code="invalid_email")
-        fields[key] = ContactField(value=value, confidence="high", block_id=getattr(document.contact, key).block_id)
-    return document.model_copy(update={"blocks": blocks, "contact": document.contact.model_copy(update=fields)})
+        fields[key] = ContactField(
+            value=value, confidence="high", block_id=getattr(document.contact, key).block_id
+        )
+    return document.model_copy(
+        update={"blocks": blocks, "contact": document.contact.model_copy(update=fields)}
+    )

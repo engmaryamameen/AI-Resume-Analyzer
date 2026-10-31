@@ -14,7 +14,9 @@ class Term:
     implies: tuple[str, ...] = ()
     case_sensitive: bool = False
     ambiguous: bool = False
-    pattern: re.Pattern[str] = field(default=None, compare=False, repr=False)  # type: ignore[assignment]
+    pattern: re.Pattern[str] = field(
+        default_factory=lambda: re.compile(r"(?!x)x"), compare=False, repr=False
+    )
 
 
 @dataclass(frozen=True)
@@ -38,9 +40,17 @@ class Taxonomy:
         delimited list, or right after a word like "with"/"in"/"using", which avoids matching "Plan R",
         "R&D" or "Go to market".
         """
-        hits = [TermHit(term.id, m.start(), m.end()) for term in self.terms.values() for m in term.pattern.finditer(text)]
+        hits = [
+            TermHit(term.id, m.start(), m.end())
+            for term in self.terms.values()
+            for m in term.pattern.finditer(text)
+        ]
         if not (trusted_context or _looks_like_list(text)):
-            hits = [h for h in hits if not self.terms[h.term_id].ambiguous or _after_skill_preposition(text, h.start)]
+            hits = [
+                h
+                for h in hits
+                if not self.terms[h.term_id].ambiguous or _after_skill_preposition(text, h.start)
+            ]
         return _drop_overlaps(hits)
 
     def normalise_surface(self, surface: str) -> str | None:
@@ -109,11 +119,18 @@ def get_taxonomy() -> Taxonomy:
     for t in raw["terms"]:
         cs = bool(t.get("case_sensitive"))
         forms = [t["name"], *t.get("aliases", [])]
-        terms.append(Term(
-            id=t["id"], name=t["name"], category=t["category"], aliases=tuple(t.get("aliases", [])),
-            implies=tuple(t.get("implies", [])), case_sensitive=cs,
-            ambiguous=bool(t.get("ambiguous")), pattern=_compile(forms, cs),
-        ))
+        terms.append(
+            Term(
+                id=t["id"],
+                name=t["name"],
+                category=t["category"],
+                aliases=tuple(t.get("aliases", [])),
+                implies=tuple(t.get("implies", [])),
+                case_sensitive=cs,
+                ambiguous=bool(t.get("ambiguous")),
+                pattern=_compile(forms, cs),
+            )
+        )
     ids = {t.id for t in terms}
     for t in terms:
         missing = set(t.implies) - ids

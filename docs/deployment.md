@@ -3,9 +3,8 @@
 How the models run in production, what they need, how to configure and operate the system, and what
 happens when something is missing or goes wrong.
 
-**Status.** Nothing here has been deployed, load-tested or benchmarked. Sizes are estimates from published
-parameter counts, and no user or throughput figure is claimed. The checks that must be done on a real
-installation are listed at the end.
+The baseline runs without model weights. Public deployment still requires operator configuration,
+restoration checks and capacity measurements on the target infrastructure.
 
 ## Processes
 
@@ -13,7 +12,7 @@ installation are listed at the end.
 | --- | --- | --- |
 | API | `uvicorn app.api.main:app --app-dir backend` | stateless; never loads a model. Needs no `ml` extra |
 | Worker | `python -m app.jobs.worker` (from `backend/`) | the only process that runs models and extraction; one job at a time per process |
-| Web | `next start` (from `frontend/`) | stateless; proxies `/api/v1` to the API |
+| Web | `npm start` (from `frontend/`) | stateless; proxies `/api/v1` to the API |
 | PostgreSQL | managed or self-hosted | single primary; also holds the job queue |
 
 Inference is a logical module inside the worker, not a separate service. Run more worker processes for
@@ -21,7 +20,7 @@ more concurrent jobs; each one holds its own copy of the models in memory.
 
 ## Offline operation
 
-- The application never downloads anything. The Hugging Face libraries are forced offline and every load
+- The runtime never downloads anything; the explicit model-setup command downloads pinned artifacts. The Hugging Face libraries are forced offline and every load
   uses local files only.
 - A fresh clone, an installed environment and a populated `models/` directory are enough to run with no
   outbound network (the worker still needs PostgreSQL).
@@ -29,7 +28,12 @@ more concurrent jobs; each one holds its own copy of the models in memory.
 
 ## Models at runtime
 
-Loading (`app/ml/local.py`, `app/ml/artifacts.py`):
+The default semantic profile uses `app/ml/semantic.py`; provision it as described in
+[quickstart](quickstart.md). It loads two checksum-verified pretrained models, uses deterministic
+entity/date checks, and never exposes uncalibrated NLI scores. Compose builds a CPU-only ML worker
+with a 3 GB limit. Retrieval inputs are capped at 256 tokens and verification at 384.
+
+The separate experimental three-model profile (`app/ml/local.py`, `app/ml/artifacts.py`):
 
 1. The worker reads `models/manifest.json`. If it is missing or invalid, or `ML_ENABLED=false`, the worker
    runs the rule-based reading and records why.
@@ -51,14 +55,14 @@ Inference is bounded:
 - out-of-memory conditions are caught and reported as "engine unavailable".
 
 On budget expiry or an engine failure the whole analysis is redone with the rules engine and says so
-(`engine.notes`, a warning, and a metric). It is never a mixture.
+(`engine.notes`, a warning, and a metric). The fallback does not retain partial neural results. The normal semantic profile is explicitly a hybrid of neural retrieval/verification and deterministic extraction.
 
 ### CPU and GPU
 
 | | CPU (default) | GPU (`ML_DEVICE=cuda`) |
 | --- | --- | --- |
-| Needed | none beyond the `ml` extra | a CUDA-enabled PyTorch build and a CUDA device; the worker refuses to start the learned engine if none is available |
-| Memory (estimate) | about 1.5–2 GB per worker | the same weights plus activations; a few GB of VRAM is enough |
+| Needed | pinned `backend/requirements-ml.lock` runtime | a CUDA-enabled PyTorch build and a CUDA device; the worker refuses to start the learned engine if none is available |
+| Memory (estimate) | reserve 3 GB per worker; measure with your documents | the same weights plus activations; a few GB of VRAM is enough |
 | Tuning | `ML_THREADS`, `ML_BATCH_SIZE` | `ML_BATCH_SIZE` |
 | Use when | most deployments; a résumé is a few dozen short passages | high volume, or if the CPU budget is not met |
 
@@ -117,7 +121,7 @@ They do **not** restrict which files it can read, network access or system calls
 - run as an unprivileged user, with a seccomp profile and all capabilities dropped;
 - mount `models/` read-only.
 
-Without that isolation the sandbox only protects against denial of service, not against a compromised
+Without that isolation the child process only protects against denial of service, not against a compromised
 parser reaching the worker's data. Verify the container configuration before exposing the service.
 
 ## Database
@@ -170,17 +174,14 @@ shared storage, or `BlobStore` needs an object-storage implementation (not writt
 3. Set production secrets, TLS, proxies, the worker container and database roles as above.
 4. Decide the real retention period and write backup retention that matches the privacy page.
 
-### Checks that need an authorised environment
+### Release checks
 
-Nothing below has been done:
+Run the checks in [testing.md](testing.md), then verify on the target infrastructure:
 
-- install dependencies from reviewed lockfiles; run `pytest` (unit, then the integration tests against a
-  disposable PostgreSQL), `ruff`, `mypy`, the frontend `typecheck`, `lint`, unit tests and e2e;
-- run `alembic upgrade head`, the downgrade, and the migration-drift test;
-- run the ML workflow in [TRAINING_AND_EVALUATION.md](TRAINING_AND_EVALUATION.md) on real, lawfully
-  obtained data, and `ml.bench` on the target hardware;
-- start the worker with and without approved models and confirm the mode each analysis records;
-- test the worker container isolation (no network, read-only filesystem, no secrets) with a hostile
-  PDF/DOCX corpus, and test the extractor limits;
-- confirm the revisions in `models/manifest.json` against the model repositories;
-- generate a dependency licence inventory and run a vulnerability audit on the resolved lockfiles.
+- migrations and restoration from an encrypted backup;
+- HTTPS, allowed origins, proxy address handling and restricted database roles;
+- worker filesystem permissions, dropped capabilities and blocked external egress;
+- queue recovery after a worker restart and deletion while work is in flight;
+- retention scheduling, storage capacity, latency and queue depth under expected load.
+
+Learned-model approval additionally requires the evaluation in [local-models.md](local-models.md).

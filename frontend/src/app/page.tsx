@@ -1,61 +1,97 @@
+import Link from "next/link";
+import { GuestAnalyzer } from "@/components/guest-analyzer";
+import { Icon } from "@/components/icon";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
-import { ButtonLink, Card } from "@/components/ui";
 
 const steps = [
-  { title: "Bring a résumé and a job", body: "Upload a PDF or Word file and paste the job description. Or skip both and use the sample documents." },
-  { title: "See what each requirement rests on", body: "For every requirement you see the exact line of your résumé that backs it up, or a plain statement that nothing does." },
-  { title: "Fix it honestly", body: "Suggestions point at your own words. Anything that needs new facts is a blank for you to fill in with true details." },
+  {
+    icon: "document" as const,
+    title: "Bring your experience.",
+    text: "Upload the résumé you already have. A PDF or Word document works.",
+  },
+  {
+    icon: "briefcase" as const,
+    title: "Give it a direction.",
+    text: "Add the job description for a role you want to explore.",
+  },
+  {
+    icon: "search" as const,
+    title: "Find your next useful edit.",
+    text: "See the evidence, spot the gaps, and decide what to clarify.",
+  },
 ];
-
-const promises = [
-  ["Mentioned isn't the same as shown", "A skill sitting in a list is treated differently from a bullet that describes using it, and \"no experience with Go\" is not read as Go."],
-  ["Nothing invented", "Nothing is added to your résumé. Suggestions quote what you wrote and leave blanks for you."],
-  ["No mystery score", "There is no overall number. You get descriptive readings, each with how it was worked out and where it falls short."],
-  ["Your data stays on this server", "Analysis runs on models stored on the same machine. No document or text is sent to an outside AI service. Delete a résumé, or your whole account, whenever you like."],
-];
-
 export default function Landing() {
   return (
     <>
       <SiteHeader />
-      <main id="main">
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-          <p className="text-sm font-medium uppercase tracking-wide text-accent">Résumé feedback with receipts</p>
-          <h1 className="mt-3 max-w-3xl font-serif text-4xl leading-tight sm:text-6xl">
-            Find out what your résumé actually proves.
-          </h1>
-          <p className="mt-5 max-w-prose text-lg text-muted">
-            Most résumé checkers count keywords. Margin Notes looks for the evidence behind them, so you can see what's solid,
-            what's only claimed, and what's missing for the job in front of you.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/demo">Try it with sample résumés</ButtonLink>
-            <ButtonLink href="/register" variant="secondary">Create an account</ButtonLink>
+      <main id="main" className="rolemark-home">
+        <GuestAnalyzer />
+        <section id="how-it-works" className="how-section" aria-labelledby="how-title">
+          <div className="how-heading">
+            <span className="micro-label">A LITTLE DIRECTION GOES A LONG WAY</span>
+            <h2 id="how-title">
+              Less second-guessing.
+              <br /> <em>More moving forward.</em>
+            </h2>
           </div>
-          <p className="mt-3 text-sm text-muted">The demo needs no account and no upload, and stores nothing.</p>
-        </section>
-
-        <section aria-labelledby="how" className="border-y border-line bg-surface">
-          <div className="mx-auto max-w-6xl px-4 py-14">
-            <h2 id="how" className="font-serif text-3xl">How it works</h2>
-            <ol className="mt-8 grid gap-6 md:grid-cols-3">
-              {steps.map((s, i) => (
-                <li key={s.title}>
-                  <span className="font-serif text-4xl text-accent" aria-hidden>{i + 1}</span>
-                  <h3 className="mt-2 font-medium">{s.title}</h3>
-                  <p className="mt-1 text-muted">{s.body}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section aria-labelledby="promises" className="mx-auto max-w-6xl px-4 py-14">
-          <h2 id="promises" className="font-serif text-3xl">What we won't do</h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {promises.map(([t, b]) => (
-              <Card key={t} as="div"><h3 className="font-medium">{t}</h3><p className="mt-1 text-muted">{b}</p></Card>
+          <ol className="how-steps">
+            {steps.map((step, i) => (
+              <li key={step.title}>
+                <div className="how-step-top">
+                  <span>0{i + 1}</span>
+                  <Icon name={step.icon} size={21} />
+                </div>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </li>
             ))}
+          </ol>
+        </section>
+        <section className="questions-section" aria-labelledby="questions-title">
+          <div>
+            <span className="micro-label">GOOD TO KNOW</span>
+            <h2 id="questions-title">
+              A few details.
+              <br /> Then you’re on your way.
+            </h2>
+            <Link href="/privacy">
+              Read our privacy approach <Icon name="arrowUpRight" size={15} />
+            </Link>
+          </div>
+          <div className="questions-list">
+            <details>
+              <summary>
+                Can I try it without an account?
+                <Icon name="plus" size={18} />
+              </summary>
+              <p>
+                Yes. One résumé review is free per network every 24 hours. Create a free account for
+                additional reviews and version history. Failed processing restores your allowance.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Where does my résumé go?
+                <Icon name="plus" size={18} />
+              </summary>
+              <p>
+                Your document is processed on this server, without an outside AI service. Guest
+                report access expires after 24 hours, and scheduled cleanup removes temporary
+                documents. You can delete yours sooner.
+              </p>
+            </details>
+            <details>
+              <summary>
+                What does the feedback actually tell me?
+                <Icon name="plus" size={18} />
+              </summary>
+              <p>
+                It compares your résumé’s wording with the role’s requirements and shows the
+                passages behind each finding. It cannot verify qualifications or predict an
+                interview. The current reader uses local, deterministic rules and makes its limits
+                visible.
+              </p>
+            </details>
           </div>
         </section>
       </main>

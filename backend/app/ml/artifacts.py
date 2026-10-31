@@ -1,13 +1,4 @@
-"""Verification of model files before they are loaded.
-
-Rules, all enforced before any weight is read:
-  * the entry must be approved by a person;
-  * every file must be listed in the manifest with its SHA-256, and nothing unlisted may sit in the
-    directory (so a planted file cannot be picked up);
-  * weights must be `.safetensors`; formats that deserialise with pickle are refused outright, because
-    unpickling an untrusted file executes code;
-  * configs must not use `auto_map`, which would make the loader import code shipped with the model.
-"""
+"""Verify approval, complete checksums and safe model formats before loading weights."""
 
 import hashlib
 import json
@@ -15,7 +6,19 @@ from pathlib import Path
 
 from app.ml.manifest import ArtifactError, Manifest, ModelEntry
 
-_FORBIDDEN_SUFFIXES = {".bin", ".pt", ".pth", ".pkl", ".pickle", ".ckpt", ".joblib", ".npy", ".npz", ".msgpack", ".h5"}
+_FORBIDDEN_SUFFIXES = {
+    ".bin",
+    ".pt",
+    ".pth",
+    ".pkl",
+    ".pickle",
+    ".ckpt",
+    ".joblib",
+    ".npy",
+    ".npz",
+    ".msgpack",
+    ".h5",
+}
 _CHUNK = 1024 * 1024
 
 
@@ -39,7 +42,9 @@ def entry_problems(model_dir: Path, entry: ModelEntry) -> list[str]:
     for item in entry.files:
         suffix = Path(item.path).suffix.lower()
         if suffix in _FORBIDDEN_SUFFIXES:
-            problems.append(f"{entry.id}: {item.path} uses a format that can execute code when loaded")
+            problems.append(
+                f"{entry.id}: {item.path} uses a format that can execute code when loaded"
+            )
             continue
         path = directory / item.path
         if path.is_symlink() or not path.resolve().is_relative_to(directory.resolve()):
@@ -58,7 +63,9 @@ def entry_problems(model_dir: Path, entry: ModelEntry) -> list[str]:
     if config.is_symlink():
         problems.append(f"{entry.id}: config symlink forbidden")
     elif config.is_file() and "auto_map" in json.loads(config.read_text(encoding="utf-8")):
-        problems.append(f"{entry.id}: config.json declares auto_map (custom code), which is not allowed")
+        problems.append(
+            f"{entry.id}: config.json declares auto_map (custom code), which is not allowed"
+        )
     if not any(Path(f.path).suffix == ".safetensors" for f in entry.files):
         problems.append(f"{entry.id}: no .safetensors weights listed")
     return problems

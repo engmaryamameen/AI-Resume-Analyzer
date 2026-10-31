@@ -36,7 +36,9 @@ def current_principal(
     user, session = found
     if request.method not in _SAFE_METHODS:
         supplied = request.headers.get(CSRF_HEADER, "")
-        if not supplied or not constant_time_equal(hash_token(supplied, settings.secret_key), session.csrf_hash):
+        if not supplied or not constant_time_equal(
+            hash_token(supplied, settings.secret_key), session.csrf_hash
+        ):
             raise Forbidden("Missing or invalid CSRF token.", code="csrf_failed")
     limiter.check(f"user:{user.id}", settings.rate_limit_per_minute)
     return Principal(user=user, session=session)

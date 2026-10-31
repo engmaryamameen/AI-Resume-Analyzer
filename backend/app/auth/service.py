@@ -15,7 +15,8 @@ from app.core.security import (
     password_policy_violation,
     verify_password,
 )
-from app.db.models import AuditEvent, Session as AuthSession, User
+from app.db.models import AuditEvent, User
+from app.db.models import Session as AuthSession
 
 
 def register(db: Session, email: str, password: str, request_id: str | None) -> User:
@@ -34,8 +35,15 @@ def register(db: Session, email: str, password: str, request_id: str | None) -> 
     except IntegrityError as exc:
         db.rollback()
         raise Conflict("An account with this email already exists.", code="email_taken") from exc
-    db.add(AuditEvent(user_id=user.id, action="account.registered", target_type="user",
-                      target_id=str(user.id), request_id=request_id))
+    db.add(
+        AuditEvent(
+            user_id=user.id,
+            action="account.registered",
+            target_type="user",
+            target_id=str(user.id),
+            request_id=request_id,
+        )
+    )
     db.commit()
     return user
 
@@ -46,9 +54,15 @@ def authenticate(db: Session, email: str, password: str, request_id: str | None)
     except ValueError:
         normalised = ""
     user = db.execute(select(User).where(User.email == normalised)).scalar_one_or_none()
-    ok = verify_password(password, user.password_hash if user else None)  # same work for unknown accounts
+    ok = verify_password(
+        password, user.password_hash if user else None
+    )  # same work for unknown accounts
     if not ok or user is None:
-        db.add(AuditEvent(user_id=user.id if user else None, action="login.failed", request_id=request_id))
+        db.add(
+            AuditEvent(
+                user_id=user.id if user else None, action="login.failed", request_id=request_id
+            )
+        )
         db.commit()
         raise Unauthenticated("Email or password is incorrect.", code="invalid_credentials")
     if needs_rehash(user.password_hash):
@@ -67,11 +81,17 @@ def create_session(db: Session, settings: Settings, user: User) -> tuple[str, st
     """Returns (session_token, csrf_token). Only keyed hashes are stored."""
     token, csrf = new_token(), new_token()
     now = datetime.now(UTC)
-    db.execute(delete(AuthSession).where(AuthSession.user_id == user.id, AuthSession.expires_at < now))
-    db.add(AuthSession(
-        user_id=user.id, token_hash=hash_token(token, settings.secret_key),
-        csrf_hash=hash_token(csrf, settings.secret_key),
-        expires_at=now + timedelta(hours=settings.session_ttl_hours)))
+    db.execute(
+        delete(AuthSession).where(AuthSession.user_id == user.id, AuthSession.expires_at < now)
+    )
+    db.add(
+        AuthSession(
+            user_id=user.id,
+            token_hash=hash_token(token, settings.secret_key),
+            csrf_hash=hash_token(csrf, settings.secret_key),
+            expires_at=now + timedelta(hours=settings.session_ttl_hours),
+        )
+    )
     db.add(AuditEvent(user_id=user.id, action="login.succeeded"))
     db.commit()
     return token, csrf
@@ -79,14 +99,21 @@ def create_session(db: Session, settings: Settings, user: User) -> tuple[str, st
 
 def revoke_session(db: Session, settings: Settings, token: str | None) -> None:
     if token:
-        db.execute(delete(AuthSession).where(AuthSession.token_hash == hash_token(token, settings.secret_key)))
+        db.execute(
+            delete(AuthSession).where(
+                AuthSession.token_hash == hash_token(token, settings.secret_key)
+            )
+        )
         db.commit()
 
 
 def lookup_session(db: Session, settings: Settings, token: str) -> tuple[User, AuthSession] | None:
     row = db.execute(
-        select(User, AuthSession).join(AuthSession, AuthSession.user_id == User.id).where(
+        select(User, AuthSession)
+        .join(AuthSession, AuthSession.user_id == User.id)
+        .where(
             AuthSession.token_hash == hash_token(token, settings.secret_key),
-            AuthSession.expires_at > datetime.now(UTC))
+            AuthSession.expires_at > datetime.now(UTC),
+        )
     ).first()
     return (row[0], row[1]) if row else None

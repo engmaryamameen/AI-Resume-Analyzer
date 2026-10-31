@@ -4,6 +4,7 @@ import hashlib
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,8 +28,12 @@ _ACTIVE = ("queued", "running")
 
 
 def create_analysis(
-    db: Session, settings: Settings, user_id: uuid.UUID, resume_version_id: uuid.UUID,
-    jd_version_id: uuid.UUID, idempotency_key: str | None,
+    db: Session,
+    settings: Settings,
+    user_id: uuid.UUID,
+    resume_version_id: uuid.UUID,
+    jd_version_id: uuid.UUID,
+    idempotency_key: str | None,
 ) -> AnalysisRun:
     resume = get_resume_version_by_id(db, user_id, resume_version_id)
     job = get_jd_version_by_id(db, user_id, jd_version_id)
@@ -44,23 +49,38 @@ def create_analysis(
             db.rollback()
             return get_run(db, user_id, existing)
 
-    run = AnalysisRun(id=run_id, user_id=user_id, resume_version_id=resume.id, jd_version_id=job.id,
-                      status="queued", pipeline_version=PIPELINE_VERSION)
+    run = AnalysisRun(
+        id=run_id,
+        user_id=user_id,
+        resume_version_id=resume.id,
+        jd_version_id=job.id,
+        status="queued",
+        pipeline_version=PIPELINE_VERSION,
+    )
     db.add(run)
     db.flush()
-    queue.enqueue(db, user_id=user_id, kind="run_analysis", target_id=run.id, max_attempts=settings.job_max_attempts)
+    queue.enqueue(
+        db,
+        user_id=user_id,
+        kind="run_analysis",
+        target_id=run.id,
+        max_attempts=settings.job_max_attempts,
+    )
     db.commit()
     return run
 
 
 def get_run(db: Session, user_id: uuid.UUID, run_id: uuid.UUID) -> AnalysisRun:
-    run = db.execute(select(AnalysisRun).where(AnalysisRun.id == run_id, AnalysisRun.user_id == user_id)).scalar_one_or_none()
+    run = db.execute(
+        select(AnalysisRun).where(AnalysisRun.id == run_id, AnalysisRun.user_id == user_id)
+    ).scalar_one_or_none()
     if run is None:
         raise NotFound("Analysis not found.")
     return run
 
 
 # ---- job handlers (registered in app.jobs.handlers) -------------------------------------------------
+
 
 @dataclass(frozen=True)
 class AnalysisWork:
@@ -84,39 +104,71 @@ def prepare_analysis(db: Session, run_id: uuid.UUID) -> AnalysisWork | None:
     resume = db.get(ResumeVersion, run.resume_version_id)
     job = db.get(JobDescriptionVersion, run.jd_version_id)
     if resume is None or job is None or resume.normalized is None or resume.parseability is None:
-        raise ValidationFailed("The inputs of this analysis are no longer available.", code="inputs_unavailable")
+        raise ValidationFailed(
+            "The inputs of this analysis are no longer available.", code="inputs_unavailable"
+        )
     run.status = "running"
     rows = list(job.requirements)
     return AnalysisWork(
         document=NormalizedDocument.model_validate(resume.normalized),
         parseability=Parseability.model_validate(resume.parseability),
-        requirements=[RequirementDraft(
-            ordinal=r.ordinal, text=r.text_, kind=r.kind, category=r.category, origin=r.origin,  # type: ignore[arg-type]
-            terms=list(r.terms), min_years=r.min_years, source_span=r.source_span) for r in rows],
-        requirement_ids={r.ordinal: r.id for r in rows})
+        requirements=[
+            RequirementDraft(
+                ordinal=r.ordinal,
+                text=r.text_,
+                kind=r.kind,
+                category=r.category,
+                origin=r.origin,
+                terms=list(r.terms),
+                min_years=r.min_years,
+                source_span=r.source_span,
+            )
+            for r in rows
+        ],
+        requirement_ids={r.ordinal: r.id for r in rows},
+    )
 
 
 def compute_analysis(work: AnalysisWork, ctx: JobContext) -> AnalysisOutcome:
     settings = get_settings()
     started = datetime.now(UTC)
-    result = analyze(work.document, work.parseability, work.requirements, ctx.engine,
-                     lambda: Budget(settings.ml_max_seconds, ctx.heartbeat))
-    return AnalysisOutcome(result, work.requirement_ids, (datetime.now(UTC) - started).total_seconds())
+    result = analyze(
+        work.document,
+        work.parseability,
+        work.requirements,
+        ctx.engine,
+        lambda: Budget(settings.ml_max_seconds, ctx.heartbeat),
+    )
+    return AnalysisOutcome(
+        result, work.requirement_ids, (datetime.now(UTC) - started).total_seconds()
+    )
 
 
 def commit_analysis(db: Session, run_id: uuid.UUID, outcome: AnalysisOutcome) -> None:
-    run = db.execute(select(AnalysisRun).where(AnalysisRun.id == run_id).with_for_update()).scalar_one_or_none()
+    run = db.execute(
+        select(AnalysisRun).where(AnalysisRun.id == run_id).with_for_update()
+    ).scalar_one_or_none()
     if run is None or run.status not in _ACTIVE:
         return
     result = outcome.result
     for match in result.matches:
-        db.add(RequirementMatch(
-            run_id=run.id, requirement_id=outcome.requirement_ids[match.ordinal], status=match.status,
-            probability=match.probability, conflict=match.conflict, reasons=match.reasons,
-            evidence=[e.model_dump(mode="json") for e in match.evidence], explanation=match.explanation))
+        db.add(
+            RequirementMatch(
+                run_id=run.id,
+                requirement_id=outcome.requirement_ids[match.ordinal],
+                status=match.status,
+                probability=match.probability,
+                conflict=match.conflict,
+                reasons=match.reasons,
+                evidence=[e.model_dump(mode="json") for e in match.evidence],
+                explanation=match.explanation,
+            )
+        )
     run.assessments = [a.model_dump(mode="json") for a in result.assessments]
-    run.summary = {"recommendations": [r.model_dump(mode="json") for r in result.recommendations],
-                   "limitations": result.limitations}
+    run.summary = {
+        "recommendations": [r.model_dump(mode="json") for r in result.recommendations],
+        "limitations": result.limitations,
+    }
     run.warnings = [w.model_dump(mode="json") for w in result.warnings]
     run.engine = result.engine.model_dump(mode="json")
     run.extraction = [m.model_dump(mode="json") for m in result.mentions]
@@ -144,6 +196,7 @@ def mark_analysis_cancelled(db: Session, run_id: uuid.UUID) -> None:
 
 # ---- API operations ---------------------------------------------------------------------------------
 
+
 def cancel_analysis(db: Session, user_id: uuid.UUID, run_id: uuid.UUID) -> AnalysisRun:
     """Queued runs are cancelled at once; a running one is flagged and its worker discards its result."""
     lock_user(db, user_id)
@@ -156,21 +209,31 @@ def cancel_analysis(db: Session, user_id: uuid.UUID, run_id: uuid.UUID) -> Analy
     return run
 
 
-def staleness(db: Session, run: AnalysisRun, current_fingerprint: str) -> dict:
+def staleness(db: Session, run: AnalysisRun, current_fingerprint: str) -> dict[str, Any]:
     """A result is current only if it used the latest versions and the models that would be used today."""
     reasons: list[str] = []
     resume = db.get(ResumeVersion, run.resume_version_id)
     job = db.get(JobDescriptionVersion, run.jd_version_id)
     if resume is not None:
-        latest = db.execute(select(ResumeVersion.version_no).where(ResumeVersion.document_id == resume.document_id)
-                            .order_by(ResumeVersion.version_no.desc()).limit(1)).scalar_one()
+        latest = db.execute(
+            select(ResumeVersion.version_no)
+            .where(ResumeVersion.document_id == resume.document_id)
+            .order_by(ResumeVersion.version_no.desc())
+            .limit(1)
+        ).scalar_one()
         if latest != resume.version_no:
             reasons.append("resume_version_superseded")
     if job is not None:
-        latest = db.execute(select(JobDescriptionVersion.version_no).where(JobDescriptionVersion.job_id == job.job_id)
-                            .order_by(JobDescriptionVersion.version_no.desc()).limit(1)).scalar_one()
+        latest = db.execute(
+            select(JobDescriptionVersion.version_no)
+            .where(JobDescriptionVersion.job_id == job.job_id)
+            .order_by(JobDescriptionVersion.version_no.desc())
+            .limit(1)
+        ).scalar_one()
         if latest != job.version_no:
             reasons.append("job_description_version_superseded")
-    if run.status == "succeeded" and (run.pipeline_version != PIPELINE_VERSION or run.model_fingerprint != current_fingerprint):
+    if run.status == "succeeded" and (
+        run.pipeline_version != PIPELINE_VERSION or run.model_fingerprint != current_fingerprint
+    ):
         reasons.append("analysis_method_changed")
     return {"is_stale": bool(reasons), "reasons": reasons}

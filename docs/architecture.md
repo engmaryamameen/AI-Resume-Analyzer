@@ -2,7 +2,7 @@
 
 The shape of the system, the boundaries between its parts, and the rules that keep concurrent work
 consistent. The machine-learning pipeline has its own document:
-[LOCAL_ML_ARCHITECTURE.md](LOCAL_ML_ARCHITECTURE.md).
+[local-models.md](local-models.md).
 
 **Status.** Implemented and statically reviewed. It has not been run: no test, build, migration or server
 start has been executed, so read "does" as "is written to do".
@@ -28,7 +28,7 @@ flowchart LR
   first-party and no cross-site cookie settings are needed.
 - The API never loads models and never runs jobs. The worker owns text extraction and all inference.
 - The queue is a table in PostgreSQL (`FOR UPDATE SKIP LOCKED`). No Redis, Kafka or vector database:
-  nothing here needs one ([adr/0002-postgres-backed-queue.md](adr/0002-postgres-backed-queue.md)).
+  nothing here needs one ([job decision](decisions.md#postgresql-jobs)).
 - There is no network call to any AI service anywhere in the system.
 
 ## Modules
@@ -37,7 +37,7 @@ flowchart LR
 backend/app/
   api/         routers and request/response schemas; no business rules
   auth/        passwords (Argon2id), sessions, CSRF, current user
-  documents/   upload validation, sandboxed extraction, normalisation, versions, private storage
+  documents/   upload validation, resource-limited extraction, normalisation, versions, private storage
   analysis/    requirements, evidence building, summaries, recommendations, pipeline, analysis service
   ml/          contracts, decision table, calibration, manifest + artifact checks, rules and learned engines
   lang/        vocabulary (taxonomy) and small text utilities shared by rules and baselines
@@ -157,4 +157,11 @@ same key with a different request is a 409. Keys expire after 24 hours.
 
 ## Decisions
 
-Short records of the main decisions are in [adr/](adr/).
+Short records of the main decisions are in [decisions.md](decisions.md).
+
+## Interface
+
+The frontend uses locally bundled Inter and Source Serif 4, shared SVG icons and keyboard-operable
+controls. Reports start with a short editing plan; evidence and measurements use tabs and disclosures.
+The white public header and responsive hero keep the document workflow prominent. Motion respects
+reduced-motion preferences. Font licenses are retained under `frontend/public/fonts`.
