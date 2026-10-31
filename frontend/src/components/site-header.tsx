@@ -45,6 +45,30 @@ export function Brand({ compact = false }: { compact?: boolean }) {
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const navId = useId();
+  const drawer = useRef<HTMLDialogElement>(null);
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 800px)");
+    const update = () => {
+      setMobile(query.matches);
+      setOpen(false);
+    };
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!mobile || !open) {
+      drawer.current?.close();
+      return;
+    }
+    drawer.current?.showModal();
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobile, open]);
   const header = useRef<HTMLElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -60,9 +84,11 @@ export function SiteHeader() {
       if (event.key !== "Escape" || !header.current?.contains(document.activeElement)) return;
       const disclosure = header.current.querySelector<HTMLDetailsElement>("details[open]");
       if (disclosure) {
+        event.preventDefault();
         disclosure.open = false;
         disclosure.querySelector("summary")?.focus();
       } else if (open) {
+        event.preventDefault();
         setOpen(false);
         toggle.current?.focus();
       }
@@ -80,6 +106,50 @@ export function SiteHeader() {
       ?.querySelectorAll("details[open]")
       .forEach((item) => item.removeAttribute("open"));
   }
+  const navigation = (
+    <nav
+      id={navId}
+      aria-label="Main"
+      className="site-nav"
+      onClick={(event) => {
+        if ((event.target as Element).closest("a")) close();
+      }}
+    >
+      <Link href="/" className="site-nav-home">
+        Home
+      </Link>
+      <details className="site-nav-dropdown">
+        <summary>
+          Explore <Icon name="chevronDown" size={14} />
+        </summary>
+        <div className="site-dropdown-panel">
+          <Link href="/#how-it-works">
+            <Icon name="list" size={18} />
+            <span>
+              How it works<small>From résumé to your next useful edit</small>
+            </span>
+          </Link>
+          <Link href="/demo">
+            <Icon name="grid" size={18} />
+            <span>
+              View example<small>Explore a complete sample review</small>
+            </span>
+          </Link>
+          <Link href="/privacy">
+            <Icon name="shield" size={18} />
+            <span>
+              Privacy<small>Understand how your data is handled</small>
+            </span>
+          </Link>
+        </div>
+      </details>
+      <span className="site-nav-divider" aria-hidden="true" />
+      <Link href="/login">Sign in</Link>
+      <Link href="/#analyze" className="site-nav-cta">
+        Try it free <Icon name="arrowUpRight" size={16} />
+      </Link>
+    </nav>
+  );
   return (
     <header ref={header} className="site-topbar" data-menu-open={open || undefined}>
       <div className="site-topbar-inner">
@@ -88,55 +158,55 @@ export function SiteHeader() {
           ref={toggle}
           type="button"
           className="site-menu-toggle"
-          aria-label={open ? "Close navigation" : "Open navigation"}
+          aria-label="Open navigation"
           aria-expanded={open}
           aria-controls={navId}
           onClick={() => setOpen(!open)}
         >
-          <Icon name={open ? "x" : "menu"} size={21} />
+          <Icon name="menu" size={21} />
         </button>
-        <nav
-          id={navId}
-          aria-label="Main"
-          className="site-nav"
-          onClick={(event) => {
-            if ((event.target as Element).closest("a")) close();
-          }}
-        >
-          <Link href="/" className="site-nav-home">
-            Home
-          </Link>
-          <details className="site-nav-dropdown">
-            <summary>
-              Explore <Icon name="chevronDown" size={14} />
-            </summary>
-            <div className="site-dropdown-panel">
-              <Link href="/#how-it-works">
-                <Icon name="list" size={18} />
-                <span>
-                  How it works<small>From résumé to your next useful edit</small>
-                </span>
-              </Link>
-              <Link href="/demo">
-                <Icon name="grid" size={18} />
-                <span>
-                  View example<small>Explore a complete sample review</small>
-                </span>
-              </Link>
-              <Link href="/privacy">
-                <Icon name="shield" size={18} />
-                <span>
-                  Privacy<small>Understand how your data is handled</small>
-                </span>
-              </Link>
+        {mobile ? (
+          <dialog
+            ref={drawer}
+            className="site-mobile-drawer"
+            aria-label="Navigation"
+            onCancel={() => setOpen(false)}
+            onClose={() => {
+              setOpen(false);
+              toggle.current?.focus();
+            }}
+            onClick={(event) => {
+              if (event.target === event.currentTarget) close();
+            }}
+          >
+            <div className="site-drawer-content">
+              <div
+                className="site-drawer-heading"
+                onClick={(event) => {
+                  if ((event.target as Element).closest("a")) close();
+                }}
+              >
+                <Brand />
+                <button
+                  type="button"
+                  className="site-menu-toggle"
+                  aria-label="Close navigation"
+                  aria-expanded={open}
+                  onClick={close}
+                >
+                  <Icon name="x" size={20} />
+                </button>
+              </div>
+              <p className="site-drawer-label">YOUR NEXT CHAPTER</p>
+              {navigation}
+              <p className="site-drawer-note">
+                <Icon name="shield" size={16} /> Private reviews. Processed locally.
+              </p>
             </div>
-          </details>
-          <span className="site-nav-divider" aria-hidden="true" />
-          <Link href="/login">Sign in</Link>
-          <Link href="/#analyze" className="site-nav-cta">
-            Try it free <Icon name="arrowUpRight" size={16} />
-          </Link>
-        </nav>
+          </dialog>
+        ) : (
+          navigation
+        )}
       </div>
     </header>
   );

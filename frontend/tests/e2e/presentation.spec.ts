@@ -169,7 +169,14 @@ test("public navigation supports desktop disclosure and a keyboard-operable mobi
   await expect(explore).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("navigation", { name: "Main", exact: true })).toBeHidden();
+  const headingTop = (await page.locator("h1").boundingBox())?.y;
   await page.getByRole("button", { name: "Open navigation" }).click();
+  const drawer = page.getByRole("dialog", { name: "Navigation", exact: true });
+  await expect(drawer).toBeVisible();
+  const bounds = await drawer.boundingBox();
+  expect(bounds?.x).toBe(0);
+  expect(bounds?.width).toBeLessThan(390);
+  expect((await page.locator("h1").boundingBox())?.y).toBe(headingTop);
   await expect(page.getByRole("button", { name: "Close navigation" })).toHaveAttribute(
     "aria-expanded",
     "true",
@@ -190,6 +197,9 @@ test("public navigation supports desktop disclosure and a keyboard-operable mobi
   await explore.press("Escape");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Open navigation" })).toBeFocused();
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.mouse.click(380, 500);
+  await expect(drawer).toBeHidden();
   await page.getByRole("button", { name: "Open navigation" }).click();
   await explore.click();
   await page
