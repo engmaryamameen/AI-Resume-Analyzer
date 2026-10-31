@@ -9,11 +9,19 @@ def prf(tp: int, fp: int, fn: int) -> dict[str, float]:
     precision = tp / (tp + fp) if tp + fp else 0.0
     recall = tp / (tp + fn) if tp + fn else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-    return {"precision": precision, "recall": recall, "f1": f1, "tp": tp, "fp": fp, "fn": fn}
+    return {
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+    }
 
 
 def span_scores(
-    gold: Sequence[set[tuple[int, int, str]]], predicted: Sequence[set[tuple[int, int, str]]]
+    gold: Sequence[set[tuple[int, int, str]]],
+    predicted: Sequence[set[tuple[int, int, str]]],
 ) -> dict[str, dict[str, float]]:
     """Exact-match (start, end, type) precision/recall/F1, per entity type and micro-averaged."""
     counts: dict[str, list[int]] = defaultdict(lambda: [0, 0, 0])
@@ -30,7 +38,9 @@ def span_scores(
     return out
 
 
-def confusion(pairs: Sequence[tuple[Hashable, Hashable]], labels: Sequence[str]) -> dict[str, dict[str, int]]:
+def confusion(
+    pairs: Sequence[tuple[Hashable, Hashable]], labels: Sequence[str]
+) -> dict[str, dict[str, int]]:
     """Rows are gold labels, columns are predictions."""
     table = {g: {p: 0 for p in labels} for g in labels}
     for gold, predicted in pairs:
@@ -38,7 +48,9 @@ def confusion(pairs: Sequence[tuple[Hashable, Hashable]], labels: Sequence[str])
     return table
 
 
-def classification_report(pairs: Sequence[tuple[str, str]], labels: Sequence[str]) -> dict:
+def classification_report(
+    pairs: Sequence[tuple[str, str]], labels: Sequence[str]
+) -> dict:
     table = confusion(pairs, labels)
     per_class = {}
     for label in labels:
@@ -58,7 +70,9 @@ def classification_report(pairs: Sequence[tuple[str, str]], labels: Sequence[str
     }
 
 
-def retrieval_scores(ranked_relevance: Sequence[Sequence[bool]], ks: Sequence[int] = (1, 3)) -> dict[str, float]:
+def retrieval_scores(
+    ranked_relevance: Sequence[Sequence[bool]], ks: Sequence[int] = (1, 3)
+) -> dict[str, float]:
     """`ranked_relevance[i]` lists, best first, whether each retrieved passage is relevant.
 
     recall@k is the share of queries with at least one relevant passage in the top k; MRR is the mean
@@ -67,7 +81,10 @@ def retrieval_scores(ranked_relevance: Sequence[Sequence[bool]], ks: Sequence[in
     if not total:
         return {}
     out = {f"hit@{k}": sum(any(r[:k]) for r in ranked_relevance) / total for k in ks}
-    reciprocal = [next((1 / (i + 1) for i, hit in enumerate(r) if hit), 0.0) for r in ranked_relevance]
+    reciprocal = [
+        next((1 / (i + 1) for i, hit in enumerate(r) if hit), 0.0)
+        for r in ranked_relevance
+    ]
     out["mrr"] = sum(reciprocal) / total
     out["queries"] = total
     return out

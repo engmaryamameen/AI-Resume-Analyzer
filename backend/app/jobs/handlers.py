@@ -16,11 +16,24 @@ def _cancel_extraction(db: Session, version_id: uuid.UUID) -> None:
         version.status, version.error_code = "failed", "cancelled"
 
 
-register(JobKind(
-    name="extract_resume", prepare=documents.prepare_extraction, compute=documents.compute_extraction,
-    commit=documents.commit_extraction, on_failed=documents.fail_extraction, on_cancelled=_cancel_extraction))
+register(
+    JobKind(
+        name="extract_resume",
+        prepare=documents.prepare_extraction,
+        compute=documents.compute_extraction,
+        commit=documents.commit_extraction,
+        on_failed=documents.fail_extraction,
+        on_cancelled=_cancel_extraction,
+    )
+)
 
-register(JobKind(
-    name="run_analysis", prepare=analysis.prepare_analysis, compute=analysis.compute_analysis,
-    commit=analysis.commit_analysis, on_failed=analysis.mark_analysis_failed,
-    on_cancelled=analysis.mark_analysis_cancelled))
+register(
+    JobKind(
+        name="run_analysis",
+        prepare=analysis.prepare_analysis,
+        compute=analysis.compute_analysis,
+        commit=analysis.commit_analysis,
+        on_failed=analysis.mark_analysis_failed,
+        on_cancelled=analysis.mark_analysis_cancelled,
+    )
+)

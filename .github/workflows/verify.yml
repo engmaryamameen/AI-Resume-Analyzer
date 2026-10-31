@@ -1,0 +1,112 @@
+name: Verify application
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  full-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: resume
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: resume_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U resume -d resume_test'
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      APP_ENV: test
+      SECRET_KEY: ci-only-session-secret-01234567890123456789
+      DATABASE_URL: postgresql+psycopg://resume:test-only@localhost:5432/resume_app
+      TEST_DATABASE_URL: postgresql+psycopg://resume:test-only@localhost:5432/resume_test
+      STORAGE_DIR: /tmp/margin-notes-storage
+      ML_ENABLED: 'false'
+      RATE_LIMIT_AUTH_PER_MINUTE: '1000'
+      RATE_LIMIT_DEMO_PER_MINUTE: '1000'
+      BACKEND_URL: http://127.0.0.1:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -c backend/requirements-dev.lock -e 'backend[dev]'
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+      - run: ruff check backend/app ml && mypy --config-file backend/pyproject.toml backend/app
+      - run: pytest -q
+        working-directory: backend
+      - run: npm audit --omit=dev --audit-level=moderate && npm audit --audit-level=high
+        working-directory: frontend
+      - run: npm run format:check && npm run typecheck && npm run lint && npm test && npm run build
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Start application
+        run: |
+          PGPASSWORD=test-only createdb -h localhost -U resume resume_app
+          mkdir -p "$STORAGE_DIR"
+          alembic -c backend/alembic.ini upgrade head
+          python frontend/tests/e2e/fixtures/make_fixture.py
+          uvicorn app.api.main:app --app-dir backend --port 8000 > /tmp/api.log 2>&1 &
+          (cd backend && python -m app.jobs.worker) > /tmp/worker.log 2>&1 &
+          (cd frontend && npm start) > /tmp/web.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/ > /dev/null && curl -fsS http://localhost:8000/readyz > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/api.log /tmp/worker.log /tmp/web.log
+          exit 1
+      - run: npm run e2e -- --workers=1
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: failure-diagnostics
+          path: |
+            frontend/test-results
+            /tmp/api.log
+            /tmp/worker.log
+            /tmp/web.log
+
+  local-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: test
+      ML_ENABLED: 'true'
+      MODEL_DIR: ${{ github.workspace }}/models
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements-ml.lock
+      - run: pip install -r backend/requirements-ml.lock
+      - run: pip install -c backend/requirements.lock ./backend
+      - uses: actions/cache@v4
+        with:
+          path: |
+            models/semantic-retriever
+            models/semantic-verifier
+          key: semantic-${{ hashFiles('backend/app/ml/semantic-models.json') }}
+      - run: python -m app.ml.provision --models-dir models
+      - run: python -m app.ml.check
+        env:
+          HF_HUB_OFFLINE: '1'
+          TRANSFORMERS_OFFLINE: '1'

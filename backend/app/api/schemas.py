@@ -2,18 +2,24 @@
 
 import uuid
 from datetime import datetime
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.analysis.job_descriptions import RequirementInput
-from app.analysis.schema import AnalysisWarning, Assessment, EvidenceRef, MatchStatus, Recommendation
+from app.analysis.schema import (
+    AnalysisWarning,
+    Assessment,
+    EvidenceRef,
+    MatchStatus,
+    Recommendation,
+)
 from app.ml.contracts import EngineInfo, Mention, ModelRef
 
 T = TypeVar("T")
 
 
-class Page(BaseModel, Generic[T]):
+class Page(BaseModel, Generic[T]):  # noqa: UP046 - Pydantic generic schema compatibility
     items: list[T]
     total: int
     limit: int
@@ -23,7 +29,7 @@ class Page(BaseModel, Generic[T]):
 class ErrorBody(BaseModel):
     code: str
     message: str
-    details: dict = Field(default_factory=dict)
+    details: dict[str, Any] = Field(default_factory=dict)
     request_id: str | None = None
 
 
@@ -53,7 +59,7 @@ class ResumeVersionOut(BaseModel):
     source: str
     status: str
     error_code: str | None
-    parseability: dict | None
+    parseability: dict[str, Any] | None
     created_at: datetime
 
 
@@ -65,7 +71,7 @@ class ResumeOut(BaseModel):
 
 
 class ResumeDetailOut(ResumeOut):
-    normalized: dict | None
+    normalized: dict[str, Any] | None
     versions: list[ResumeVersionOut]
 
 
@@ -93,9 +99,9 @@ class RequirementOut(BaseModel):
     kind: str
     category: str
     origin: str
-    terms: list
+    terms: list[Any]
     min_years: float | None
-    source_span: dict | None
+    source_span: dict[str, Any] | None
 
 
 class JobVersionOut(BaseModel):
@@ -171,6 +177,7 @@ class AnalysisDetailOut(AnalysisOut):
 
 
 class ModelStatusOut(BaseModel):
+    available_method: str = "rules"
     learned_models_approved: bool
     models: list[ModelRef]
     note: str

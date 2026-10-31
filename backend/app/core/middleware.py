@@ -17,7 +17,14 @@ _UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 
 def _error(code: str, message: str, status: int) -> JSONResponse:
     return JSONResponse(
-        {"error": {"code": code, "message": message, "details": {}, "request_id": request_id_var.get()}},
+        {
+            "error": {
+                "code": code,
+                "message": message,
+                "details": {},
+                "request_id": request_id_var.get(),
+            }
+        },
         status_code=status,
     )
 
@@ -33,7 +40,9 @@ class BodyLimitMiddleware:
             return await self.app(scope, receive, send)
         declared = Headers(scope=scope).get("content-length")
         if declared and declared.isdigit() and int(declared) > self.max_bytes:
-            return await _error("payload_too_large", "The request body is too large.", 413)(scope, receive, send)
+            return await _error("payload_too_large", "The request body is too large.", 413)(
+                scope, receive, send
+            )
 
         seen = 0
         exceeded = False
@@ -109,6 +118,8 @@ class RequestContextMiddleware:
         finally:
             route = scope.get("route")
             label = getattr(route, "path", "unmatched")
-            HTTP_REQUESTS.labels(method=scope["method"], route=label, status=str(status_holder["code"])).inc()
+            HTTP_REQUESTS.labels(
+                method=scope["method"], route=label, status=str(status_holder["code"])
+            ).inc()
             HTTP_LATENCY.labels(route=label).observe(time.perf_counter() - started)
             request_id_var.reset(token)

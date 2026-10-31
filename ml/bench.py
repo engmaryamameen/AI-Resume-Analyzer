@@ -16,6 +16,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from app.ml.engine import Budget, Engine
+
 from ml.inputs import passage_of, query_of
 from ml.metrics import percentile
 from ml.schema import ExtractionRecord, VerificationRecord, read_jsonl
@@ -30,22 +31,40 @@ def _timed(call, items: int) -> dict:
         started = time.perf_counter()
         call()
         samples.append(time.perf_counter() - started)
-    return {"items": items, "runs": REPEATS, "seconds_p50": percentile(samples, 0.5), "seconds_p95": percentile(samples, 0.95),
-            "seconds_per_item": percentile(samples, 0.5) / max(1, items)}
+    return {
+        "items": items,
+        "runs": REPEATS,
+        "seconds_p50": percentile(samples, 0.5),
+        "seconds_p95": percentile(samples, 0.95),
+        "seconds_per_item": percentile(samples, 0.5) / max(1, items),
+    }
 
 
-def bench(engine: Engine, extraction: Sequence[ExtractionRecord], verification: Sequence[VerificationRecord]) -> dict:
+def bench(
+    engine: Engine,
+    extraction: Sequence[ExtractionRecord],
+    verification: Sequence[VerificationRecord],
+) -> dict:
     out: dict = {}
     passages = [passage_of(r) for r in extraction]
     pairs = [(query_of(r.requirement, r.id), passage_of(r)) for r in verification]
     if passages:
-        out["extract"] = _timed(lambda: engine.extract(passages, Budget(NO_TIME_LIMIT)), len(passages))
+        out["extract"] = _timed(
+            lambda: engine.extract(passages, Budget(NO_TIME_LIMIT)), len(passages)
+        )
     if pairs:
-        out["verify"] = _timed(lambda: engine.verify(pairs, Budget(NO_TIME_LIMIT)), len(pairs))
+        out["verify"] = _timed(
+            lambda: engine.verify(pairs, Budget(NO_TIME_LIMIT)), len(pairs)
+        )
         queries = [q for q, _ in pairs[:20]]
         corpus = [p for _, p in pairs]
-        out["retrieve"] = _timed(lambda: engine.retrieve(queries, corpus, 5, Budget(NO_TIME_LIMIT)), len(queries))
-    out["peak_rss_mb"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024  # kilobytes on Linux
+        out["retrieve"] = _timed(
+            lambda: engine.retrieve(queries, corpus, 5, Budget(NO_TIME_LIMIT)),
+            len(queries),
+        )
+    out["peak_rss_mb"] = (
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    )  # kilobytes on Linux
     try:
         import torch
 
@@ -78,9 +97,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     load_seconds = time.perf_counter() - started
 
     records = [r for path in args.data for r in read_jsonl(path)]
-    result = {"engine": engine.info.model_dump(mode="json"), "device": args.device, "load_seconds": load_seconds,
-              **bench(engine, [r for r in records if isinstance(r, ExtractionRecord)],
-                      [r for r in records if isinstance(r, VerificationRecord)])}
+    result = {
+        "engine": engine.info.model_dump(mode="json"),
+        "device": args.device,
+        "load_seconds": load_seconds,
+        **bench(
+            engine,
+            [r for r in records if isinstance(r, ExtractionRecord)],
+            [r for r in records if isinstance(r, VerificationRecord)],
+        ),
+    }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps(result, indent=2, sort_keys=True))

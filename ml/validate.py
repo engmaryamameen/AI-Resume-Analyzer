@@ -16,6 +16,7 @@ from pathlib import Path
 
 from app.lang.taxonomy import get_taxonomy
 from app.ml.decoding import MAX_CHUNK_CHARS
+
 from ml.schema import (
     SPLITS,
     ExtractionRecord,
@@ -48,7 +49,7 @@ def shingles(text: str, n: int = 3) -> frozenset[str]:
     words = _WORD.findall(text.lower())
     if len(words) < n:
         return frozenset({" ".join(words)})
-    return frozenset(" ".join(words[i: i + n]) for i in range(len(words) - n + 1))
+    return frozenset(" ".join(words[i : i + n]) for i in range(len(words) - n + 1))
 
 
 def jaccard(a: frozenset[str], b: frozenset[str]) -> float:
@@ -67,7 +68,9 @@ def check_record(record: Record, report: Report) -> None:
         if not text.strip():
             report.errors.append(f"{where}: empty text")
         if len(text) > MAX_CHUNK_CHARS:
-            report.errors.append(f"{where}: text longer than {MAX_CHUNK_CHARS} characters")
+            report.errors.append(
+                f"{where}: text longer than {MAX_CHUNK_CHARS} characters"
+            )
     if isinstance(record, ExtractionRecord):
         _check_spans(record, report)
     elif isinstance(record, VerificationRecord):
@@ -89,25 +92,37 @@ def _check_requirement(record: VerificationRecord, report: Report) -> None:
         term_id = taxonomy.normalise_surface(value)
         if term_id is not None and taxonomy.get(term_id).name != value:
             # The application words the hypothesis with the vocabulary's canonical name; so must the data.
-            report.errors.append(f"{record.id}: requirement {value!r} should be written as {taxonomy.get(term_id).name!r}")
+            report.errors.append(
+                f"{record.id}: requirement {value!r} should be written as {taxonomy.get(term_id).name!r}"
+            )
 
 
 def _check_spans(record: ExtractionRecord, report: Report) -> None:
     last_end = 0
     for span in sorted(record.spans, key=lambda s: (s.start, s.end)):
         if span.end > len(record.text):
-            report.errors.append(f"{record.id}: span {span.start}-{span.end} is outside the text")
+            report.errors.append(
+                f"{record.id}: span {span.start}-{span.end} is outside the text"
+            )
             continue
         if span.start < last_end:
-            report.errors.append(f"{record.id}: overlapping spans near offset {span.start}")
+            report.errors.append(
+                f"{record.id}: overlapping spans near offset {span.start}"
+            )
         last_end = max(last_end, span.end)
-        surface = record.text[span.start: span.end]
+        surface = record.text[span.start : span.end]
         if surface != surface.strip():
-            report.errors.append(f"{record.id}: span {surface!r} has surrounding whitespace")
+            report.errors.append(
+                f"{record.id}: span {surface!r} has surrounding whitespace"
+            )
         before = record.text[span.start - 1] if span.start else " "
         after = record.text[span.end] if span.end < len(record.text) else " "
-        if (before.isalnum() and surface[0].isalnum()) or (after.isalnum() and surface[-1].isalnum()):
-            report.warnings.append(f"{record.id}: span {surface!r} starts or ends inside a word")
+        if (before.isalnum() and surface[0].isalnum()) or (
+            after.isalnum() and surface[-1].isalnum()
+        ):
+            report.warnings.append(
+                f"{record.id}: span {surface!r} starts or ends inside a word"
+            )
 
 
 def check_records(records: Sequence[Record]) -> Report:
@@ -163,10 +178,14 @@ def check_splits(directory: Path) -> Report:
                 texts[normalized(text)].add(split)
     for group, splits in sorted(groups.items()):
         if len(splits) > 1:
-            report.errors.append(f"group {group!r} appears in several splits: {sorted(splits)}")
+            report.errors.append(
+                f"group {group!r} appears in several splits: {sorted(splits)}"
+            )
     for text, splits in texts.items():
         if len(splits) > 1:
-            report.errors.append(f"identical text in several splits {sorted(splits)}: {text[:60]!r}")
+            report.errors.append(
+                f"identical text in several splits {sorted(splits)}: {text[:60]!r}"
+            )
 
     train = [(r.id, shingles(t)) for r in by_split["train"] for t in record_texts(r)]
     for split in SPLITS[1:]:
@@ -175,7 +194,9 @@ def check_splits(directory: Path) -> Report:
                 grams = shingles(text)
                 for other_id, other in train:
                     if jaccard(grams, other) >= NEAR_DUPLICATE_JACCARD:
-                        report.errors.append(f"near-duplicate of training record {other_id}: {record.id} ({split})")
+                        report.errors.append(
+                            f"near-duplicate of training record {other_id}: {record.id} ({split})"
+                        )
                         break
     return report
 

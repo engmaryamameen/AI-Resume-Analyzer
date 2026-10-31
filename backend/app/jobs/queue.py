@@ -1,22 +1,15 @@
-"""PostgreSQL-backed job queue.
+"""Durable PostgreSQL jobs with SKIP LOCKED claims, heartbeats and bounded retries.
 
-    queued -> running -> succeeded
-                     \\-> queued   retry with backoff while attempts < max_attempts
-                     \\-> failed   terminal
-    queued|running -> cancelled
-
-One row per (kind, target), so a client retry can't create a second logical job. Claiming uses
-FOR UPDATE SKIP LOCKED, so concurrent workers never take the same job. A claimed job carries a lock that
-the worker extends with `touch`; if the worker dies the lock expires and the job is reclaimed until
-`max_attempts` is reached, after which atomic exhausted-job settlement fails it.
-"""
+One row per target prevents duplicate logical work; expired claims are reclaimed or failed."""
 
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
 from app.core.metrics import JOB_QUEUE_DEPTH, JOB_RETRIES
@@ -39,10 +32,18 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def enqueue(db: Session, *, user_id: uuid.UUID, kind: str, target_id: uuid.UUID, max_attempts: int) -> None:
+def enqueue(
+    db: Session, *, user_id: uuid.UUID, kind: str, target_id: uuid.UUID, max_attempts: int
+) -> None:
     db.execute(
         pg_insert(ProcessingJob)
-        .values(id=uuid.uuid4(), user_id=user_id, kind=kind, target_id=target_id, max_attempts=max_attempts)
+        .values(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            kind=kind,
+            target_id=target_id,
+            max_attempts=max_attempts,
+        )
         .on_conflict_do_nothing(constraint="uq_jobs_kind_target")
     )
 
@@ -54,8 +55,11 @@ def claim_next(db: Session, lock_seconds: int) -> ClaimedJob | None:
         .where(
             ProcessingJob.next_run_at <= now,
             (ProcessingJob.status == "queued")
-            | ((ProcessingJob.status == "running") & (ProcessingJob.locked_until < now)
-               & (ProcessingJob.attempts < ProcessingJob.max_attempts)),
+            | (
+                (ProcessingJob.status == "running")
+                & (ProcessingJob.locked_until < now)
+                & (ProcessingJob.attempts < ProcessingJob.max_attempts)
+            ),
         )
         .order_by(ProcessingJob.next_run_at)
         .limit(1)
@@ -75,12 +79,19 @@ def claim_next(db: Session, lock_seconds: int) -> ClaimedJob | None:
 def exhausted_candidates(db: Session, limit: int = 50) -> list[tuple[uuid.UUID, uuid.UUID]]:
     """Read candidates without row locks; settlement rechecks them under the user's advisory lock."""
     now = _now()
-    return list(db.execute(
-        select(ProcessingJob.id, ProcessingJob.user_id)
-        .where(ProcessingJob.status == "running", ProcessingJob.locked_until < now,
-               ProcessingJob.attempts >= ProcessingJob.max_attempts)
-        .order_by(ProcessingJob.locked_until).limit(limit)
-    ).all())
+    return [
+        tuple(row)
+        for row in db.execute(
+            select(ProcessingJob.id, ProcessingJob.user_id)
+            .where(
+                ProcessingJob.status == "running",
+                ProcessingJob.locked_until < now,
+                ProcessingJob.attempts >= ProcessingJob.max_attempts,
+            )
+            .order_by(ProcessingJob.locked_until)
+            .limit(limit)
+        ).all()
+    ]
 
 
 def touch(db: Session, job_id: uuid.UUID, attempts: int, lock_seconds: int) -> bool:
@@ -88,16 +99,22 @@ def touch(db: Session, job_id: uuid.UUID, attempts: int, lock_seconds: int) -> b
     now = _now()
     result = db.execute(
         update(ProcessingJob)
-        .where(ProcessingJob.id == job_id, ProcessingJob.status == "running",
-               ProcessingJob.attempts == attempts, ProcessingJob.locked_until > now,
-               ProcessingJob.cancel_requested.is_(False))
+        .where(
+            ProcessingJob.id == job_id,
+            ProcessingJob.status == "running",
+            ProcessingJob.attempts == attempts,
+            ProcessingJob.locked_until > now,
+            ProcessingJob.cancel_requested.is_(False),
+        )
         .values(locked_until=now + timedelta(seconds=lock_seconds))
     )
-    return bool(result.rowcount)
+    return bool(cast(CursorResult[Any], result).rowcount)
 
 
 def lock_job(db: Session, job_id: uuid.UUID) -> ProcessingJob | None:
-    return db.execute(select(ProcessingJob).where(ProcessingJob.id == job_id).with_for_update()).scalar_one_or_none()
+    return db.execute(
+        select(ProcessingJob).where(ProcessingJob.id == job_id).with_for_update()
+    ).scalar_one_or_none()
 
 
 def mark_succeeded(job: ProcessingJob) -> None:
@@ -119,11 +136,17 @@ def schedule_retry(job: ProcessingJob, code: str) -> None:
     JOB_RETRIES.labels(kind=job.kind).inc()
 
 
-def cancel_for_target(db: Session, user_id: uuid.UUID, kind: str, target_id: uuid.UUID) -> str | None:
+def cancel_for_target(
+    db: Session, user_id: uuid.UUID, kind: str, target_id: uuid.UUID
+) -> str | None:
     """Cancel a queued job at once, or flag a running one. Returns the job's status afterwards."""
     job = db.execute(
         select(ProcessingJob)
-        .where(ProcessingJob.kind == kind, ProcessingJob.target_id == target_id, ProcessingJob.user_id == user_id)
+        .where(
+            ProcessingJob.kind == kind,
+            ProcessingJob.target_id == target_id,
+            ProcessingJob.user_id == user_id,
+        )
         .with_for_update()
     ).scalar_one_or_none()
     if job is None:
@@ -136,9 +159,14 @@ def cancel_for_target(db: Session, user_id: uuid.UUID, kind: str, target_id: uui
 
 
 def refresh_depth_gauge(db: Session) -> None:
-    rows = dict(db.execute(
-        select(ProcessingJob.kind, func.count()).where(ProcessingJob.status == "queued").group_by(ProcessingJob.kind)
-    ).all())
+    rows: dict[str, int] = {
+        kind: count
+        for kind, count in db.execute(
+            select(ProcessingJob.kind, func.count())
+            .where(ProcessingJob.status == "queued")
+            .group_by(ProcessingJob.kind)
+        ).all()
+    }
     for kind in KINDS:
         JOB_QUEUE_DEPTH.labels(kind=kind).set(rows.get(kind, 0))
 
@@ -147,7 +175,8 @@ def purge_finished(db: Session, older_than_days: int) -> int:
     cutoff = _now() - timedelta(days=older_than_days)
     result = db.execute(
         delete(ProcessingJob).where(
-            ProcessingJob.status.in_(("succeeded", "failed", "cancelled")), ProcessingJob.updated_at < cutoff
+            ProcessingJob.status.in_(("succeeded", "failed", "cancelled")),
+            ProcessingJob.updated_at < cutoff,
         )
     )
-    return result.rowcount or 0
+    return cast(CursorResult[Any], result).rowcount or 0

@@ -19,8 +19,15 @@ from pathlib import Path
 from app.ml.calibration import expected_calibration_error
 from app.ml.contracts import ROLE_TYPES, ROLES, VERDICT_LABELS, Passage
 from app.ml.engine import Budget, Engine
+
 from ml.inputs import passage_of, query_of
-from ml.metrics import classification_report, label_counts, rate, retrieval_scores, span_scores
+from ml.metrics import (
+    classification_report,
+    label_counts,
+    rate,
+    retrieval_scores,
+    span_scores,
+)
 from ml.schema import (
     ExtractionRecord,
     Record,
@@ -32,7 +39,9 @@ from ml.schema import (
 )
 
 NO_TIME_LIMIT = 10**9
-MAX_LISTED_ERRORS = 200  # record ids only: no text, so a report about private data stays free of it
+MAX_LISTED_ERRORS = (
+    200  # record ids only: no text, so a report about private data stays free of it
+)
 
 
 def _budget() -> Budget:
@@ -74,15 +83,19 @@ def evaluate_extraction(engine: Engine, records: Sequence[ExtractionRecord]) -> 
 
     errors = [
         {"id": r.id, "missing": sorted(g - p), "extra": sorted(p - g)}
-        for r, g, p in zip(records, gold_sets, predicted_sets, strict=True) if g != p][:MAX_LISTED_ERRORS]
+        for r, g, p in zip(records, gold_sets, predicted_sets, strict=True)
+        if g != p
+    ][:MAX_LISTED_ERRORS]
     labels = [*ROLES, "missed"]
     role_report = classification_report(role_pairs, labels) if role_pairs else {}
     report = {
         "records": len(records),
         "spans": span_scores(gold_sets, predicted_sets),
         "roles": role_report,
-        "roles_by_tag": {tag: {"samples": len(p), "accuracy": sum(g == q for g, q in p) / len(p)}
-                         for tag, p in sorted(per_tag_pairs.items())},
+        "roles_by_tag": {
+            tag: {"samples": len(p), "accuracy": sum(g == q for g, q in p) / len(p)}
+            for tag, p in sorted(per_tag_pairs.items())
+        },
         "spans_by_tag": _spans_by_tag(records, gold_sets, predicted_sets),
         "span_errors": errors,
         "seconds": seconds,
@@ -101,7 +114,9 @@ def _spans_by_tag(records, gold_sets, predicted_sets) -> dict:
     return {tag: span_scores(g, p)["micro"] for tag, (g, p) in sorted(grouped.items())}
 
 
-def evaluate_verification(engine: Engine, records: Sequence[VerificationRecord]) -> dict:
+def evaluate_verification(
+    engine: Engine, records: Sequence[VerificationRecord]
+) -> dict:
     if not records:
         return {}
     pairs = [(query_of(r.requirement, r.id), passage_of(r)) for r in records]
@@ -111,24 +126,41 @@ def evaluate_verification(engine: Engine, records: Sequence[VerificationRecord])
     outcomes = [(r.label, v.label) for r, v in zip(records, verdicts, strict=True)]
     report = classification_report(outcomes, list(VERDICT_LABELS))
     predicted_support = [(g, p) for g, p in outcomes if p == "supports"]
-    report["false_support_rate"] = rate(sum(g != "supports" for g, _ in predicted_support), len(predicted_support))
+    report["false_support_rate"] = rate(
+        sum(g != "supports" for g, _ in predicted_support), len(predicted_support)
+    )
     gold_contradicts = [(g, p) for g, p in outcomes if g == "contradicts"]
-    report["contradiction_recall"] = rate(sum(p == "contradicts" for _, p in gold_contradicts), len(gold_contradicts))
-    report["contradiction_read_as_support"] = rate(sum(p == "supports" for _, p in gold_contradicts), len(gold_contradicts))
+    report["contradiction_recall"] = rate(
+        sum(p == "contradicts" for _, p in gold_contradicts), len(gold_contradicts)
+    )
+    report["contradiction_read_as_support"] = rate(
+        sum(p == "supports" for _, p in gold_contradicts), len(gold_contradicts)
+    )
     by_tag: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for record, outcome in zip(records, outcomes, strict=True):
         for tag in record.tags:
             by_tag[tag].append(outcome)
-    report["by_tag"] = {tag: {"samples": len(p), "accuracy": sum(g == q for g, q in p) / len(p)}
-                        for tag, p in sorted(by_tag.items())}
-    report["by_requirement_type"] = _accuracy_by(records, outcomes, lambda r: r.requirement.type)
+    report["by_tag"] = {
+        tag: {"samples": len(p), "accuracy": sum(g == q for g, q in p) / len(p)}
+        for tag, p in sorted(by_tag.items())
+    }
+    report["by_requirement_type"] = _accuracy_by(
+        records, outcomes, lambda r: r.requirement.type
+    )
     report["label_counts"] = label_counts([r.label for r in records])
-    report["errors"] = [{"id": r.id, "gold": g, "predicted": p, "tags": r.tags}
-                        for r, (g, p) in zip(records, outcomes, strict=True) if g != p][:MAX_LISTED_ERRORS]
-    probs = [(v.probs, r.label) for r, v in zip(records, verdicts, strict=True) if v.probs]
+    report["errors"] = [
+        {"id": r.id, "gold": g, "predicted": p, "tags": r.tags}
+        for r, (g, p) in zip(records, outcomes, strict=True)
+        if g != p
+    ][:MAX_LISTED_ERRORS]
+    probs = [
+        (v.probs, r.label) for r, v in zip(records, verdicts, strict=True) if v.probs
+    ]
     if probs:
         report["ece"] = expected_calibration_error(
-            [[p[label] for label in VERDICT_LABELS] for p, _ in probs], [VERDICT_LABELS.index(g) for _, g in probs])
+            [[p[label] for label in VERDICT_LABELS] for p, _ in probs],
+            [VERDICT_LABELS.index(g) for _, g in probs],
+        )
     report["seconds"] = seconds
     return report
 
@@ -137,7 +169,10 @@ def _accuracy_by(records, outcomes, key) -> dict:
     grouped: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for record, outcome in zip(records, outcomes, strict=True):
         grouped[key(record)].append(outcome)
-    return {k: {"samples": len(v), "accuracy": sum(g == p for g, p in v) / len(v)} for k, v in sorted(grouped.items())}
+    return {
+        k: {"samples": len(v), "accuracy": sum(g == p for g, p in v) / len(v)}
+        for k, v in sorted(grouped.items())
+    }
 
 
 def evaluate_retrieval(engine: Engine, records: Sequence[RetrievalRecord]) -> dict:
@@ -147,25 +182,41 @@ def evaluate_retrieval(engine: Engine, records: Sequence[RetrievalRecord]) -> di
     by_tag: dict[str, list[list[bool]]] = defaultdict(list)
     started = time.perf_counter()
     for record in records:
-        passages = [Passage(id=p.id, text=p.text, context="experience", section_kind="experience") for p in record.passages]
+        passages = [
+            Passage(
+                id=p.id, text=p.text, context="experience", section_kind="experience"
+            )
+            for p in record.passages
+        ]
         relevant = {p.id for p in record.passages if p.relevant}
         query = query_of(Requirement(type="skill", value=record.query), record.id)
         found = engine.retrieve([query], passages, len(passages), _budget())[record.id]
         order = [c.passage_id for c in found]
-        order += [p.id for p in passages if p.id not in order]  # unretrieved passages rank last
+        order += [
+            p.id for p in passages if p.id not in order
+        ]  # unretrieved passages rank last
         hits = [pid in relevant for pid in order]
         ranked.append(hits)
         for tag in record.tags:
             by_tag[tag].append(hits)
-    return {**retrieval_scores(ranked), "by_tag": {t: retrieval_scores(r) for t, r in sorted(by_tag.items())},
-            "seconds": time.perf_counter() - started}
+    return {
+        **retrieval_scores(ranked),
+        "by_tag": {t: retrieval_scores(r) for t, r in sorted(by_tag.items())},
+        "seconds": time.perf_counter() - started,
+    }
 
 
 def evaluate(engine: Engine, records: Sequence[Record]) -> dict:
     return {
-        "extraction": evaluate_extraction(engine, [r for r in records if isinstance(r, ExtractionRecord)]),
-        "retrieval": evaluate_retrieval(engine, [r for r in records if isinstance(r, RetrievalRecord)]),
-        "verification": evaluate_verification(engine, [r for r in records if isinstance(r, VerificationRecord)]),
+        "extraction": evaluate_extraction(
+            engine, [r for r in records if isinstance(r, ExtractionRecord)]
+        ),
+        "retrieval": evaluate_retrieval(
+            engine, [r for r in records if isinstance(r, RetrievalRecord)]
+        ),
+        "verification": evaluate_verification(
+            engine, [r for r in records if isinstance(r, VerificationRecord)]
+        ),
     }
 
 
@@ -174,10 +225,19 @@ def build_report(engine: Engine, files: Sequence[Path]) -> dict:
     sources = label_counts([r.source for r in records])
     return {
         "engine": engine.info.model_dump(mode="json"),
-        "data": {"files": [str(p) for p in files], "digest": dataset_digest(files), "records": len(records),
-                 "sources": sources},
-        "caveats": (["Part of this data is synthetic; scores on synthetic data overstate performance on real résumés."]
-                    if sources.get("synthetic") else []),
+        "data": {
+            "files": [str(p) for p in files],
+            "digest": dataset_digest(files),
+            "records": len(records),
+            "sources": sources,
+        },
+        "caveats": (
+            [
+                "Part of this data is synthetic; scores on synthetic data overstate performance on real résumés."
+            ]
+            if sources.get("synthetic")
+            else []
+        ),
         **evaluate(engine, records),
     }
 
@@ -188,7 +248,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, required=True)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--engine", choices=["rules"], help="the rule-based baseline")
-    group.add_argument("--candidate", type=Path, help="a training run directory with extractor/, verifier/ and retriever/")
+    group.add_argument(
+        "--candidate",
+        type=Path,
+        help="a training run directory with extractor/, verifier/ and retriever/",
+    )
     parser.add_argument("--device", default="cpu")
     args = parser.parse_args(argv)
 

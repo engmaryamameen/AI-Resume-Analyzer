@@ -342,3 +342,37 @@ def test_migrations_match_models(db_engine):
         diff = compare_metadata(MigrationContext.configure(conn), Base.metadata)
     assert diff == [], f"models and migrations have drifted: {diff}"
     assert os.environ["TEST_DATABASE_URL"]
+
+
+def test_resume_deletion_cleans_jobs_and_allows_a_fresh_idempotent_upload(make_user, run_jobs):
+    from app.db.models import IdempotencyKey
+
+    _, c = make_user()
+    first = upload(c, "repeat-after-delete-001").json()
+    run_jobs()
+    version = c.get(f"{API}/resumes/{first['id']}").json()["latest_version"]["id"]
+    _, jv = make_job(c)
+    analyse(c, version, jv, "analysis-after-delete-001")
+    c.delete(f"{API}/resumes/{first['id']}")
+    assert count(ProcessingJob) == 0
+    assert count(IdempotencyKey) == 0
+    fresh = upload(c, "repeat-after-delete-001")
+    assert fresh.status_code == 202 and fresh.json()["id"] != first["id"]
+
+
+def test_job_deletion_removes_only_its_analysis_jobs(make_user, run_jobs):
+    from app.db.models import IdempotencyKey
+
+    _, c = make_user()
+    _, rv = ready_resume(c, run_jobs)
+    deleted_id, deleted_version = make_job(c)
+    _, kept_version = make_job(c)
+    deleted_run = analyse(c, rv, deleted_version, "delete-job-run-0001").json()["id"]
+    kept_run = analyse(c, rv, kept_version, "keep-job-run-00001").json()["id"]
+    assert c.delete(f"{API}/job-descriptions/{deleted_id}").status_code == 204
+    run_jobs()
+    assert c.get(f"{API}/analyses/{deleted_run}").status_code == 404
+    assert c.get(f"{API}/analyses/{kept_run}").json()["status"] == "succeeded"
+    # The résumé extraction job and the unrelated analysis remain.
+    assert count(ProcessingJob) == 2
+    assert count(IdempotencyKey) == 1

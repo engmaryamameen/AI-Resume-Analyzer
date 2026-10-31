@@ -21,11 +21,14 @@ def lock_user(db: Session, user_id: uuid.UUID, timeout_ms: int = 10_000) -> None
     """Take the per-user transaction-scoped advisory lock, waiting at most `timeout_ms`."""
     try:
         db.execute(text(f"SET LOCAL lock_timeout = {int(timeout_ms)}"))
-        db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": str(user_id)})
+        db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": str(user_id)}
+        )
     except OperationalError as exc:
         db.rollback()
         if getattr(exc.orig, "sqlstate", None) == _LOCK_NOT_AVAILABLE:
             raise ServiceUnavailable(
-                "Your data is being processed right now. Please try again in a few seconds.", code="user_busy"
+                "Your data is being processed right now. Please try again in a few seconds.",
+                code="user_busy",
             ) from exc
         raise

@@ -1,7 +1,7 @@
 """The ML lab's torch-free parts: dataset schema, validation, splitting, synthetic data and metrics.
 
 Anything that needs a model or a GPU (encoding, training, calibration, benchmarking) is not covered here:
-those need real weights and are run by a person (docs/TRAINING_AND_EVALUATION.md).
+those need real weights and are run by a person (docs/local-models.md).
 """
 
 from pathlib import Path

@@ -10,7 +10,12 @@ from pathlib import Path
 
 from app.core.config import REPO_ROOT
 from app.ml.local import LocalEngine
-from app.ml.manifest import REQUIRED_MODELS, ArtifactError, HeadCalibration, load_manifest
+from app.ml.manifest import (
+    REQUIRED_MODELS,
+    ArtifactError,
+    HeadCalibration,
+    load_manifest,
+)
 
 _HEADS = {"extractor": "role", "verifier": "verdict"}
 
@@ -25,12 +30,20 @@ def load_candidate_engine(run_dir: Path, device: str = "cpu") -> LocalEngine:
         directories[model_id] = directory
 
     calibration_path = run_dir / "calibration.json"
-    calibration = json.loads(calibration_path.read_text(encoding="utf-8")) if calibration_path.is_file() else {}
+    calibration = (
+        json.loads(calibration_path.read_text(encoding="utf-8"))
+        if calibration_path.is_file()
+        else {}
+    )
     for entry in manifest.models:
         entry.approved = True  # in memory only: this manifest is never saved
         head = _HEADS.get(entry.id)
         if head and head in calibration:
-            entry.calibration = {head: HeadCalibration(
-                temperature=calibration[head]["temperature"], validation_samples=calibration[head]["validation_samples"],
-                ece=calibration[head]["ece"])}
+            entry.calibration = {
+                head: HeadCalibration(
+                    temperature=calibration[head]["temperature"],
+                    validation_samples=calibration[head]["validation_samples"],
+                    ece=calibration[head]["ece"],
+                )
+            }
     return LocalEngine(manifest, directories, device=device, threads=4, batch_size=16)

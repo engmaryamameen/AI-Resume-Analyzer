@@ -42,7 +42,9 @@ def sniff_kind(data: bytes) -> FileKind:
             with zipfile.ZipFile(BytesIO(data)) as zf:
                 names = set(zf.namelist())
         except zipfile.BadZipFile as exc:
-            raise ValidationFailed("The file is damaged or not a valid DOCX.", code="docx_corrupt") from exc
+            raise ValidationFailed(
+                "The file is damaged or not a valid DOCX.", code="docx_corrupt"
+            ) from exc
         if "[Content_Types].xml" in names and "word/document.xml" in names:
             return "docx"
     raise UnsupportedMedia("Only PDF and DOCX résumés are supported.", code="unsupported_file_type")
@@ -59,7 +61,9 @@ def validate_upload(filename: str | None, data: bytes, max_bytes: int) -> Valida
     kind = sniff_kind(data)
     ext = (filename or "").rsplit(".", 1)[-1].lower() if filename and "." in filename else ""
     if ext and ext not in {"pdf", "docx"}:
-        raise UnsupportedMedia("Only .pdf and .docx files are supported.", code="unsupported_file_type")
+        raise UnsupportedMedia(
+            "Only .pdf and .docx files are supported.", code="unsupported_file_type"
+        )
     if ext and ext != kind:
         raise ValidationFailed(
             "The file extension does not match the file content.", code="file_type_mismatch"

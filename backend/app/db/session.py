@@ -2,8 +2,9 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache
+from typing import Any
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Connection, Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
@@ -20,15 +21,31 @@ def get_engine() -> Engine:
         pool_timeout=5,
         pool_pre_ping=True,
         pool_recycle=1800,
-        connect_args={"options": "-c statement_timeout=15000 -c idle_in_transaction_session_timeout=30000"},
+        connect_args={
+            "options": "-c statement_timeout=15000 -c idle_in_transaction_session_timeout=30000"
+        },
     )
 
     @event.listens_for(engine, "before_cursor_execute")
-    def _start(conn, cursor, statement, parameters, context, executemany):  # noqa: ANN001
+    def _start(
+        conn: Connection,
+        cursor: Any,
+        statement: str,
+        parameters: Any,
+        context: Any,
+        executemany: bool,
+    ) -> None:
         conn.info["q_start"] = time.perf_counter()
 
     @event.listens_for(engine, "after_cursor_execute")
-    def _stop(conn, cursor, statement, parameters, context, executemany):  # noqa: ANN001
+    def _stop(
+        conn: Connection,
+        cursor: Any,
+        statement: str,
+        parameters: Any,
+        context: Any,
+        executemany: bool,
+    ) -> None:
         started = conn.info.pop("q_start", None)
         if started is not None:
             DB_QUERY_SECONDS.observe(time.perf_counter() - started)

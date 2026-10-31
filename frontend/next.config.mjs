@@ -2,6 +2,7 @@ const backend = process.env.BACKEND_URL ?? "http://localhost:8000";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
   // The browser only ever talks to this origin, so session cookies stay first-party.
@@ -11,7 +12,8 @@ const nextConfig = {
   async headers() {
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'", // Next injects inline bootstrap scripts; tighten with nonces before launch
+      // Next development bundles need eval; production never receives this exception.
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
       "connect-src 'self'",

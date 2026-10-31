@@ -24,18 +24,60 @@ from app.documents.schema import (
 )
 
 SECTION_ALIASES: dict[SectionKind, tuple[str, ...]] = {
-    "summary": ("summary", "professional summary", "profile", "about me", "objective",
-                "career objective", "personal statement", "executive summary"),
-    "experience": ("experience", "work experience", "professional experience", "employment",
-                   "employment history", "work history", "career history", "internships",
-                   "internship experience", "relevant experience"),
-    "education": ("education", "academic background", "education and training", "academic qualifications"),
-    "projects": ("projects", "personal projects", "selected projects", "academic projects",
-                 "open source", "open source projects"),
-    "skills": ("skills", "technical skills", "core competencies", "key skills", "technologies",
-               "tech stack", "competencies", "tools and technologies"),
-    "certifications": ("certifications", "certificates", "licenses", "licenses and certifications",
-                       "courses", "training"),
+    "summary": (
+        "summary",
+        "professional summary",
+        "profile",
+        "about me",
+        "objective",
+        "career objective",
+        "personal statement",
+        "executive summary",
+    ),
+    "experience": (
+        "experience",
+        "work experience",
+        "professional experience",
+        "employment",
+        "employment history",
+        "work history",
+        "career history",
+        "internships",
+        "internship experience",
+        "relevant experience",
+    ),
+    "education": (
+        "education",
+        "academic background",
+        "education and training",
+        "academic qualifications",
+    ),
+    "projects": (
+        "projects",
+        "personal projects",
+        "selected projects",
+        "academic projects",
+        "open source",
+        "open source projects",
+    ),
+    "skills": (
+        "skills",
+        "technical skills",
+        "core competencies",
+        "key skills",
+        "technologies",
+        "tech stack",
+        "competencies",
+        "tools and technologies",
+    ),
+    "certifications": (
+        "certifications",
+        "certificates",
+        "licenses",
+        "licenses and certifications",
+        "courses",
+        "training",
+    ),
     "awards": ("awards", "honors", "honours", "achievements", "accomplishments"),
     "publications": ("publications", "talks"),
     "volunteering": ("volunteering", "volunteer experience", "community"),
@@ -53,8 +95,12 @@ _DATE = rf"(?:(?:{_MONTHS})\.?\s+)?(?:19|20)\d{{2}}|\d{{1,2}}/(?:19|20)\d{{2}}"
 _RANGE = re.compile(
     rf"(?P<s>{_DATE})\s*(?:-|–|—|to)\s*(?P<e>present|current|now|ongoing|{_DATE})", re.IGNORECASE
 )
-_MONTH_NUM = {name: i for i, name in enumerate(
-    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+_MONTH_NUM = {
+    name: i
+    for i, name in enumerate(
+        ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1
+    )
+}
 _PRESENT = {"present", "current", "now", "ongoing"}
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _PHONE = re.compile(r"(?<![\w/])(\+?\d[\d\s().-]{7,}\d)(?![\w/])")
@@ -62,10 +108,25 @@ _LINK = re.compile(
     r"(?:https?://[^\s,;|]+|(?:www\.)?(?:linkedin\.com|github\.com|gitlab\.com)/[^\s,;|]+)", re.I
 )
 _TITLE_WORDS = {
-    "engineer", "developer", "manager", "analyst", "designer", "resume", "curriculum", "vitae",
-    "consultant", "specialist", "architect", "scientist", "intern", "lead", "director",
+    "engineer",
+    "developer",
+    "manager",
+    "analyst",
+    "designer",
+    "resume",
+    "curriculum",
+    "vitae",
+    "consultant",
+    "specialist",
+    "architect",
+    "scientist",
+    "intern",
+    "lead",
+    "director",
 }
-_WRAP_MIN_LINE = 45  # a line this long that doesn't end a sentence was probably wrapped by the page width
+_WRAP_MIN_LINE = (
+    45  # a line this long that doesn't end a sentence was probably wrapped by the page width
+)
 _DERIVED_UNCERTAINTIES = {"experience_dates_missing", "date_precision_low"}
 
 
@@ -141,40 +202,66 @@ def derive_structure(doc: NormalizedDocument, today: date) -> NormalizedDocument
             block = blocks[block_id]
             if block.kind == "entry_header":
                 date_range = parse_date_range(block.text, today)
-                if entry is not None and not entry.block_ids and entry.date_range is None and date_range:
+                if (
+                    entry is not None
+                    and not entry.block_ids
+                    and entry.date_range is None
+                    and date_range
+                ):
                     entry.date_range = date_range  # the date sits on a second header line
                     entry.block_ids.append(block_id)
                 else:
-                    entry = Entry(id=f"e{len(entries) + 1}", section_id=section.id,
-                                  header_block_id=block_id, date_range=date_range)
+                    entry = Entry(
+                        id=f"e{len(entries) + 1}",
+                        section_id=section.id,
+                        header_block_id=block_id,
+                        date_range=date_range,
+                    )
                     entries.append(entry)
             elif entry is not None:
                 entry.block_ids.append(block_id)
 
     kind_of = doc.section_kind_by_id()
-    ranges = [e.date_range for e in entries
-              if e.date_range and kind_of.get(e.section_id) in {"experience", "volunteering"}]
+    ranges = [
+        e.date_range
+        for e in entries
+        if e.date_range and kind_of.get(e.section_id) in {"experience", "volunteering"}
+    ]
     notes = [u for u in doc.uncertainties if u.code not in _DERIVED_UNCERTAINTIES]
     months: int | None = None
     if ranges:
         months = union_months(ranges, today)
         if any(r.approximate for r in ranges):
-            notes.append(Uncertainty(
-                code="date_precision_low", severity="info",
-                message="Some dates have no month, so the experience estimate is approximate."))
+            notes.append(
+                Uncertainty(
+                    code="date_precision_low",
+                    severity="info",
+                    message="Some dates have no month, so the experience estimate is approximate.",
+                )
+            )
     elif "experience" in kind_of.values():
-        notes.append(Uncertainty(
-            code="experience_dates_missing", severity="info",
-            message="Experience entries were found but no parseable date ranges, so total "
-                    "experience cannot be estimated."))
-    return doc.model_copy(update={"entries": entries, "total_experience_months": months, "uncertainties": notes})
+        notes.append(
+            Uncertainty(
+                code="experience_dates_missing",
+                severity="info",
+                message="Experience entries were found but no parseable date ranges, so total "
+                "experience cannot be estimated.",
+            )
+        )
+    return doc.model_copy(
+        update={"entries": entries, "total_experience_months": months, "uncertainties": notes}
+    )
 
 
-def normalize(lines: list[RawLine], page_count: int | None, today: date | None = None) -> NormalizedDocument:
+def normalize(
+    lines: list[RawLine], page_count: int | None, today: date | None = None
+) -> NormalizedDocument:
     today = today or date.today()
     doc = NormalizedDocument(page_count=page_count)
     if not lines:
-        doc.uncertainties.append(Uncertainty(code="no_text", message="No text was extracted.", severity="error"))
+        doc.uncertainties.append(
+            Uncertainty(code="no_text", message="No text was extracted.", severity="error")
+        )
         return doc
 
     counters = {"b": 0, "s": 0}
@@ -216,7 +303,7 @@ def normalize(lines: list[RawLine], page_count: int | None, today: date | None =
             and (previous_length >= _WRAP_MIN_LINE or previous_kind == "bullet")
             and last.text[-1:] not in ".;:!?"
         )
-        if wrapped:
+        if wrapped and last is not None:
             last.text = f"{last.text} {text}"[:4000]
             previous_length = len(text)
             continue
@@ -224,23 +311,34 @@ def normalize(lines: list[RawLine], page_count: int | None, today: date | None =
         if is_bullet:
             kind = "bullet"
         elif section.kind in {"experience", "projects", "education", "volunteering"} and (
-            has_range or (len(text) <= 90 and text[-1:] not in ".;!?" and previous_kind != "entry_header")
+            has_range
+            or (len(text) <= 90 and text[-1:] not in ".;!?" and previous_kind != "entry_header")
         ):
             kind = "entry_header"
         else:
             kind = "paragraph"
-        block = Block(id=next_id("b"), section_id=section.id, kind=kind, text=text[:4000],  # type: ignore[arg-type]
-                      page=raw.page, line=line_no)
+        block = Block(
+            id=next_id("b"),
+            section_id=section.id,
+            kind=kind,
+            text=text[:4000],
+            page=raw.page,
+            line=line_no,
+        )
         doc.blocks.append(block)
         section.block_ids.append(block.id)
         previous_kind, previous_length = kind, len(text)
 
     if not saw_heading:
         doc.sections[0].kind = "other"
-        doc.uncertainties.append(Uncertainty(
-            code="no_sections_detected", severity="warn",
-            message="No section headings were recognised, so content could not be assigned to "
-                    "experience, education or skills."))
+        doc.uncertainties.append(
+            Uncertainty(
+                code="no_sections_detected",
+                severity="warn",
+                message="No section headings were recognised, so content could not be assigned to "
+                "experience, education or skills.",
+            )
+        )
 
     _extract_contact(doc)
     return derive_structure(doc, today)
@@ -259,8 +357,12 @@ def _extract_contact(doc: NormalizedDocument) -> None:
         if not contact.phone.value:
             for m in _PHONE.finditer(b.text):
                 digits = re.sub(r"\D", "", m.group(1))
-                if 8 <= len(digits) <= 15 and not re.fullmatch(r"(?:19|20)\d{2}(?:19|20)\d{2}", digits):
-                    contact.phone = ContactField(value=m.group(1).strip(), confidence="medium", block_id=b.id)
+                if 8 <= len(digits) <= 15 and not re.fullmatch(
+                    r"(?:19|20)\d{2}(?:19|20)\d{2}", digits
+                ):
+                    contact.phone = ContactField(
+                        value=m.group(1).strip(), confidence="medium", block_id=b.id
+                    )
                     break
         for m in _LINK.finditer(b.text):
             url = m.group(0).rstrip(".,)")
@@ -273,15 +375,31 @@ def _extract_contact(doc: NormalizedDocument) -> None:
         if any(t.lower().strip(".,") in _TITLE_WORDS for t in tokens):
             continue
         if all(re.fullmatch(r"[A-Za-z][A-Za-z'.\-]*", t) and t[0].isupper() for t in tokens):
-            contact.name = ContactField(value=b.text, confidence="medium" if index == 0 else "low", block_id=b.id)
+            contact.name = ContactField(
+                value=b.text, confidence="medium" if index == 0 else "low", block_id=b.id
+            )
             break
     doc.contact = contact
     if not contact.name.value:
-        doc.uncertainties.append(Uncertainty(
-            code="name_not_found", severity="info", message="A candidate name could not be identified; please enter it."))
+        doc.uncertainties.append(
+            Uncertainty(
+                code="name_not_found",
+                severity="info",
+                message="A candidate name could not be identified; please enter it.",
+            )
+        )
     elif contact.name.confidence != "high":
-        doc.uncertainties.append(Uncertainty(
-            code="name_unverified", severity="info", block_id=contact.name.block_id,
-            message="The name is a best guess; please confirm it."))
+        doc.uncertainties.append(
+            Uncertainty(
+                code="name_unverified",
+                severity="info",
+                block_id=contact.name.block_id,
+                message="The name is a best guess; please confirm it.",
+            )
+        )
     if not contact.email.value:
-        doc.uncertainties.append(Uncertainty(code="email_not_found", severity="info", message="No email address was found."))
+        doc.uncertainties.append(
+            Uncertainty(
+                code="email_not_found", severity="info", message="No email address was found."
+            )
+        )

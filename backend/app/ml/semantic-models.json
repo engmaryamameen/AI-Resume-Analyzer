@@ -1,0 +1,102 @@
+{
+  "manifest_version": 1,
+  "models": [
+    {
+      "id": "retriever",
+      "directory": "semantic-retriever",
+      "origin": "pretrained",
+      "base_model": "sentence-transformers/all-MiniLM-L6-v2",
+      "base_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "license": "Apache-2.0",
+      "license_notes": "Published pretrained weights; model card retained with the artifacts. No task-specific training or accuracy claim.",
+      "files": [
+        {
+          "path": "model.safetensors",
+          "sha256": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db",
+          "size": 90868376
+        },
+        {
+          "path": "config.json",
+          "sha256": "953f9c0d463486b10a6871cc2fd59f223b2c70184f49815e7efbcab5d8908b41",
+          "size": 612
+        },
+        {
+          "path": "tokenizer.json",
+          "sha256": "be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037",
+          "size": 466247
+        },
+        {
+          "path": "tokenizer_config.json",
+          "sha256": "acb92769e8195aabd29b7b2137a9e6d6e25c476a4f15aa4355c233426c61576b",
+          "size": 350
+        },
+        {
+          "path": "special_tokens_map.json",
+          "sha256": "303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3",
+          "size": 112
+        },
+        {
+          "path": "README.md",
+          "sha256": "dcd602d2fd35c203a247304a06fec6654a12f7941b739f9221a064fe8dc3b7f0",
+          "size": 10502
+        },
+        {
+          "path": "vocab.txt",
+          "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+          "size": 231508
+        },
+        {
+          "path": "LICENSE.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "size": 11358
+        }
+      ]
+    },
+    {
+      "id": "verifier",
+      "directory": "semantic-verifier",
+      "origin": "pretrained",
+      "base_model": "cross-encoder/nli-MiniLM2-L6-H768",
+      "base_revision": "b95119ce93d3e065de6214e38cd4a97b0f2f2c6d",
+      "license": "Apache-2.0",
+      "license_notes": "Published pretrained weights; model card retained with the artifacts. No task-specific training or accuracy claim.",
+      "files": [
+        {
+          "path": "model.safetensors",
+          "sha256": "ec9c5b6a08b60d7a01b465c7ed44b496244dfd1bed3274c95875a74cea89ab35",
+          "size": 328499560
+        },
+        {
+          "path": "config.json",
+          "sha256": "8b0e41caff7567c0f53e6983f35591c3dec59507c9173ab125c5823394fb57f3",
+          "size": 875
+        },
+        {
+          "path": "tokenizer.json",
+          "sha256": "82139106e603ee4e1d5bc99d056ccbed5a92bc24848b1b5a7137c26e00d0dbf6",
+          "size": 1356048
+        },
+        {
+          "path": "tokenizer_config.json",
+          "sha256": "e06f5c3c435fc0255b08b5574cd574eec685390f60c85b27f83d785eb8ecaaa1",
+          "size": 330
+        },
+        {
+          "path": "special_tokens_map.json",
+          "sha256": "378eb3bf733eb16e65792d7e3fda5b8a4631387ca04d2015199c4d4f22ae554d",
+          "size": 239
+        },
+        {
+          "path": "README.md",
+          "sha256": "1a6e3f880df3584acc1b209c7c667eb22cb7ddd98ab56a5905dda5cfc446ddd1",
+          "size": 2695
+        },
+        {
+          "path": "LICENSE.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "size": 11358
+        }
+      ]
+    }
+  ]
+}

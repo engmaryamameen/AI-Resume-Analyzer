@@ -15,6 +15,23 @@ out/
 *.tsbuildinfo
 
 .env
-./.env
-.env.local
-./.env.local
+.env.*
+!.env.example
+# Runtime data and browser artifacts
+.venv/
+work/
+backend/storage/
+frontend/test-results/
+frontend/playwright-report/
+
+# Python distribution builds
+backend/build/
+backend/dist/
+
+# Local evaluation artifacts
+frontend-audit-*.json
+ml/data/generated/
+ml/runs/
+/models/*
+!/models/README.md
+!/models/manifest.json

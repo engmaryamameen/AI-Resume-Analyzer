@@ -1,4 +1,5 @@
 import hashlib
+from typing import Literal, TypedDict
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
@@ -18,11 +19,24 @@ from app.privacy import deletion
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+class CookieOptions(TypedDict):
+    max_age: int
+    secure: bool
+    samesite: Literal["lax"]
+    path: str
+
+
 def _set_cookies(response: Response, settings: Settings, session_token: str, csrf: str) -> None:
-    options = {"max_age": settings.session_ttl_hours * 3600, "secure": settings.is_production,
-               "samesite": "lax", "path": "/"}
+    options: CookieOptions = {
+        "max_age": settings.session_ttl_hours * 3600,
+        "secure": settings.is_production,
+        "samesite": "lax",
+        "path": "/",
+    }
     response.set_cookie(SESSION_COOKIE, session_token, httponly=True, **options)
-    response.set_cookie(CSRF_COOKIE, csrf, httponly=False, **options)  # the SPA echoes it in X-CSRF-Token
+    response.set_cookie(
+        CSRF_COOKIE, csrf, httponly=False, **options
+    )  # the SPA echoes it in X-CSRF-Token
 
 
 def _clear_cookies(response: Response) -> None:
@@ -32,8 +46,11 @@ def _clear_cookies(response: Response) -> None:
 
 @router.post("/register", response_model=UserOut, status_code=201)
 def register(
-    body: Credentials, request: Request, response: Response,
-    db: Session = Depends(get_db), settings: Settings = Depends(get_settings),
+    body: Credentials,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> User:
     limiter.check(f"auth:{client_ip(request, settings)}", settings.rate_limit_auth_per_minute)
     user = service.register(db, body.email, body.password, current_request_id())
@@ -44,8 +61,11 @@ def register(
 
 @router.post("/login", response_model=UserOut)
 def login(
-    body: Credentials, request: Request, response: Response,
-    db: Session = Depends(get_db), settings: Settings = Depends(get_settings),
+    body: Credentials,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> User:
     ip = client_ip(request, settings)
     limiter.check(f"auth:{ip}", settings.rate_limit_auth_per_minute)
@@ -59,8 +79,10 @@ def login(
 
 @router.post("/logout", status_code=204)
 def logout(
-    request: Request, _: Principal = Depends(current_principal),
-    db: Session = Depends(get_db), settings: Settings = Depends(get_settings),
+    request: Request,
+    _: Principal = Depends(current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> Response:
     service.revoke_session(db, settings, request.cookies.get(SESSION_COOKIE))
     out = Response(status_code=204)
@@ -75,8 +97,10 @@ def me(principal: Principal = Depends(current_principal)) -> User:
 
 @router.post("/delete-account", status_code=204)
 def delete_account(
-    body: DeleteAccountIn, principal: Principal = Depends(current_principal),
-    db: Session = Depends(get_db), store: BlobStore = Depends(get_store),
+    body: DeleteAccountIn,
+    principal: Principal = Depends(current_principal),
+    db: Session = Depends(get_db),
+    store: BlobStore = Depends(get_store),
 ) -> Response:
     """Permanently deletes the account and everything it owns. Requires the current password."""
     service.confirm_password(principal.user, body.password)

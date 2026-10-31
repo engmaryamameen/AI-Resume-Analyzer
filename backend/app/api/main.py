@@ -1,4 +1,6 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import Depends, FastAPI, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,12 +22,13 @@ from app.core.middleware import BodyLimitMiddleware, RequestContextMiddleware
 from app.core.security import constant_time_equal
 from app.db.session import get_db
 from app.demo.router import router as demo_router
+from app.guest.router import router as guest_router
 
 API_PREFIX = "/api/v1"
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     yield
 
@@ -36,7 +39,7 @@ def create_app() -> FastAPI:
         title="Résumé Intelligence API",
         version="0.1.0",
         description="Evidence-based résumé analysis. Errors share one envelope: "
-                    "`{error: {code, message, details, request_id}}`.",
+        "`{error: {code, message, details, request_id}}`.",
         docs_url=None if settings.is_production else "/docs",
         redoc_url=None,
         openapi_url=None if settings.is_production else "/openapi.json",
@@ -47,21 +50,36 @@ def create_app() -> FastAPI:
     # add_middleware wraps outermost-last: request context is outermost, then CORS, then body limit.
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_upload_bytes + 256 * 1024)
     app.add_middleware(
-        CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=True,
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type", "Idempotency-Key", "X-CSRF-Token", "X-Request-ID"],
-        expose_headers=["X-Request-ID", "Content-Disposition"], max_age=600)
+        expose_headers=["X-Request-ID", "Content-Disposition"],
+        max_age=600,
+    )
     app.add_middleware(RequestContextMiddleware, settings=settings)
 
-    for r in (auth_router, resumes_router, jobs_router, analyses_router, demo_router, admin_router, system_router):
+    for r in (
+        auth_router,
+        resumes_router,
+        jobs_router,
+        analyses_router,
+        demo_router,
+        admin_router,
+        system_router,
+        guest_router,
+    ):
         app.include_router(r, prefix=API_PREFIX)
 
     @app.get("/healthz", include_in_schema=False)
-    def healthz() -> dict:
+    def healthz() -> dict[str, Any]:
         return {"status": "ok"}
 
     @app.get("/readyz", include_in_schema=False)
-    def readyz(db: Session = Depends(get_db), s: Settings = Depends(get_settings)) -> dict:
+    def readyz(
+        db: Session = Depends(get_db), s: Settings = Depends(get_settings)
+    ) -> dict[str, Any]:
         try:
             db.execute(text("SELECT 1"))
         except Exception as exc:  # noqa: BLE001 - readiness must report, not raise details
@@ -71,7 +89,9 @@ def create_app() -> FastAPI:
         return {"status": "ready"}
 
     @app.get("/metrics", include_in_schema=False)
-    def metrics(authorization: str | None = Header(default=None), s: Settings = Depends(get_settings)) -> Response:
+    def metrics(
+        authorization: str | None = Header(default=None), s: Settings = Depends(get_settings)
+    ) -> Response:
         if not s.metrics_token:
             raise NotFound("Not found.")
         supplied = (authorization or "").removeprefix("Bearer ").strip()

@@ -3,6 +3,7 @@
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 MAX_CONTEXT_CHARS = 160
 MAX_CHUNK_CHARS = 700
@@ -45,7 +46,7 @@ def chunk_text(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[tuple[int, s
 def spans_from_labels(labels: Sequence[str], offsets: Sequence[tuple[int, int]]) -> list[Span]:
     """Turn per-token BIO labels into character spans. An I- label with no open span of its type starts one."""
     spans: list[Span] = []
-    current: list | None = None  # [start, end, type, first_token]
+    current: list[Any] | None = None  # [start, end, type, first_token]
 
     def close() -> None:
         nonlocal current

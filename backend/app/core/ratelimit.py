@@ -1,6 +1,6 @@
 """In-process sliding-window rate limiter.
 
-Limitation (documented in docs/INFERENCE_AND_DEPLOYMENT.md): state is per process, so with N API replicas the
+Limitation (documented in docs/deployment.md): state is per process, so with N API replicas the
 effective limit is N x the configured value. Put a gateway limiter in front for production.
 """
 

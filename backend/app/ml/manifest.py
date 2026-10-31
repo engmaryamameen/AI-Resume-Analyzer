@@ -28,9 +28,13 @@ class ArtifactError(Exception):
 
 def _safe_relative(value: str) -> bool:
     path = Path(value)
-    return bool(value and not path.is_absolute() and "\\" not in value
-                and all(part not in ("", ".", "..") for part in value.split("/"))
-                and not (len(value) >= 2 and value[1] == ":"))
+    return bool(
+        value
+        and not path.is_absolute()
+        and "\\" not in value
+        and all(part not in ("", ".", "..") for part in value.split("/"))
+        and not (len(value) >= 2 and value[1] == ":")
+    )
 
 
 class ManifestFile(BaseModel):
@@ -39,7 +43,7 @@ class ManifestFile(BaseModel):
     size: int = Field(ge=0)
 
     @model_validator(mode="after")
-    def validate_path(self):
+    def validate_path(self) -> "ManifestFile":
         if not _safe_relative(self.path):
             raise ValueError("artifact path must be a safe relative path")
         return self
@@ -81,7 +85,7 @@ class ModelEntry(BaseModel):
     approved_on: str | None = None
 
     @model_validator(mode="after")
-    def validate_artifacts(self):
+    def validate_artifacts(self) -> "ModelEntry":
         if not _safe_relative(self.directory):
             raise ValueError("model directory must be a safe relative path")
         paths = [item.path for item in self.files]
@@ -90,8 +94,13 @@ class ModelEntry(BaseModel):
         return self
 
     def ref(self) -> ModelRef:
-        return ModelRef(id=self.id, origin=self.origin, base_model=self.base_model,
-                        revision=self.base_revision, license=self.license)
+        return ModelRef(
+            id=self.id,
+            origin=self.origin,
+            base_model=self.base_model,
+            revision=self.base_revision,
+            license=self.license,
+        )
 
 
 class Manifest(BaseModel):
@@ -100,7 +109,7 @@ class Manifest(BaseModel):
     models: list[ModelEntry]
 
     @model_validator(mode="after")
-    def validate_entries(self):
+    def validate_entries(self) -> "Manifest":
         ids = [entry.id for entry in self.models]
         directories = [entry.directory for entry in self.models]
         if len(ids) != len(set(ids)) or len(directories) != len(set(directories)):
@@ -112,8 +121,11 @@ class Manifest(BaseModel):
 
     def calibration_usable(self, entry: ModelEntry, head: str) -> bool:
         cal = entry.calibration.get(head)
-        return bool(cal and cal.ece <= self.display_policy.max_ece
-                    and cal.validation_samples >= self.display_policy.min_validation_samples)
+        return bool(
+            cal
+            and cal.ece <= self.display_policy.max_ece
+            and cal.validation_samples >= self.display_policy.min_validation_samples
+        )
 
 
 def load_manifest(model_dir: Path) -> Manifest:
@@ -127,18 +139,30 @@ def load_manifest(model_dir: Path) -> Manifest:
 
 
 def fingerprint(manifest: Manifest) -> str:
-    """"rules" unless every required model is approved; otherwise a hash of what was approved."""
+    """ "rules" unless every required model is approved; otherwise a hash of what was approved."""
     entries = [manifest.entry(i) for i in REQUIRED_MODELS]
     if any(e is None or not e.approved for e in entries):
         return "rules"
-    material = [{"id": e.id, "files": sorted((f.path, f.sha256) for f in e.files),
-                 "calibration": {k: v.model_dump() for k, v in sorted(e.calibration.items())}}
-                for e in entries if e is not None]
+    material = [
+        {
+            "id": e.id,
+            "files": sorted((f.path, f.sha256) for f in e.files),
+            "calibration": {k: v.model_dump() for k, v in sorted(e.calibration.items())},
+        }
+        for e in entries
+        if e is not None
+    ]
     return hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest()
 
 
-def current_fingerprint(model_dir: Path) -> str:
+def current_fingerprint(model_dir: Path, *, enabled: bool = True) -> str:
+    if not enabled:
+        return "rules"
     try:
+        if (model_dir / "semantic-manifest.json").is_file():
+            from app.ml.semantic import semantic_fingerprint, semantic_manifest
+
+            return semantic_fingerprint(semantic_manifest(model_dir))
         return fingerprint(load_manifest(model_dir))
-    except ArtifactError:
+    except (ArtifactError, ValueError, OSError):
         return "rules"

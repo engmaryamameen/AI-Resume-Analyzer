@@ -22,8 +22,12 @@ def softmax(logits: Sequence[float], temperature: float = 1.0) -> list[float]:
     return [e / total for e in exps]
 
 
-def negative_log_likelihood(rows: Sequence[Sequence[float]], labels: Sequence[int], temperature: float) -> float:
-    return -sum(math.log(max(softmax(r, temperature)[y], 1e-12)) for r, y in zip(rows, labels, strict=True)) / len(rows)
+def negative_log_likelihood(
+    rows: Sequence[Sequence[float]], labels: Sequence[int], temperature: float
+) -> float:
+    return -sum(
+        math.log(max(softmax(r, temperature)[y], 1e-12)) for r, y in zip(rows, labels, strict=True)
+    ) / len(rows)
 
 
 def fit_temperature(rows: Sequence[Sequence[float]], labels: Sequence[int]) -> float:
@@ -63,15 +67,26 @@ def reliability_bins(
     out = []
     for i, bucket in enumerate(buckets):
         if bucket:
-            out.append(ReliabilityBin(i / bins, (i + 1) / bins, len(bucket),
-                                      sum(c for c, _ in bucket) / len(bucket),
-                                      sum(ok for _, ok in bucket) / len(bucket)))
+            out.append(
+                ReliabilityBin(
+                    i / bins,
+                    (i + 1) / bins,
+                    len(bucket),
+                    sum(c for c, _ in bucket) / len(bucket),
+                    sum(ok for _, ok in bucket) / len(bucket),
+                )
+            )
     return out
 
 
-def expected_calibration_error(prob_rows: Sequence[Sequence[float]], labels: Sequence[int], bins: int = 10) -> float:
+def expected_calibration_error(
+    prob_rows: Sequence[Sequence[float]], labels: Sequence[int], bins: int = 10
+) -> float:
     n = len(labels)
-    return sum(b.count / n * abs(b.accuracy - b.mean_confidence) for b in reliability_bins(prob_rows, labels, bins))
+    return sum(
+        b.count / n * abs(b.accuracy - b.mean_confidence)
+        for b in reliability_bins(prob_rows, labels, bins)
+    )
 
 
 def brier_score(prob_rows: Sequence[Sequence[float]], labels: Sequence[int]) -> float:
@@ -97,13 +112,17 @@ def calibrate(rows: Sequence[Sequence[float]], labels: Sequence[int]) -> Calibra
 
 
 def evaluate_calibration(
-    rows: Sequence[Sequence[float]], labels: Sequence[int], temperature: float,
+    rows: Sequence[Sequence[float]],
+    labels: Sequence[int],
+    temperature: float,
     ece_before_rows: Sequence[Sequence[float]] | None = None,
 ) -> CalibrationResult:
     before = [softmax(r) for r in (ece_before_rows or rows)]
     after = [softmax(r, temperature) for r in rows]
     return CalibrationResult(
-        temperature=temperature, samples=len(labels),
+        temperature=temperature,
+        samples=len(labels),
         ece_before=expected_calibration_error(before, labels),
         ece_after=expected_calibration_error(after, labels),
-        brier_after=brier_score(after, labels))
+        brier_after=brier_score(after, labels),
+    )

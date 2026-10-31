@@ -1,8 +1,8 @@
 """Operator commands: `python -m app.cli <command>`.
 
-    grant-admin EMAIL   make an existing account an administrator (the only way to create one)
-    maintenance         retention, orphan files, stuck jobs, expired sessions (schedule daily)
-    verify-models       check the local model artifacts against the approved manifest
+grant-admin EMAIL   make an existing account an administrator (the only way to create one)
+maintenance         retention, orphan files, stuck jobs, expired sessions (schedule daily)
+verify-models       check the local model artifacts against the approved manifest
 """
 
 import argparse
@@ -24,7 +24,10 @@ def _grant_admin(email: str) -> int:
     with session_scope() as db:
         user = db.query(User).filter(User.email == normalise_email(email)).one_or_none()
         if user is None:
-            print("No account with that email. Register it first, then grant the role.", file=sys.stderr)
+            print(
+                "No account with that email. Register it first, then grant the role.",
+                file=sys.stderr,
+            )
             return 1
         user.role = "admin"
         db.add(AuditEvent(user_id=user.id, action="admin.granted", detail={"via": "cli"}))

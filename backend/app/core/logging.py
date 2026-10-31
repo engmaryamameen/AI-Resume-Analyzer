@@ -16,8 +16,20 @@ _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _PHONE = re.compile(r"(?<!\d)(?:\+?\d[\s().-]?){9,15}(?!\d)")
 _BEARER = re.compile(r"(?i)(bearer\s+|token[=:]\s*|api[_-]?key[=:]\s*|password[=:]\s*)[^\s,;]+")
 _SENSITIVE_KEYS = {
-    "password", "token", "authorization", "cookie", "set-cookie", "api_key", "secret",
-    "text", "content", "prompt", "body", "email", "phone", "excerpt",
+    "password",
+    "token",
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "api_key",
+    "secret",
+    "text",
+    "content",
+    "prompt",
+    "body",
+    "email",
+    "phone",
+    "excerpt",
 }
 
 

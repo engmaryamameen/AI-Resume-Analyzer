@@ -68,6 +68,10 @@ def load_engine(settings: Settings) -> Engine:
     if not settings.ml_enabled:
         return RulesEngine(notes=["Learned models are disabled (ML_ENABLED=false)."])
     try:
+        if (settings.model_dir / "semantic-manifest.json").is_file():
+            from app.ml.semantic import SemanticEngine
+
+            return SemanticEngine.load(settings)
         from app.ml.local import LocalEngine
 
         return LocalEngine.load(settings)

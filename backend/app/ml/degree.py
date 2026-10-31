@@ -22,9 +22,12 @@ _PERIOD_ABBREVIATIONS = re.compile(r"\b(?:B\.S\.|B\.A\.|M\.S\.|M\.A\.)")
 _BARE_ABBREVIATION = re.compile(r"\b(BS|BA|MS|MA)\b")
 _MICROSOFT_PRODUCTS = re.compile(
     r"^\s*(?:office|excel|word|powerpoint|project|access|teams|outlook|sql|azure|dynamics|visio|sharepoint)\b",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 _FOLLOWED_BY_FIELD = re.compile(r"^\s*(?:in|of|\()\s*[A-Za-z]", re.IGNORECASE)
-_DEGREE_INTRO = re.compile(r"(?:earned|completed|holds?|with|a|an|my|received|obtained|awarded)\s*$", re.IGNORECASE)
+_DEGREE_INTRO = re.compile(
+    r"(?:earned|completed|holds?|with|a|an|my|received|obtained|awarded)\s*$", re.IGNORECASE
+)
 _STATE_CONTEXT = re.compile(r",\s*$")
 
 
@@ -51,7 +54,7 @@ def find_degrees(text: str, section_kind: str) -> list[DegreeSpan]:
     spans = [DegreeSpan(m.start(), m.end()) for m in _WORD_FORMS.finditer(text)]
     spans += [DegreeSpan(m.start(), m.end()) for m in _PERIOD_ABBREVIATIONS.finditer(text)]
     for m in _BARE_ABBREVIATION.finditer(text):
-        before, after = text[: m.start()], text[m.end():]
+        before, after = text[: m.start()], text[m.end() :]
         if _STATE_CONTEXT.search(before) and not _FOLLOWED_BY_FIELD.match(after):
             continue  # "Boston, MA"
         if m.group(1) == "MS" and _MICROSOFT_PRODUCTS.match(after):

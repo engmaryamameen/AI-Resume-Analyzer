@@ -1,14 +1,6 @@
-"""Record formats for the datasets, and the markup used to author span annotations by hand.
+"""Validated JSONL records and span markup.
 
-Three record kinds, one JSON object per line:
-
-  extraction    a passage with entity spans and, for skills/degrees/certifications, a role per span
-  verification  a passage, a requirement and the verdict a careful reader would give
-  retrieval     a requirement and a small set of passages, some of which are relevant
-
-Every record carries a `group`: records that share a group come from the same template family, person or
-job posting and are always placed in the same split (see split.py).
-"""
+Records sharing a document or template-family group must stay in the same split."""
 
 import hashlib
 import json
@@ -16,8 +8,6 @@ import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Literal
-
-from pydantic import BaseModel, Field, model_validator
 
 from app.ml.contracts import ENTITY_TYPES, ROLE_TYPES, ROLES
 from app.ml.hypotheses import (
@@ -27,11 +17,14 @@ from app.ml.hypotheses import (
     skill_hypothesis,
     soft_skill_hypothesis,
 )
+from pydantic import BaseModel, Field, model_validator
 
 SOURCES = ("synthetic", "hand_written", "licensed")
 SPLITS = ("train", "validation", "calibration", "test")
 
-_MARKUP = re.compile(r"\[\[(?P<text>[^\[\]|]+)\|(?P<type>[A-Z]+)(?:\|(?P<role>[a-z]+))?\]\]")
+_MARKUP = re.compile(
+    r"\[\[(?P<text>[^\[\]|]+)\|(?P<type>[A-Z]+)(?:\|(?P<role>[a-z]+))?\]\]"
+)
 
 
 class Span(BaseModel):
@@ -68,7 +61,9 @@ class ExtractionRecord(Meta):
 
 
 class Requirement(BaseModel):
-    type: Literal["skill", "soft_skill", "certification", "experience", "responsibility"]
+    type: Literal[
+        "skill", "soft_skill", "certification", "experience", "responsibility"
+    ]
     value: str
 
     def hypothesis(self) -> str:
@@ -90,7 +85,9 @@ class VerificationRecord(Meta):
     entry_header: str | None = None
     text: str
     requirement: Requirement
-    label: Literal["supports", "mentions_only", "contradicts", "insufficient", "unrelated"]
+    label: Literal[
+        "supports", "mentions_only", "contradicts", "insufficient", "unrelated"
+    ]
 
 
 class RetrievalPassage(BaseModel):
@@ -106,7 +103,11 @@ class RetrievalRecord(Meta):
 
 
 Record = ExtractionRecord | VerificationRecord | RetrievalRecord
-_KINDS = {"extraction": ExtractionRecord, "verification": VerificationRecord, "retrieval": RetrievalRecord}
+_KINDS = {
+    "extraction": ExtractionRecord,
+    "verification": VerificationRecord,
+    "retrieval": RetrievalRecord,
+}
 
 
 def parse_markup(marked: str) -> tuple[str, list[Span]]:
@@ -116,7 +117,7 @@ def parse_markup(marked: str) -> tuple[str, list[Span]]:
     cursor = 0
     length = 0
     for match in _MARKUP.finditer(marked):
-        plain = marked[cursor: match.start()]
+        plain = marked[cursor : match.start()]
         text_parts.append(plain)
         length += len(plain)
         surface = match.group("text")
@@ -125,7 +126,9 @@ def parse_markup(marked: str) -> tuple[str, list[Span]]:
             raise ValueError(f"unknown entity type {kind!r}")
         if role is not None and role not in ROLES:
             raise ValueError(f"unknown role {role!r}")
-        spans.append(Span(start=length, end=length + len(surface), type=kind, role=role))  # type: ignore[arg-type]
+        spans.append(
+            Span(start=length, end=length + len(surface), type=kind, role=role)
+        )  # type: ignore[arg-type]
         text_parts.append(surface)
         length += len(surface)
         cursor = match.end()
@@ -138,8 +141,11 @@ def parse_record(raw: dict) -> Record:
     `text` and `spans`; see parse_markup."""
     if "marked" in raw:
         text, spans = parse_markup(raw["marked"])
-        raw = {**{k: v for k, v in raw.items() if k != "marked"}, "text": text,
-               "spans": [s.model_dump() for s in spans]}
+        raw = {
+            **{k: v for k, v in raw.items() if k != "marked"},
+            "text": text,
+            "spans": [s.model_dump() for s in spans],
+        }
     kind = raw.get("kind")
     if kind not in _KINDS:
         raise ValueError(f"unknown record kind {kind!r}")
@@ -163,7 +169,12 @@ def write_jsonl(path: Path, records: Iterable[Record]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         for record in records:
-            handle.write(json.dumps(record.model_dump(mode="json"), ensure_ascii=False, sort_keys=True) + "\n")
+            handle.write(
+                json.dumps(
+                    record.model_dump(mode="json"), ensure_ascii=False, sort_keys=True
+                )
+                + "\n"
+            )
 
 
 def file_sha256(path: Path) -> str:
@@ -177,5 +188,3 @@ def dataset_digest(paths: Sequence[Path]) -> str:
         digest.update(path.name.encode())
         digest.update(file_sha256(path).encode())
     return digest.hexdigest()
-
-

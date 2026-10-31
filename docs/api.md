@@ -40,6 +40,7 @@ REST over JSON, mounted at `/api/v1`. With `APP_ENV` other than production, inte
 | `GET /analyses/{id}/report?format=json\|md\|csv` | download |
 | `GET /analyses/compare?base=&target=` | compare two completed analyses |
 | `GET /system/models` | whether approved learned models are installed on this server |
+| `GET /guest`, `POST /guest/analyze`, `POST /guest/progress`, `DELETE /guest` | guest allowance, multipart review, progress and deletion; guest cookie/Origin rules |
 | `GET /demo/samples`, `POST /demo/analyze` | public, synthetic documents, rule-based reading only |
 | `GET /admin/overview`, `POST /admin/maintenance` | admin only; counts, no content |
 | `GET /healthz`, `/readyz`, `/metrics` | liveness; readiness (database, storage); Prometheus (needs `METRICS_TOKEN`) |

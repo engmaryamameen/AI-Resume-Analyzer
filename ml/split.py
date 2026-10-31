@@ -16,11 +16,21 @@ from pathlib import Path
 
 from ml.schema import SPLITS, Record, read_jsonl, write_jsonl
 
-DEFAULT_FRACTIONS = {"train": 0.70, "validation": 0.10, "calibration": 0.10, "test": 0.10}
+DEFAULT_FRACTIONS = {
+    "train": 0.70,
+    "validation": 0.10,
+    "calibration": 0.10,
+    "test": 0.10,
+}
 
 
-def assign(group: str, seed: int, fractions: dict[str, float] = DEFAULT_FRACTIONS) -> str:
-    point = int.from_bytes(hashlib.sha256(f"{seed}:{group}".encode()).digest()[:8], "big") / 2**64
+def assign(
+    group: str, seed: int, fractions: dict[str, float] = DEFAULT_FRACTIONS
+) -> str:
+    point = (
+        int.from_bytes(hashlib.sha256(f"{seed}:{group}".encode()).digest()[:8], "big")
+        / 2**64
+    )
     edge = 0.0
     for split in SPLITS:
         edge += fractions[split]
@@ -36,7 +46,9 @@ def split_records(records: Sequence[Record], seed: int) -> dict[str, list[Record
     return out
 
 
-def write_splits(records: Sequence[Record], out_dir: Path, seed: int, prefix: str) -> dict[str, dict[str, int]]:
+def write_splits(
+    records: Sequence[Record], out_dir: Path, seed: int, prefix: str
+) -> dict[str, dict[str, int]]:
     summary: dict[str, dict[str, int]] = {}
     for split, items in split_records(records, seed).items():
         by_kind: dict[str, list[Record]] = {}
@@ -51,7 +63,11 @@ def write_splits(records: Sequence[Record], out_dir: Path, seed: int, prefix: st
 
 def load_split(directory: Path, split: str, kind: str) -> list[Record]:
     """All records of one kind in one split of a directory written by `write_splits`."""
-    return [r for path in sorted(directory.glob(f"{split}.*-{kind}.jsonl")) for r in read_jsonl(path)]
+    return [
+        r
+        for path in sorted(directory.glob(f"{split}.*-{kind}.jsonl"))
+        for r in read_jsonl(path)
+    ]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -64,7 +80,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     records = [r for path in args.files for r in read_jsonl(path)]
     summary = write_splits(records, args.out, args.seed, args.prefix)
     (args.out / "splits.json").write_text(
-        json.dumps({"seed": args.seed, "fractions": DEFAULT_FRACTIONS, "counts": summary}, indent=2, sort_keys=True), encoding="utf-8")
+        json.dumps(
+            {"seed": args.seed, "fractions": DEFAULT_FRACTIONS, "counts": summary},
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
     for split, counts in summary.items():
         print(split, counts)
     return 0

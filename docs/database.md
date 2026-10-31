@@ -61,4 +61,4 @@ not normalised into tables.
 There is one initial migration because no deployed data exists yet. Once a database is in use, add
 migrations; make destructive changes in two steps (expand, then contract) so old and new code can run
 side by side. Run migrations with a separate role from the application's (see
-[INFERENCE_AND_DEPLOYMENT.md](INFERENCE_AND_DEPLOYMENT.md#database)).
+[deployment.md](deployment.md#database)).
