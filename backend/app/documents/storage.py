@@ -40,8 +40,12 @@ class LocalPrivateStore:
         p = self._resolve(key)
         p.parent.mkdir(mode=0o700, exist_ok=True)
         fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "wb") as fh:
-            fh.write(data)
+        try:
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(data)
+        except BaseException:
+            p.unlink(missing_ok=True)
+            raise
         return key
 
     def path(self, key: str) -> Path:

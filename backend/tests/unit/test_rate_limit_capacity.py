@@ -41,3 +41,52 @@ def test_concurrent_limit_is_atomic():
     with ThreadPoolExecutor(max_workers=24) as pool:
         assert sum(pool.map(attempt, range(24))) == 3
     assert len(limiter._hits['shared']) == 3
+
+
+def test_short_window_does_not_evict_long_window(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr('app.core.ratelimit.time.monotonic', lambda: clock[0])
+    limiter = RateLimiter(max_keys=2)
+    limiter.check('long', 1, 3600)
+    limiter.check('short', 1, 5)
+    clock[0] = 6.0
+    limiter.check('replacement', 1, 5)
+    assert set(limiter._hits) == {'long', 'replacement'}
+    with pytest.raises(RateLimited):
+        limiter.check('long', 1, 3600)
+
+
+def test_long_window_does_not_keep_short_window_at_capacity(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr('app.core.ratelimit.time.monotonic', lambda: clock[0])
+    limiter = RateLimiter(max_keys=2)
+    limiter.check('short', 1, 5)
+    limiter.check('long', 1, 3600)
+    clock[0] = 6.0
+    limiter.check('replacement', 1, 3600)
+    assert set(limiter._hits) == {'long', 'replacement'}
+
+
+def test_expiration_tracks_last_accepted_request(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr('app.core.ratelimit.time.monotonic', lambda: clock[0])
+    limiter = RateLimiter(max_keys=1)
+    limiter.check('a', 2, 10)
+    clock[0] = 7.0
+    limiter.check('a', 2, 10)
+    clock[0] = 11.0
+    with pytest.raises(RateLimited):
+        limiter.check('b', 1, 10)
+    clock[0] = 17.0
+    limiter.check('b', 1, 10)
+    assert list(limiter._hits) == ['b']
+
+
+def test_expired_key_can_be_reused_with_a_longer_window(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr('app.core.ratelimit.time.monotonic', lambda: clock[0])
+    limiter = RateLimiter(max_keys=1)
+    limiter.check('shared', 1, 2)
+    clock[0] = 3.0
+    limiter.check('shared', 1, 3600)
+    assert len(limiter._hits['shared']) == 1

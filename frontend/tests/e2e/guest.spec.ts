@@ -7,8 +7,19 @@ test("one home-page guest analysis works without an account and deletion preserv
   page,
   browser,
 }) => {
+  // This destructive quota test must start with a fresh disposable E2E database.
+  // A previous run intentionally leaves the network blocked even after deleting its report.
+  const preflight = await page.request.get("/api/v1/guest");
+  expect(preflight.ok(), `Guest status request returned ${preflight.status()}`).toBe(true);
+  const guest = (await preflight.json()) as { available: boolean; status?: string };
+  expect(
+    guest.available,
+    `Guest E2E network allowance is already consumed (status: ${guest.status ?? "unknown"}). ` +
+      "Use a fresh disposable Compose project/database for each guest E2E run.",
+  ).toBe(true);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/#analyze");
+  await expect(page.getByLabel("Your résumé file")).toBeAttached();
   await page
     .getByLabel("Your résumé file")
     .setInputFiles(path.join(__dirname, "fixtures/synthetic-resume.docx"));

@@ -45,6 +45,21 @@ REST over JSON, mounted at `/api/v1`. With `APP_ENV` other than production, inte
 | `GET /admin/overview`, `POST /admin/maintenance` | admin only; counts, no content |
 | `GET /healthz`, `/readyz`, `/metrics` | liveness; readiness (database, storage); Prometheus (needs `METRICS_TOKEN`) |
 
+
+### Requirement replacement contract
+
+`PUT /job-descriptions/{id}/requirements` replaces the complete requirement list in a new
+immutable job-description version. Every supplied item requires `text` and `kind`; `category`
+defaults to `responsibility`. For an item referencing an existing requirement by `id`, **omitting**
+`min_years` preserves its previous threshold (backward compatibility), **explicit `null`** clears
+it, and a number from 0 to 60 replaces it. For a newly added item, omission and `null` both mean
+no threshold. Items omitted from the list are removed from the new version, not the old version.
+
+`origin` and `source_span` identify where a requirement's text came from, not whether its editable
+`kind` or `min_years` annotations remain original. They are preserved only while normalized text
+and category still match the previous requirement; changed text or category is marked as user
+content without a source span. Earlier versions and their analyses are unchanged.
+
 ## Analysis detail
 
 ```json

@@ -34,13 +34,16 @@ def ingest_upload(
     user_id: uuid.UUID,
     upload: ValidatedUpload,
     document_id: uuid.UUID,
+    *,
+    commit: bool = True,
 ) -> tuple[ResumeDocument, ResumeVersion]:
     """Create document + version 1 + queued extraction job in one transaction.
 
-    The blob is written first and removed again if the transaction fails. An idempotency-key claim made
-    earlier in this session commits or rolls back together with it.
+    Callers that combine uploads with other writes can commit the session themselves.
+    A failed database write removes the newly stored blob.
     """
     key = store.put(upload.data)
+    committing = False
     try:
         document = ResumeDocument(id=document_id, user_id=user_id, title=upload.display_title)
         db.add(document)
@@ -65,11 +68,19 @@ def ingest_upload(
             target_id=version.id,
             max_attempts=settings.job_max_attempts,
         )
-        db.commit()
+        if commit:
+            committing = True
+            db.commit()
         return document, version
     except Exception:
         db.rollback()
-        store.delete(key)
+        # If COMMIT lost its acknowledgment, the row may already be durable.
+        # The orphan sweep removes the file only when no row references it.
+        if not committing:
+            try:
+                store.delete(key)
+            except OSError:
+                pass
         raise
 
 
