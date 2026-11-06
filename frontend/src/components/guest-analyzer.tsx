@@ -58,22 +58,24 @@ export function GuestAnalyzer() {
   useEffect(() => {
     if (!pending) return;
     let live = true;
-    const id = setInterval(() => {
-      api
-        .guestProgress()
-        .then((v) => {
-          if (live) {
-            setState(v);
-            setError("");
-          }
-        })
-        .catch((e) => {
-          if (live) setError(friendlyError(e));
-        });
-    }, 1800);
+    let timer: ReturnType<typeof setTimeout>;
+    async function poll() {
+      try {
+        const next = await api.guestProgress();
+        if (live) {
+          setState(next);
+          setError("");
+        }
+      } catch (e) {
+        if (live) setError(friendlyError(e));
+      } finally {
+        if (live) timer = setTimeout(poll, 1800);
+      }
+    }
+    timer = setTimeout(poll, 1800);
     return () => {
       live = false;
-      clearInterval(id);
+      clearTimeout(timer);
     };
   }, [pending]);
   useEffect(() => {
