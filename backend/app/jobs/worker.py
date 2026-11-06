@@ -6,9 +6,12 @@ re-reading the cancel flag, so cancellation and deletion can never interleave wi
 """
 
 import signal
+import threading
 import time
 import uuid
 from collections.abc import Callable
+from contextlib import contextmanager
+from collections.abc import Iterator
 
 from app.core.config import get_settings
 from app.core.errors import AppError
@@ -34,6 +37,37 @@ def _heartbeat(job: ClaimedJob) -> Callable[[], None]:
                 raise Transient("lease_lost")
 
     return beat
+
+
+@contextmanager
+def _lease_heartbeat(job: ClaimedJob) -> Iterator[Callable[[], None]]:
+    """Renew a claim even while inference blocks; never commit after a lost lease."""
+    heartbeat = _heartbeat(job)
+    interval = max(0.1, get_settings().job_lock_seconds / 3)
+    stop = threading.Event()
+    lost = threading.Event()
+
+    def renew() -> None:
+        while not stop.wait(interval):
+            try:
+                heartbeat()
+            except Exception:
+                lost.set()
+                return
+
+    thread = threading.Thread(target=renew, name="job-heartbeat", daemon=True)
+    thread.start()
+    try:
+        def checked_heartbeat() -> None:
+            if lost.is_set():
+                raise Transient("lease_lost")
+            heartbeat()
+        yield checked_heartbeat
+        if lost.is_set():
+            raise Transient("lease_lost")
+    finally:
+        stop.set()
+        thread.join()
 
 
 def _finish(job: ClaimedJob, kind: JobKind, result: object | None) -> None:
@@ -82,11 +116,10 @@ def _execute(job: ClaimedJob, engine: Engine) -> None:
     try:
         with session_scope() as db:
             prepared = kind.prepare(db, job.target_id)
-        result = (
-            None
-            if prepared is None
-            else kind.compute(prepared, JobContext(engine, _heartbeat(job)))
-        )
+        with _lease_heartbeat(job) as heartbeat:
+            result = (
+                None if prepared is None else kind.compute(prepared, JobContext(engine, heartbeat))
+            )
         _finish(job, kind, result)
     except Transient as exc:
         _fail_or_retry(job, kind, exc.code, retryable=True)

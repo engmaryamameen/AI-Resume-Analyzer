@@ -4,8 +4,9 @@ The shape of the system, the boundaries between its parts, and the rules that ke
 consistent. The machine-learning pipeline has its own document:
 [local-models.md](local-models.md).
 
-**Status.** Implemented and statically reviewed. It has not been run: no test, build, migration or server
-start has been executed, so read "does" as "is written to do".
+**Verification.** Backend unit tests run without PostgreSQL. Database migrations, multi-worker
+integration tests and learned-model inference still require an environment with their dependencies.
+Do not infer production reliability from the unit suite.
 
 ## Shape
 
@@ -165,3 +166,12 @@ The frontend uses locally bundled Inter and Source Serif 4, shared SVG icons and
 controls. Reports start with a short editing plan; evidence and measurements use tabs and disclosures.
 The white public header and responsive hero keep the document workflow prominent. Motion respects
 reduced-motion preferences. Font licenses are retained under `frontend/public/fonts`.
+
+## Operational boundaries
+
+The in-process limiter caps active keys at 50,000 per API process; unknown keys receive 429 when full.
+Multi-replica limits require gateway enforcement. Workers renew their PostgreSQL lease independently
+while inference blocks. Completion and retry remain attempt-fenced in the database; a worker that loses
+its lease must not write a terminal result. Guest upload consists of several commits because existing
+upload and job-description services commit internally. Maintenance removes interrupted guest workspaces
+before returning their quota, and reclaims unreferenced files; it must run periodically.

@@ -92,20 +92,7 @@ def _state(
     if resume is None:
         state["status"] = "preparing"
         if guest.created_at < _now() - timedelta(minutes=5):
-            _lock(db, guest.network_key)
-            alive = db.scalar(select(GuestAnalysis.id).where(GuestAnalysis.id == guest.id))
-            original = (
-                db.get(GuestAllowance, guest.network_key, populate_existing=True) if alive else None
-            )
-            if original:
-                original.next_allowed_at = _now()
-                db.commit()
-            state.update(
-                status="failed",
-                error_code="guest_interrupted",
-                available=True,
-                next_allowed_at=None,
-            )
+            state.update(status="failed", error_code="guest_interrupted")
         return state
     if resume.status == "failed":
         state.update(status="failed", error_code=resume.error_code)
@@ -137,10 +124,10 @@ def _state(
         original = (
             db.get(GuestAllowance, guest.network_key, populate_existing=True) if alive else None
         )
-        if original:
+        if original and original.next_allowed_at == guest.expires_at:
             original.next_allowed_at = _now()
-        db.commit()
-        state.update(available=True, next_allowed_at=None)
+            db.commit()
+            state.update(available=True, next_allowed_at=None)
     return state
 
 
@@ -236,22 +223,28 @@ def start(
             )
         )
         db.flush()
+        deadline = _now() + WINDOW
         guest = GuestAnalysis(
             network_key=network,
             token_hash=token_hash,
             request_hash=fingerprint,
             user_id=owner_id,
-            expires_at=_now() + WINDOW,
+            expires_at=deadline,
         )
         db.add(guest)
         if allowance:
-            allowance.next_allowed_at = _now() + WINDOW
+            allowance.next_allowed_at = deadline
         else:
-            db.add(GuestAllowance(network_key=network, next_allowed_at=_now() + WINDOW))
+            db.add(GuestAllowance(network_key=network, next_allowed_at=deadline))
         db.commit()
+        # Failed unlink must not prevent a successfully reserved upload; maintenance
+        # reconciles stored blobs not referenced by any resume version.
         for key in expired_keys:
             if key:
-                store.delete(key)
+                try:
+                    store.delete(key)
+                except OSError:
+                    pass
         try:
             _, resume = documents.ingest_upload(db, store, settings, owner_id, upload, uuid.uuid4())
             _, job, _ = job_descriptions.create_job(
@@ -261,11 +254,15 @@ def start(
             db.commit()
         except Exception:
             db.rollback()
-            current = db.get(GuestAllowance, network)
-            if current:
-                current.next_allowed_at = _now()
-                db.commit()
+            # Remove the failed workspace before returning its reservation. A
+            # failure in deletion leaves the quota occupied for maintenance to
+            # reconcile, rather than allowing another upload over orphaned data.
             delete_account(db, store, owner_id, None)
+            _lock(db, network)
+            current = db.get(GuestAllowance, network)
+            if current and current.next_allowed_at == deadline:
+                current.next_allowed_at = _now()
+            db.commit()
             raise
     response.set_cookie(
         COOKIE,

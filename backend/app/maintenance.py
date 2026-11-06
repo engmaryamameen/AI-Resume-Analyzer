@@ -133,6 +133,22 @@ def fail_stuck_targets(db: Session) -> int:
 
 def run_maintenance(db: Session, store: BlobStore, settings: Settings) -> dict[str, int]:
     now = datetime.now(UTC)
+    # A killed upload can leave a quota reservation and a guest owner without
+    # resume records. Do not release that reservation before deleting its owner.
+    interrupted = list(db.execute(
+        select(GuestAnalysis.user_id, GuestAnalysis.network_key, GuestAnalysis.expires_at)
+        .where(
+            GuestAnalysis.created_at < now - timedelta(minutes=5),
+            GuestAnalysis.resume_version_id.is_(None),
+            GuestAnalysis.expires_at > now,
+        )
+    ).all())
+    for owner_id, network_key, deadline in interrupted:
+        if deletion.delete_account(db, store, owner_id, None):
+            allowance = db.get(GuestAllowance, network_key)
+            if allowance and allowance.next_allowed_at == deadline:
+                allowance.next_allowed_at = now
+                db.commit()
     expired_guests = list(
         db.execute(select(GuestAnalysis.user_id).where(GuestAnalysis.expires_at <= now)).scalars()
     )
@@ -140,6 +156,7 @@ def run_maintenance(db: Session, store: BlobStore, settings: Settings) -> dict[s
         deletion.delete_account(db, store, owner_id, None)
     result = expire_old_data(db, store, settings.retention_days)
     result["expired_guests"] = len(expired_guests)
+    result["interrupted_guests"] = len(interrupted)
     db.execute(delete(GuestAllowance).where(GuestAllowance.next_allowed_at <= now))
     result["orphan_files"] = remove_orphan_files(db, store)
     result["stuck_targets"] = fail_stuck_targets(db)

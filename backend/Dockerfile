@@ -3,7 +3,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /app
 ARG ML_RUNTIME=0
 COPY backend/requirements-ml.lock /app/backend/requirements-ml.lock
-RUN --mount=type=cache,id=margin-ml-pip,target=/root/.cache/pip if [ "$ML_RUNTIME" = "1" ]; then pip install -r backend/requirements-ml.lock; fi
+RUN --mount=type=cache,id=margin-ml-pip,target=/root/.cache/pip \
+    if [ "$ML_RUNTIME" = "1" ]; then \
+        pip install --timeout 600 --retries 10 -r backend/requirements-ml.lock; \
+    fi
 COPY backend/pyproject.toml /app/backend/pyproject.toml
 COPY backend/requirements.lock /app/backend/requirements.lock
 COPY backend/app /app/backend/app
