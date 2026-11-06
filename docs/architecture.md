@@ -170,8 +170,9 @@ reduced-motion preferences. Font licenses are retained under `frontend/public/fo
 ## Operational boundaries
 
 The in-process limiter caps active keys at 50,000 per API process; unknown keys receive 429 when full.
-Multi-replica limits require gateway enforcement. Workers renew their PostgreSQL lease independently
-while inference blocks. Completion and retry remain attempt-fenced in the database; a worker that loses
-its lease must not write a terminal result. Guest upload consists of several commits because existing
-upload and job-description services commit internally. Maintenance removes interrupted guest workspaces
-before returning their quota, and reclaims unreferenced files; it must run periodically.
+Multi-replica limits require gateway enforcement. Workers renew the PostgreSQL lease through
+final database settlement. Attempt fencing prevents stale workers from committing results.
+Guest creation commits the quota, owner, résumé, job description and extraction job together while
+holding a network advisory lock. A failed upload rolls back the reservation; orphaned blobs are
+reclaimed by maintenance. Maintenance leaves incomplete legacy reservations untouched until their normal expiry,
+rather than guessing whether an upload is still active. It must run periodically.

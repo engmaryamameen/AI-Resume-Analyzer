@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Header, Request, Response, UploadFile
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.analysis import job_descriptions
@@ -23,6 +23,7 @@ from app.core.errors import Forbidden, NotFound, RateLimited, ValidationFailed
 from app.core.net import client_ip
 from app.core.ratelimit import limiter
 from app.core.security import constant_time_equal, hash_token
+from app.db.locks import lock_guest_network as _lock
 from app.db.locks import lock_user
 from app.db.models import AnalysisRun, GuestAllowance, GuestAnalysis, ResumeVersion, User
 from app.db.session import get_db
@@ -47,13 +48,6 @@ def _network(request: Request, settings: Settings) -> str:
 def _origin(request: Request, settings: Settings) -> None:
     if request.headers.get("origin") not in settings.cors_origins:
         raise Forbidden("Use the form on this site to start an analysis.", code="guest_origin")
-
-
-def _lock(db: Session, key: str) -> None:
-    db.execute(
-        text("SELECT pg_advisory_xact_lock(:key)"),
-        {"key": int.from_bytes(bytes.fromhex(key)[:8], signed=True)},
-    )
 
 
 def _visitor(db: Session, request: Request, settings: Settings) -> GuestAnalysis | None:
@@ -91,8 +85,7 @@ def _state(
     resume = db.get(ResumeVersion, guest.resume_version_id) if guest.resume_version_id else None
     if resume is None:
         state["status"] = "preparing"
-        if guest.created_at < _now() - timedelta(minutes=5):
-            state.update(status="failed", error_code="guest_interrupted")
+        # Legacy incomplete rows expire with the guest allowance; age alone is not a failure.
         return state
     if resume.status == "failed":
         state.update(status="failed", error_code=resume.error_code)
@@ -236,34 +229,37 @@ def start(
             allowance.next_allowed_at = deadline
         else:
             db.add(GuestAllowance(network_key=network, next_allowed_at=deadline))
-        db.commit()
-        # Failed unlink must not prevent a successfully reserved upload; maintenance
-        # reconciles stored blobs not referenced by any resume version.
+        new_blob_key = None
+        committing = False
+        try:
+            _, resume = documents.ingest_upload(
+                db, store, settings, owner_id, upload, uuid.uuid4(), commit=False
+            )
+            new_blob_key = resume.storage_key
+            _, job, _ = job_descriptions.create_job(
+                db, settings, owner_id, "Guest target role", cleaned, commit=False
+            )
+            guest.resume_version_id, guest.jd_version_id = resume.id, job.id
+            # Reservation, private workspace, both versions and queued extraction
+            # become visible together. A crash before this point leaves no quota.
+            committing = True
+            db.commit()
+        except Exception:
+            db.rollback()
+            # A connection failure during COMMIT has an uncertain outcome.
+            # Preserve the file until the orphan sweep can compare durable rows.
+            if new_blob_key and not committing:
+                try:
+                    store.delete(new_blob_key)
+                except OSError:
+                    pass  # the orphan-file sweep handles an unsuccessful unlink
+            raise
         for key in expired_keys:
             if key:
                 try:
                     store.delete(key)
                 except OSError:
                     pass
-        try:
-            _, resume = documents.ingest_upload(db, store, settings, owner_id, upload, uuid.uuid4())
-            _, job, _ = job_descriptions.create_job(
-                db, settings, owner_id, "Guest target role", cleaned
-            )
-            guest.resume_version_id, guest.jd_version_id = resume.id, job.id
-            db.commit()
-        except Exception:
-            db.rollback()
-            # Remove the failed workspace before returning its reservation. A
-            # failure in deletion leaves the quota occupied for maintenance to
-            # reconcile, rather than allowing another upload over orphaned data.
-            delete_account(db, store, owner_id, None)
-            _lock(db, network)
-            current = db.get(GuestAllowance, network)
-            if current and current.next_allowed_at == deadline:
-                current.next_allowed_at = _now()
-            db.commit()
-            raise
     response.set_cookie(
         COOKIE,
         token,

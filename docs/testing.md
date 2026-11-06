@@ -37,6 +37,21 @@ The guest test consumes the network allowance, which intentionally survives repo
 separate Compose project/volumes for QA rather than clearing the real application's quota.
 `E2E_BASE_URL` selects the test server; `E2E_CHANNEL=chrome` selects an installed Chrome.
 
+For an isolated Compose E2E stack, the **browser origin must match the API origin allowlist**.
+For example, if the E2E web container is published at `http://localhost:3001`, set
+`E2E_BASE_URL=http://localhost:3001` for Playwright and
+`CORS_ALLOWED_ORIGINS=http://localhost:3001` for the API container **before creating it**.
+Check the effective setting with `docker compose -p resume-e2e --env-file /tmp/resume-e2e.env
+-f compose.yaml -f /tmp/resume-e2e-ports.yml config`; rebuild/recreate the API
+if the allowed origin changes. The middleware and guest analyze endpoint both require a
+matching Origin for POST requests; do not disable their checks for tests.
+
+The guest test requires a **new disposable database/volume for each run**. A failed
+first attempt may already have consumed the quota, so simply rerunning the test,
+clearing the browser, or deleting the guest report does not restore the allowance.
+The test fails early with a descriptive error if the allowance was already consumed.
+Never remove a real user/database volume to reset E2E state.
+
 Coverage includes guest upload, registration, extraction review, requirement edits, source inspection,
 user-authored corrections, reruns, comparisons, exports, deletion and failed sign-out. Responsive tests
 exercise upload, processing and limited states at ten widths, asserting column geometry as well as

@@ -23,6 +23,7 @@ export function GuestAnalyzer() {
   const resultHeading = useRef<HTMLHeadingElement>(null);
   const submitted = useRef(false);
   const requestKey = useRef<string | null>(null);
+  const requestVersion = useRef(0);
   const [clock, setClock] = useState(Date.now());
   const pending =
     state?.status === "preparing" ||
@@ -30,20 +31,21 @@ export function GuestAnalyzer() {
     state?.status === "analyzing";
   useEffect(() => {
     let live = true;
+    const version = requestVersion.current;
     setStatusLoading(true);
     api
       .guestStatus()
       .then((v) => {
-        if (live) {
+        if (live && version === requestVersion.current) {
           setState(v);
           setStatusError(null);
         }
       })
       .catch((e) => {
-        if (live) setStatusError(e);
+        if (live && version === requestVersion.current) setStatusError(e);
       })
       .finally(() => {
-        if (live) setStatusLoading(false);
+        if (live && version === requestVersion.current) setStatusLoading(false);
       });
     return () => {
       live = false;
@@ -56,20 +58,21 @@ export function GuestAnalyzer() {
     }
   }, [state?.report]);
   useEffect(() => {
-    if (!pending) return;
+    if (!pending || busy) return;
     let live = true;
+    const version = requestVersion.current;
     let timer: ReturnType<typeof setTimeout>;
     async function poll() {
       try {
         const next = await api.guestProgress();
-        if (live) {
+        if (live && version === requestVersion.current) {
           setState(next);
           setError("");
         }
       } catch (e) {
-        if (live) setError(friendlyError(e));
+        if (live && version === requestVersion.current) setError(friendlyError(e));
       } finally {
-        if (live) timer = setTimeout(poll, 1800);
+        if (live && version === requestVersion.current) timer = setTimeout(poll, 1800);
       }
     }
     timer = setTimeout(poll, 1800);
@@ -77,7 +80,7 @@ export function GuestAnalyzer() {
       live = false;
       clearTimeout(timer);
     };
-  }, [pending]);
+  }, [pending, busy]);
   useEffect(() => {
     const id = setInterval(() => setClock(Date.now()), 60_000);
     return () => clearInterval(id);
@@ -101,16 +104,21 @@ export function GuestAnalyzer() {
     event.preventDefault();
     if (!file || busy || pending || blocked) return;
     submitted.current = true;
+    const version = ++requestVersion.current;
+    setStatusLoading(false);
     setBusy(true);
     setError("");
     requestKey.current ??= newIdempotencyKey();
     try {
-      setState(await api.guestAnalyze(file, job, requestKey.current));
+      const result = await api.guestAnalyze(file, job, requestKey.current);
+      if (version === requestVersion.current) setState(result);
     } catch (e) {
+      if (version !== requestVersion.current) return;
       setError(friendlyError(e));
       if (e instanceof ApiError && e.code === "guest_limit") {
         try {
-          setState(await api.guestStatus());
+          const current = await api.guestStatus();
+          if (version === requestVersion.current) setState(current);
         } catch {
           /* Keep the actionable error visible. */
         }
@@ -126,12 +134,16 @@ export function GuestAnalyzer() {
       )
     )
       return;
+    const version = ++requestVersion.current;
     setBusy(true);
     try {
       await api.deleteGuest();
-      setState(await api.guestStatus());
-      setFile(null);
-      requestKey.current = null;
+      const current = await api.guestStatus();
+      if (version === requestVersion.current) {
+        setState(current);
+        setFile(null);
+        requestKey.current = null;
+      }
     } catch (e) {
       setError(friendlyError(e));
     } finally {

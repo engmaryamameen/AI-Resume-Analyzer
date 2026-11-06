@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GuestAnalyzer } from "@/components/guest-analyzer";
@@ -80,5 +80,43 @@ describe("guest review state and report clarity", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Your résumé review" })).toBeInTheDocument(),
     );
+  });
+});
+
+describe("guest progress polling", () => {
+  it("does not start a second progress request while the first is unresolved", async () => {
+    const extracting: GuestState = { ...idle, status: "extracting", available: false };
+    vi.spyOn(api, "guestStatus").mockResolvedValue(extracting);
+    let resolveProgress: ((state: GuestState) => void) | undefined;
+    const progress = vi.spyOn(api, "guestProgress").mockImplementation(
+      () =>
+        new Promise<GuestState>((resolve) => {
+          resolveProgress = resolve;
+        }),
+    );
+    vi.useFakeTimers();
+    try {
+      render(<GuestAnalyzer />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1800);
+      });
+      expect(progress).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(progress).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        resolveProgress?.(extracting);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1800);
+      });
+      expect(progress).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
