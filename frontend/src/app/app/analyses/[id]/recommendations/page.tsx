@@ -15,9 +15,11 @@ import {
   PageHeader,
   TextArea,
 } from "@/components/ui";
-import { api, ApiError, newIdempotencyKey } from "@/lib/api";
+import { ApiError, newIdempotencyKey } from "@/lib/http/client";
+import { analysesApi } from "@/features/analyses/api";
+import { resumesApi } from "@/features/resumes/api";
 import { RECOMMENDATION_KIND, friendlyError } from "@/lib/copy";
-import { useAsync } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks";
 import type { Recommendation } from "@/lib/types";
 
 interface Saved {
@@ -29,11 +31,10 @@ interface Saved {
 export default function Recommendations() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const analysis = useAsync(() => api.analysis(id), [id]);
+  const analysis = useQuery(["analysis", id], (signal) => analysesApi.analysis(id, signal));
   const documentId = analysis.data?.resume_document_id ?? null;
-  const resume = useAsync(
-    () => (documentId ? api.resume(documentId) : Promise.resolve(null)),
-    [documentId],
+  const resume = useQuery(["resume", documentId], (signal) =>
+    documentId ? resumesApi.resume(documentId, undefined, signal) : Promise.resolve(null),
   );
 
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -61,7 +62,7 @@ export default function Recommendations() {
     setBusy(bid);
     setMessage(null);
     try {
-      const v = await api.correctResume(documentId!, {
+      const v = await resumesApi.correctResume(documentId!, {
         base_version_no: latest!.version_no,
         block_edits: { [bid]: after },
       });
@@ -89,7 +90,7 @@ export default function Recommendations() {
     if (!newest) return;
     setRerunning(true);
     try {
-      const next = await api.createAnalysis(newest, run.jd_version_id, rerunKey.current);
+      const next = await analysesApi.createAnalysis(newest, run.jd_version_id, rerunKey.current);
       router.push(`/app/analyses/${next.id}`);
     } catch (e) {
       setMessage({ tone: "bad", text: friendlyError(e) });

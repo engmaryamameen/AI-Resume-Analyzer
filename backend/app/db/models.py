@@ -54,6 +54,24 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False, server_default="user")
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = _created()
+
+
+class AccountToken(Base):
+    __tablename__ = "account_tokens"
+    __table_args__ = (
+        CheckConstraint(
+            "purpose IN ('verify_email','reset_password')", name="ck_account_token_purpose"
+        ),
+        Index("ix_account_tokens_user_purpose", "user_id", "purpose"),
+        Index("ix_account_tokens_expires", "expires_at"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    purpose: Mapped[str] = mapped_column(String(24), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = _created()
 
 

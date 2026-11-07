@@ -185,3 +185,25 @@ Run the checks in [testing.md](testing.md), then verify on the target infrastruc
 - retention scheduling, storage capacity, latency and queue depth under expected load.
 
 Learned-model approval additionally requires the evaluation in [local-models.md](local-models.md).
+
+## Current portfolio scope and account email
+
+The owner intends local portfolio use only; no public deployment is requested or claimed. The
+hardened ingress, rollback guidance and restore tooling are engineering demonstrations. See
+[operations](operations.md) for the exact tested topology and its limits.
+
+Account email uses implicit TLS SMTP. Configure `SMTP_HOST`, `SMTP_PORT` (465), `SMTP_USERNAME`,
+`SMTP_PASSWORD`, `SMTP_FROM`, and `PUBLIC_APP_URL` in the ignored local `.env`. Gmail uses
+`smtp.gmail.com`, the full mailbox address as username/from, and a separate Google app password.
+Never put the password in `.env.example`, source control, screenshots or chat. No real email is sent
+by the test suite. Public mode requires an HTTPS `PUBLIC_APP_URL` and configured delivery; local mode
+does not require verification to use synthetic workflows. A provider using STARTTLS on port 587 is
+not compatible with the current implicit-TLS transport; use its TLS endpoint on 465.
+
+Production registration issues no session and returns a generic response. An email link proves
+ownership before workspace access. Recovery links expire after 30 minutes and reset all sessions.
+Existing accounts need verification if public mode is enabled. Request another link after a delivery
+failure; each request invalidates the older link. MFA remains outside local portfolio scope.
+
+Mailbox verification requires choosing a password and revokes every session/token. This prevents a
+pre-registered account from retaining an attacker-chosen credential after its real owner verifies.

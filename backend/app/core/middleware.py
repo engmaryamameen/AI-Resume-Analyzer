@@ -30,7 +30,7 @@ def _error(code: str, message: str, status: int) -> JSONResponse:
 
 
 class BodyLimitMiddleware:
-    """Counts bytes as they stream in, so chunked uploads cannot dodge a Content-Length check."""
+    """Bounds the complete body before dispatch, including chunked and early-response requests."""
 
     def __init__(self, app: ASGIApp, max_bytes: int):
         self.app, self.max_bytes = app, max_bytes
@@ -38,41 +38,43 @@ class BodyLimitMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
-        declared = Headers(scope=scope).get("content-length")
-        if declared and declared.isdigit() and int(declared) > self.max_bytes:
+        # Buffer at most max_bytes before invoking the app. This also covers endpoints
+        # that answer without reading their body: no response can start before the limit
+        # is established. The ingress supplies slow-client timeouts and its own cap.
+        lengths = Headers(scope=scope).getlist("content-length")
+        if lengths and (len(lengths) != 1 or not re.fullmatch(r"[0-9]+", lengths[0])):
+            return await _error("invalid_content_length", "Invalid Content-Length.", 400)(
+                scope, receive, send
+            )
+        if lengths and (len(lengths[0]) > 20 or int(lengths[0]) > self.max_bytes):
             return await _error("payload_too_large", "The request body is too large.", 413)(
                 scope, receive, send
             )
-
-        seen = 0
-        exceeded = False
-
-        async def limited_receive() -> Message:
-            nonlocal seen, exceeded
+        body = bytearray()
+        while True:
             message = await receive()
-            if message["type"] == "http.request":
-                seen += len(message.get("body", b""))
-                if seen > self.max_bytes:
-                    exceeded = True
-                    return {"type": "http.request", "body": b"", "more_body": False}
-            return message
-
-        replaced = False
-
-        async def guarded_send(message: Message) -> None:
-            # Whatever the app answers to a truncated body (usually a confusing 4xx/5xx) is
-            # replaced by one clear 413.
-            nonlocal replaced
-            if exceeded:
-                if not replaced:
-                    replaced = True
-                    await _error("payload_too_large", "The request body is too large.", 413)(
-                        scope, receive, send
-                    )
+            if message["type"] == "http.disconnect":
                 return
-            await send(message)
+            if message["type"] != "http.request":
+                continue
+            chunk = message.get("body", b"")
+            if len(body) + len(chunk) > self.max_bytes:
+                return await _error("payload_too_large", "The request body is too large.", 413)(
+                    scope, receive, send
+                )
+            body.extend(chunk)
+            if not message.get("more_body", False):
+                break
+        delivered = False
 
-        await self.app(scope, limited_receive, guarded_send)
+        async def buffered_receive() -> Message:
+            nonlocal delivered
+            if not delivered:
+                delivered = True
+                return {"type": "http.request", "body": bytes(body), "more_body": False}
+            return await receive()
+
+        await self.app(scope, buffered_receive, send)
 
 
 class RequestContextMiddleware:

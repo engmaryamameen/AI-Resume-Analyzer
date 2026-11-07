@@ -30,6 +30,13 @@ export interface User {
   id: string;
   email: string;
   role: string;
+  email_verified_at?: string | null;
+  email_verification_required?: boolean;
+}
+
+export interface Registration {
+  user: User | null;
+  email_verification_required: boolean;
 }
 
 export interface Signal {

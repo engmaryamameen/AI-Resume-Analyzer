@@ -25,7 +25,7 @@ records its fallback reason. Model quality remains a separate evaluation problem
 
 Opaque session tokens are stored as keyed hashes and sent in HttpOnly cookies. State-changing account
 requests require a CSRF token and an allowed Origin. Sessions can be revoked immediately. Email
-verification, password recovery, MFA and a multi-device session list are not implemented.
+verification, password recovery and an active-session list are implemented with expiring, hashed, single-use tokens and session revocation. MFA remains outside the local portfolio scope.
 
 ## Immutable versions
 

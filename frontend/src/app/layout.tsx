@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import "./globals.css";
 import "./rolemark.css";
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
   description: BRAND.description,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  await headers(); // Request-specific CSP nonces require dynamic rendering.
   return (
     <html lang="en">
       <body>

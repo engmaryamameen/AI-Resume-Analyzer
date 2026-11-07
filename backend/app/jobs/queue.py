@@ -175,8 +175,15 @@ def purge_finished(db: Session, older_than_days: int) -> int:
     cutoff = _now() - timedelta(days=older_than_days)
     result = db.execute(
         delete(ProcessingJob).where(
-            ProcessingJob.status.in_(("succeeded", "failed", "cancelled")),
-            ProcessingJob.updated_at < cutoff,
+            ProcessingJob.id.in_(
+                select(ProcessingJob.id)
+                .where(
+                    ProcessingJob.status.in_(("succeeded", "failed", "cancelled")),
+                    ProcessingJob.updated_at < cutoff,
+                )
+                .order_by(ProcessingJob.updated_at)
+                .limit(1000)
+            )
         )
     )
     return cast(CursorResult[Any], result).rowcount or 0

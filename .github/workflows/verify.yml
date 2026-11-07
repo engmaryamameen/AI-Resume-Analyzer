@@ -1,5 +1,6 @@
 name: Verify application
 on:
+  workflow_dispatch:
   push:
   pull_request:
 permissions:
@@ -46,8 +47,14 @@ jobs:
       - run: npm ci --ignore-scripts
         working-directory: frontend
       - run: ruff check backend/app ml && mypy --config-file backend/pyproject.toml backend/app
-      - run: pytest -q
+      - name: Check generated response contracts
+        run: |
+          python frontend/scripts/export-contracts.py --check
+          node frontend/scripts/compile-contracts.mjs --check
+      - run: pytest -q --junitxml=/tmp/backend-results.xml
         working-directory: backend
+      - name: Rehearse disposable database restore
+        run: ALLOW_DISPOSABLE_RESTORE=1 python backend/scripts/restore_rehearsal.py
       - run: npm audit --omit=dev --audit-level=moderate && npm audit --audit-level=high
         working-directory: frontend
       - run: npm run format:check && npm run typecheck && npm run lint && npm test && npm run build
@@ -72,10 +79,11 @@ jobs:
       - run: npm run e2e -- --workers=1
         working-directory: frontend
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: failure-diagnostics
+          name: verification-evidence
           path: |
+            /tmp/backend-results.xml
             frontend/test-results
             /tmp/api.log
             /tmp/worker.log
@@ -105,8 +113,51 @@ jobs:
             models/semantic-retriever
             models/semantic-verifier
           key: semantic-${{ hashFiles('backend/app/ml/semantic-models.json') }}
+      - run: pip install -c backend/requirements-dev.lock -e 'backend[dev]'
       - run: python -m app.ml.provision --models-dir models
       - run: python -m app.ml.check
         env:
           HF_HUB_OFFLINE: '1'
           TRANSFORMERS_OFFLINE: '1'
+      - run: pytest -q backend/tests/unit/test_local_engine_empty_queries.py backend/tests/unit/test_semantic.py
+
+  dependency-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pip-audit==2.10.1
+      - run: python backend/scripts/audit_locks.py backend/requirements.lock
+      - run: python backend/scripts/audit_locks.py backend/requirements-dev.lock
+      - run: python backend/scripts/audit_locks.py backend/requirements-ml.lock
+
+  operational-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python deploy/verify-ingress.py
+      - run: >-
+          docker run --rm --network none -v "$PWD/deploy:/rules:ro" -w /rules
+          --entrypoint /bin/promtool prom/prometheus:v3.10.0 test rules alerts.test.yml
+
+  image-security:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t resume-api:audit -f backend/Dockerfile .
+      - run: docker build -t resume-web:audit -f frontend/Dockerfile .
+      - run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.69.3 image --exit-code 1 --severity HIGH,CRITICAL resume-api:audit
+      - run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.69.3 image --exit-code 1 --severity HIGH,CRITICAL resume-web:audit

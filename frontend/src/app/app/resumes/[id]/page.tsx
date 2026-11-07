@@ -15,9 +15,10 @@ import {
   TextArea,
   TextField,
 } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/http/client";
+import { resumesApi } from "@/features/resumes/api";
 import { SECTION_LABEL, failureMessage, formatDate, friendlyError, years } from "@/lib/copy";
-import { useAsync, usePolling } from "@/lib/hooks";
+import { useQuery, usePolling } from "@/lib/hooks";
 import type { ContactField } from "@/lib/types";
 
 function confidenceNote(f: ContactField): string | undefined {
@@ -28,7 +29,7 @@ function confidenceNote(f: ContactField): string | undefined {
 export default function ResumeReview() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const detail = useAsync(() => api.resume(id), [id]);
+  const detail = useQuery(["resume", id], (signal) => resumesApi.resume(id, undefined, signal));
   const doc = detail.data?.normalized ?? null;
   const latest = detail.data?.versions.at(-1);
 
@@ -65,7 +66,7 @@ export default function ResumeReview() {
       return;
     setDeleting(true);
     try {
-      await api.deleteResume(id);
+      await resumesApi.deleteResume(id);
       router.replace("/app/resumes");
     } catch (e) {
       setMessage({ tone: "bad", text: friendlyError(e) });
@@ -119,7 +120,7 @@ export default function ResumeReview() {
     setSaving(true);
     setMessage(null);
     try {
-      const v = await api.correctResume(id, {
+      const v = await resumesApi.correctResume(id, {
         base_version_no: latest!.version_no,
         block_edits: edits,
         contact,

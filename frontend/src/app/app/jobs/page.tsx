@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { QueryActivity } from "@/components/query-activity";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -15,14 +16,14 @@ import {
   TextArea,
   TextField,
 } from "@/components/ui";
-import { api } from "@/lib/api";
+import { jobDescriptionsApi } from "@/features/job-descriptions/api";
 import { formatDate, friendlyError } from "@/lib/copy";
-import { useAsync } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks";
 
 export default function Jobs() {
   const router = useRouter();
   const [offset, setOffset] = useState(0);
-  const list = useAsync(() => api.jobs(offset), [offset]);
+  const list = useQuery(["jobs", offset], (signal) => jobDescriptionsApi.jobs(offset, signal));
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,7 +34,7 @@ export default function Jobs() {
     setBusy(true);
     setError(null);
     try {
-      const job = await api.createJob(title || "Untitled role", text);
+      const job = await jobDescriptionsApi.createJob(title || "Untitled role", text);
       router.push(`/app/jobs/${job.id}`);
     } catch (err) {
       setError(friendlyError(err));
@@ -47,6 +48,7 @@ export default function Jobs() {
         Paste a posting. The requirements are picked out of it, and you get to correct anything
         that&apos;s wrong.
       </PageHeader>
+      <QueryActivity active={list.refreshing} />
       <Card className="mb-8">
         <form onSubmit={create} className="space-y-4">
           <TextField

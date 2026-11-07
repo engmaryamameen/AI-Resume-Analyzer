@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GuestAnalyzer } from "@/components/guest-analyzer";
+import { GuestAnalyzer } from "@/features/guest/guest-analyzer";
 import { Icon } from "@/components/icon";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 

@@ -100,3 +100,11 @@ recovery. Resource limits reduce parser risk but are not a complete sandbox.
 - [Analysis and optional local models](docs/local-models.md)
 
 MIT. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md). Bundled fonts retain their license notices.
+
+## Engineering review and verification
+
+This is a local portfolio application, not a deployed production service. See the
+[engineering review disposition](docs/engineering-review.md), [threat model](docs/threat-model.md),
+[operations and recovery](docs/operations.md) and [local verification evidence](docs/verification.md).
+Real-world model accuracy has not been independently measured. Public deployment, hosted rollout and
+licensed holdout collection are outside the owner's intended scope.

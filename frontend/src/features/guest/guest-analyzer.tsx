@@ -1,155 +1,35 @@
 "use client";
-
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { api, ApiError, newIdempotencyKey } from "@/lib/api";
-import { failureMessage, formatDateTime, friendlyError } from "@/lib/copy";
-import type { GuestState } from "@/lib/types";
-import { AnalysisResults } from "./analysis-view";
-import { Icon } from "./icon";
-import { Button, ButtonLink, ErrorState, Loading, Notice, TextArea } from "./ui";
+import { failureMessage, formatDateTime } from "@/lib/copy";
+import { AnalysisResults } from "@/features/analyses/components/analysis-report";
+import { Icon } from "@/components/icon";
+import { Button, ButtonLink, ErrorState, Loading, Notice, TextArea } from "@/components/ui";
+import { useGuestAnalysis } from "./use-guest-analysis";
 
 export function GuestAnalyzer() {
-  const [state, setState] = useState<GuestState | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [job, setJob] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [dragging, setDragging] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
-  const [statusLoading, setStatusLoading] = useState(true);
-  const [statusError, setStatusError] = useState<unknown>(null);
-  const [statusAttempt, setStatusAttempt] = useState(0);
-  const resultHeading = useRef<HTMLHeadingElement>(null);
-  const submitted = useRef(false);
-  const requestKey = useRef<string | null>(null);
-  const requestVersion = useRef(0);
-  const [clock, setClock] = useState(Date.now());
-  const pending =
-    state?.status === "preparing" ||
-    state?.status === "extracting" ||
-    state?.status === "analyzing";
-  useEffect(() => {
-    let live = true;
-    const version = requestVersion.current;
-    setStatusLoading(true);
-    api
-      .guestStatus()
-      .then((v) => {
-        if (live && version === requestVersion.current) {
-          setState(v);
-          setStatusError(null);
-        }
-      })
-      .catch((e) => {
-        if (live && version === requestVersion.current) setStatusError(e);
-      })
-      .finally(() => {
-        if (live && version === requestVersion.current) setStatusLoading(false);
-      });
-    return () => {
-      live = false;
-    };
-  }, [statusAttempt]);
-  useEffect(() => {
-    if (state?.report && submitted.current) {
-      submitted.current = false;
-      resultHeading.current?.focus();
-    }
-  }, [state?.report]);
-  useEffect(() => {
-    if (!pending || busy) return;
-    let live = true;
-    const version = requestVersion.current;
-    let timer: ReturnType<typeof setTimeout>;
-    async function poll() {
-      try {
-        const next = await api.guestProgress();
-        if (live && version === requestVersion.current) {
-          setState(next);
-          setError("");
-        }
-      } catch (e) {
-        if (live && version === requestVersion.current) setError(friendlyError(e));
-      } finally {
-        if (live && version === requestVersion.current) timer = setTimeout(poll, 1800);
-      }
-    }
-    timer = setTimeout(poll, 1800);
-    return () => {
-      live = false;
-      clearTimeout(timer);
-    };
-  }, [pending, busy]);
-  useEffect(() => {
-    const id = setInterval(() => setClock(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  const remaining = state?.next_allowed_at
-    ? Math.max(0, new Date(state.next_allowed_at).getTime() - clock)
-    : 0;
-  const remainingMinutes = Math.ceil(remaining / 60_000);
-  const blocked = state?.available === false && remaining > 0;
-  function pick(next: File | undefined) {
-    if (!next || busy || pending) return;
-    if (!/\.(pdf|docx)$/i.test(next.name) || next.size > 5 * 1024 * 1024) {
-      setError("Choose a PDF or DOCX résumé, up to 5 MB.");
-      return;
-    }
-    setFile(next);
-    setError("");
-    requestKey.current = null;
-  }
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!file || busy || pending || blocked) return;
-    submitted.current = true;
-    const version = ++requestVersion.current;
-    setStatusLoading(false);
-    setBusy(true);
-    setError("");
-    requestKey.current ??= newIdempotencyKey();
-    try {
-      const result = await api.guestAnalyze(file, job, requestKey.current);
-      if (version === requestVersion.current) setState(result);
-    } catch (e) {
-      if (version !== requestVersion.current) return;
-      setError(friendlyError(e));
-      if (e instanceof ApiError && e.code === "guest_limit") {
-        try {
-          const current = await api.guestStatus();
-          if (version === requestVersion.current) setState(current);
-        } catch {
-          /* Keep the actionable error visible. */
-        }
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function remove() {
-    if (
-      !window.confirm(
-        "Delete this guest report and its documents? Your 24-hour allowance will not reset.",
-      )
-    )
-      return;
-    const version = ++requestVersion.current;
-    setBusy(true);
-    try {
-      await api.deleteGuest();
-      const current = await api.guestStatus();
-      if (version === requestVersion.current) {
-        setState(current);
-        setFile(null);
-        requestKey.current = null;
-      }
-    } catch (e) {
-      setError(friendlyError(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const {
+    state,
+    file,
+    job,
+    setJob,
+    busy,
+    error,
+    setError,
+    dragging,
+    setDragging,
+    step,
+    setStep,
+    statusLoading,
+    statusError,
+    setStatusAttempt,
+    resultHeading,
+    pending,
+    remainingMinutes,
+    blocked,
+    pick,
+    submit,
+    remove,
+  } = useGuestAnalysis();
   return (
     <section
       id="analyze"
@@ -271,7 +151,7 @@ export function GuestAnalyzer() {
               <Icon name="search" size={30} />
             </span>
             <h2>
-              {state.status === "extracting" ? "Reading your résumé" : "Following the evidence"}
+              {state?.status === "extracting" ? "Reading your résumé" : "Following the evidence"}
             </h2>
             <p>
               Your document is being processed privately by the local worker. This usually takes a
@@ -415,7 +295,6 @@ export function GuestAnalyzer() {
                   value={job}
                   onChange={(e) => {
                     setJob(e.target.value);
-                    requestKey.current = null;
                   }}
                 />
                 <Button

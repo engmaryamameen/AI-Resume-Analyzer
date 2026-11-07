@@ -1,5 +1,5 @@
 import type { IconName } from "@/components/icon";
-import { ApiError } from "./api";
+import { ApiError } from "./http/client";
 import type { EvidenceLabel, MatchStatus, MentionRole, Recommendation } from "./types";
 
 export const STATUS: Record<

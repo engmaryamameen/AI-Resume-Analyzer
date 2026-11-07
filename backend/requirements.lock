@@ -23,7 +23,7 @@ pycparser==3.12
 pydantic==2.14.1
 pydantic-settings==2.16.1
 pydantic_core==2.50.1
-pypdf==6.21.2
+pypdf==6.21.4
 python-dotenv==1.2.4
 python-multipart==0.0.32
 PyYAML==6.0.3

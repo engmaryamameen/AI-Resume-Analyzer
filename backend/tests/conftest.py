@@ -13,6 +13,8 @@ os.environ.update({
     "STORAGE_DIR": str(Path(_TMP) / "storage"),
     "MODEL_DIR": str(Path(_TMP) / "models"),  # empty: tests run the rule-based reading
     "ML_ENABLED": "false",
+    "SMTP_HOST": "",
+    "SMTP_FROM": "",  # tests never deliver real mail, even if the developer has configured SMTP
     "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
     "RATE_LIMIT_DEMO_PER_MINUTE": "1000",
 })

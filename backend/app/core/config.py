@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     parser_timeout_seconds: int = 20
     parser_memory_mb: int = 512
     session_ttl_hours: int = 72
+    public_app_url: str = "http://localhost:3000"
+    smtp_host: str = ""
+    smtp_port: int = 465
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
+    @property
+    def email_verification_required(self) -> bool:
+        return self.is_production
+
     retention_days: int = 90
 
     job_max_attempts: int = Field(default=3, ge=1)

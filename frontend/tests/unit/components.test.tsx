@@ -2,19 +2,18 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AnalysisResults } from "@/features/analyses/components/analysis-report";
+import { AssessmentCard, EnginePanel } from "@/features/analyses/components/engine-and-assessments";
 import {
-  AnalysisResults,
-  AssessmentCard,
-  EnginePanel,
   EvidenceCard,
   Probability,
   RequirementCard,
   StatusBadge,
-} from "@/components/analysis-view";
+} from "@/features/analyses/components/requirement-evidence";
 import { ComparisonView } from "@/components/comparison-view";
 import { Diff, diffWords } from "@/components/diff";
 import { ModelStatusView } from "@/components/model-status";
-import { ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/http/client";
 import { analysisFailure, failureMessage, friendlyError, percent } from "@/lib/copy";
 import type { Assessment, Comparison, EngineInfo, Evidence, Match, ModelStatus } from "@/lib/types";
 

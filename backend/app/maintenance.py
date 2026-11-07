@@ -17,6 +17,7 @@ from app.core.errors import ServiceUnavailable
 from app.core.logging import get_logger
 from app.db import idempotency
 from app.db.models import (
+    AccountToken,
     AnalysisRun,
     AuditEvent,
     GuestAllowance,
@@ -36,25 +37,33 @@ log = get_logger(__name__)
 AUDIT_RETENTION = timedelta(days=365)
 FINISHED_JOB_RETENTION_DAYS = 30
 ORPHAN_FILE_GRACE = timedelta(hours=1)
+MAINTENANCE_BATCH = 200
+ROW_PURGE_BATCH = 1000
 
 
 def expire_old_data(db: Session, store: BlobStore, retention_days: int) -> dict[str, int]:
     """Delete résumés and job descriptions with no activity inside the retention window."""
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
     stale_resumes = db.execute(
-        select(ResumeDocument.id, ResumeDocument.user_id).where(
+        select(ResumeDocument.id, ResumeDocument.user_id)
+        .where(
             ~exists().where(
                 ResumeVersion.document_id == ResumeDocument.id, ResumeVersion.created_at >= cutoff
             )
         )
+        .order_by(ResumeDocument.created_at, ResumeDocument.id)
+        .limit(MAINTENANCE_BATCH)
     ).all()
     stale_jobs = db.execute(
-        select(JobDescription.id, JobDescription.user_id).where(
+        select(JobDescription.id, JobDescription.user_id)
+        .where(
             ~exists().where(
                 JobDescriptionVersion.job_id == JobDescription.id,
                 JobDescriptionVersion.created_at >= cutoff,
             )
         )
+        .order_by(JobDescription.created_at, JobDescription.id)
+        .limit(MAINTENANCE_BATCH)
     ).all()
     counts = {"resumes": 0, "job_descriptions": 0, "skipped_busy": 0}
     for document_id, user_id in stale_resumes:
@@ -76,16 +85,25 @@ def expire_old_data(db: Session, store: BlobStore, retention_days: int) -> dict[
 
 def remove_orphan_files(db: Session, store: BlobStore) -> int:
     """Delete stored files that no résumé version refers to (crash between write and commit, failed unlink)."""
-    known = set(
-        db.execute(
-            select(ResumeVersion.storage_key).where(ResumeVersion.storage_key.is_not(None))
-        ).scalars()
-    )
+    # Stream filesystem entries and query only one bounded key batch at a time.
+    # Committing each read batch avoids an hours-long snapshot on a large volume.
+    from itertools import islice
+
     threshold = (datetime.now(UTC) - ORPHAN_FILE_GRACE).timestamp()
-    orphans = [key for key, modified in store.stored() if key not in known and modified < threshold]
-    for key in orphans:
-        store.delete(key)
-    return len(orphans)
+    candidates = (key for key, modified in store.stored() if modified < threshold)
+    removed = 0
+    while batch := list(islice(candidates, ROW_PURGE_BATCH)):
+        known = set(
+            db.scalars(
+                select(ResumeVersion.storage_key).where(ResumeVersion.storage_key.in_(batch))
+            )
+        )
+        db.commit()
+        for key in batch:
+            if key not in known:
+                store.delete(key)
+                removed += 1
+    return removed
 
 
 def fail_stuck_targets(db: Session) -> int:
@@ -138,27 +156,64 @@ def run_maintenance(db: Session, store: BlobStore, settings: Settings) -> dict[s
     # incomplete reservation while a request was still active. Normal expiry
     # removes those legacy rows without risking a live upload.
     expired_guests = list(
-        db.execute(select(GuestAnalysis.user_id).where(GuestAnalysis.expires_at <= now)).scalars()
+        db.execute(
+            select(GuestAnalysis.user_id)
+            .where(GuestAnalysis.expires_at <= now)
+            .order_by(GuestAnalysis.expires_at)
+            .limit(MAINTENANCE_BATCH)
+        ).scalars()
     )
     for owner_id in expired_guests:
         deletion.delete_account(db, store, owner_id, None)
     result = expire_old_data(db, store, settings.retention_days)
     result["expired_guests"] = len(expired_guests)
-    db.execute(delete(GuestAllowance).where(GuestAllowance.next_allowed_at <= now))
+    db.execute(
+        delete(GuestAllowance).where(
+            GuestAllowance.network_key.in_(
+                select(GuestAllowance.network_key)
+                .where(GuestAllowance.next_allowed_at <= now)
+                .limit(ROW_PURGE_BATCH)
+            )
+        )
+    )
     result["orphan_files"] = remove_orphan_files(db, store)
     result["stuck_targets"] = fail_stuck_targets(db)
     result["sessions"] = (
         cast(
-            CursorResult[Any], db.execute(delete(AuthSession).where(AuthSession.expires_at < now))
+            CursorResult[Any],
+            db.execute(
+                delete(AuthSession).where(
+                    AuthSession.id.in_(
+                        select(AuthSession.id)
+                        .where(AuthSession.expires_at < now)
+                        .limit(ROW_PURGE_BATCH)
+                    )
+                )
+            ),
         ).rowcount
         or 0
     )
     result["audit_events"] = (
         cast(
             CursorResult[Any],
-            db.execute(delete(AuditEvent).where(AuditEvent.created_at < now - AUDIT_RETENTION)),
+            db.execute(
+                delete(AuditEvent).where(
+                    AuditEvent.id.in_(
+                        select(AuditEvent.id)
+                        .where(AuditEvent.created_at < now - AUDIT_RETENTION)
+                        .limit(ROW_PURGE_BATCH)
+                    )
+                )
+            ),
         ).rowcount
         or 0
+    )
+    db.execute(
+        delete(AccountToken).where(
+            AccountToken.id.in_(
+                select(AccountToken.id).where(AccountToken.expires_at <= now).limit(ROW_PURGE_BATCH)
+            )
+        )
     )
     result["idempotency_keys"] = idempotency.purge_expired(db)
     result["finished_jobs"] = queue.purge_finished(db, FINISHED_JOB_RETENTION_DAYS)

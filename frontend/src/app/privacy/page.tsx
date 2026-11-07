@@ -33,8 +33,9 @@ export default function Privacy() {
               reader is used instead, and every result says so.
             </p>
             <p className="mt-2">
-              Models can be wrong. They are checked against labelled examples before being approved,
-              but that doesn&apos;t make them right for every résumé.
+              Models can be wrong. This portfolio demonstrates engineering checks against synthetic
+              and challenge examples. It has no independently labeled real-world benchmark and does
+              not claim measured accuracy on real résumés.
             </p>
           </section>
           <section aria-labelledby="stored">
@@ -76,7 +77,10 @@ export default function Privacy() {
               That removes the stored file, the extracted text and every analysis built on it.
               Deleting your account (it asks for your password) removes everything you have stored.
               A short anonymous record that an account was deleted is kept, with no link back to
-              you.
+              you. Copies in existing backups, database recovery logs, or reports you downloaded are
+              separate: deleting live data does not erase those copies. Any operator offering this
+              service must publish and enforce their backup retention period before accepting real
+              personal data.
             </p>
           </section>
           <section aria-labelledby="demo">
@@ -98,9 +102,9 @@ export default function Privacy() {
               allowance.
             </p>
             <p className="mt-2">
-              Guest report access expires after 24 hours. Scheduled cleanup removes the documents
-              and results, normally within the following hour. You can delete your guest report
-              sooner from its review panel.
+              Guest report access expires after 24 hours. Scheduled cleanup removes documents and
+              results in batches; a cleanup backlog can delay physical removal. You can delete your
+              guest report sooner from its review panel.
             </p>
           </section>
           <section aria-labelledby="cookies">
@@ -110,7 +114,9 @@ export default function Privacy() {
             <p className="mt-2">
               Account cookies keep you signed in and protect against forged requests. A separate
               HttpOnly guest cookie grants access to your temporary guest report. There are no
-              analytics or advertising trackers.
+              analytics or advertising trackers. Account verification and recovery emails use the
+              configured mail provider; your email address and account link are included, but your
+              documents and job descriptions are not.
             </p>
           </section>
         </div>

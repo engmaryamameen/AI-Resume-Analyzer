@@ -5,15 +5,15 @@ import { Select } from "@/components/select";
 import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icon";
-import { AnalysisResults } from "@/components/analysis-view";
+import { AnalysisResults } from "@/features/analyses/components/analysis-report";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Button, ErrorState, Notice } from "@/components/ui";
-import { api } from "@/lib/api";
-import { useAsync } from "@/lib/hooks";
+import { demoApi } from "@/features/demo/api";
+import { useQuery } from "@/lib/hooks";
 import type { DemoResult } from "@/lib/types";
 
 export default function Demo() {
-  const samples = useAsync(() => api.demoSamples(), []);
+  const samples = useQuery(["demoSamples"], (signal) => demoApi.demoSamples(signal));
   const [resume, setResume] = useState("");
   const [job, setJob] = useState("");
   const [result, setResult] = useState<DemoResult | null>(null);
@@ -27,7 +27,7 @@ export default function Demo() {
     setError(null);
     setResult(null);
     try {
-      setResult(await api.demoAnalyze({ resume_id: resume, job_id: job }));
+      setResult(await demoApi.demoAnalyze({ resume_id: resume, job_id: job }));
     } catch (err) {
       setError(err);
     } finally {

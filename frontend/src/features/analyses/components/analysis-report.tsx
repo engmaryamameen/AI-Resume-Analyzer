@@ -2,17 +2,16 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import { Select } from "./select";
-import { Icon } from "./icon";
-import { Pagination } from "./ui";
+import { Select } from "@/components/select";
+import { Icon } from "@/components/icon";
+import { Pagination } from "@/components/ui";
 import {
   AssessmentCard,
   EnginePanel,
-  RecommendationList,
-  RequirementCard,
-  StatusBadge,
   Warnings,
-} from "./analysis-widgets";
+} from "@/features/analyses/components/engine-and-assessments";
+import { RequirementCard, StatusBadge } from "@/features/analyses/components/requirement-evidence";
+import { RecommendationList } from "@/features/analyses/components/recommendations";
 import { STATUS, STATUS_ORDER } from "@/lib/copy";
 import type {
   Assessment,

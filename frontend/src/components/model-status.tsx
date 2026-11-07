@@ -1,8 +1,8 @@
 "use client";
 
-import { api } from "@/lib/api";
+import { systemApi } from "@/features/system/api";
 import { ORIGIN_LABEL } from "@/lib/copy";
-import { useAsync } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks";
 import type { ModelStatus } from "@/lib/types";
 import { Badge, Card } from "./ui";
 
@@ -50,6 +50,6 @@ export function ModelStatusView({ status }: { status: ModelStatus }) {
 }
 
 export function ModelStatusPanel() {
-  const status = useAsync(() => api.modelStatus(), []);
+  const status = useQuery(["modelStatus"], (signal) => systemApi.modelStatus(signal));
   return status.data ? <ModelStatusView status={status.data} /> : null;
 }

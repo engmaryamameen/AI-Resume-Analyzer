@@ -128,3 +128,16 @@ frontend tree. The pinned ESLint toolchain currently inherits the moderate
 [minimatch advisory](https://github.com/advisories/GHSA-g3hv-75wg-m249). It is development-only; patterns
 come from repository configuration, not résumé uploads. The patched minimatch major changes its API,
 so a compatible lint-tool upgrade remains necessary.
+
+## Account email and ownership
+
+Account links use the operator's configured SMTP provider. Only the recipient address and account
+link/notification are sent; documents and job descriptions are not included. Tokens are random, hashed
+at rest, expire after 30 minutes and are single use. Verification establishes a mailbox-owner-chosen
+password and revokes all sessions/tokens, including credentials from pre-registration. Recovery does
+the same and sends a notification. No real email is sent by automated tests.
+
+Expiry denies guest access immediately. Physical cleanup is bounded to 200 workspaces per sweep, so
+a large backlog can delay storage removal beyond the next hourly run. Live deletion does not erase
+existing backups, WAL, downloaded reports or separately retained logs. Public operation would require
+an explicit backup/deletion-ledger policy and restore rehearsal before accepting real documents.

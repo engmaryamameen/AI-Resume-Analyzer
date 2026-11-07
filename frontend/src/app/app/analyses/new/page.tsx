@@ -15,17 +15,24 @@ import {
   PageHeader,
   Pagination,
 } from "@/components/ui";
-import { api, newIdempotencyKey } from "@/lib/api";
+import { newIdempotencyKey } from "@/lib/http/client";
+import { analysesApi } from "@/features/analyses/api";
+import { jobDescriptionsApi } from "@/features/job-descriptions/api";
+import { resumesApi } from "@/features/resumes/api";
 import { friendlyError } from "@/lib/copy";
-import { useAsync } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks";
 
 function NewAnalysis() {
   const router = useRouter();
   const params = useSearchParams();
   const [resumeOffset, setResumeOffset] = useState(0);
   const [jobOffset, setJobOffset] = useState(0);
-  const resumes = useAsync(() => api.resumes(resumeOffset), [resumeOffset]);
-  const jobs = useAsync(() => api.jobs(jobOffset), [jobOffset]);
+  const resumes = useQuery(["resumes", resumeOffset], (signal) =>
+    resumesApi.resumes(resumeOffset, signal),
+  );
+  const jobs = useQuery(["jobs", jobOffset], (signal) =>
+    jobDescriptionsApi.jobs(jobOffset, signal),
+  );
   const [resumeLabel, setResumeLabel] = useState("");
   const [jobLabel, setJobLabel] = useState("");
   const [resumeVersion, setResumeVersion] = useState(params.get("resume") ?? "");
@@ -81,7 +88,7 @@ function NewAnalysis() {
     setBusy(true);
     setError(null);
     try {
-      const run = await api.createAnalysis(resumeVersion, jobVersion, key.current.value);
+      const run = await analysesApi.createAnalysis(resumeVersion, jobVersion, key.current.value);
       router.push(`/app/analyses/${run.id}`);
     } catch (err) {
       setError(friendlyError(err));

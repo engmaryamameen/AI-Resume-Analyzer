@@ -138,3 +138,20 @@ review results; do not rank or screen people with this tool.
   motivate visible extraction and manual corrections; this app does not emulate Greenhouse.
 - [Sentence Transformers similarity](https://www.sbert.net/docs/sentence_transformer/usage/semantic_textual_similarity.html)
   explains embedding comparisons; similarity alone is not evidence of a qualification.
+
+## Independent benchmark boundary
+
+The current portfolio has no consented/licensed, independently annotated real-world holdout. Challenge
+scores and the offline three-passage smoke are engineering checks, not real résumé accuracy. Do not
+label model output as an objective probability or promote synthetic measurements into product claims.
+
+If scope changes, `python -m ml.holdout --manifest private/holdout.json --training private/train/*.jsonl`
+checks provenance references, two independent reviewers and adjudication, checksums, source-group
+separation, at least 200 records/50 groups, and coverage of negation, contradiction, OCR, alternatives,
+dates, degrees, seniority, multilingual and out-of-domain inputs. Licensed/consented examples use the
+existing `source: licensed` record value with rights/consent references in the manifest. Training inputs
+must include calibration and every other previously seen split. The thresholds are proposed minimum
+policy, not measured quality. The manifest cannot prove a human's claims; rights and labels still need
+human review. Then run `ml.evaluate` on the same versioned holdout for baseline/candidate and apply
+`ml.compare` with `ml/configs/promotion.json`, including latency and calibration results. A passing
+provenance gate alone is never a passing model quality gate. No data or labels are fabricated here.

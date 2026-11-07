@@ -13,7 +13,12 @@ for (const width of [320, 390, 1440]) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
-      await page.addScriptTag({ content: axe.source });
+      await page.evaluate((source) => {
+        const script = document.createElement("script");
+        script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+        script.textContent = source;
+        document.head.appendChild(script);
+      }, axe.source);
       const violations = await page.evaluate(
         async () =>
           (
@@ -68,7 +73,12 @@ for (const width of [390, 1440]) {
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         route,
       ).toBe(true);
-      await page.addScriptTag({ content: axe.source });
+      await page.evaluate((source) => {
+        const script = document.createElement("script");
+        script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+        script.textContent = source;
+        document.head.appendChild(script);
+      }, axe.source);
       const violations = await page.evaluate(async () =>
         (
           await (window as typeof window & { axe: typeof axe }).axe.run(document, {
@@ -99,7 +109,12 @@ test("dropdown options are styled, keyboard accessible and dismiss without commi
   await control.press("Enter");
   await expect(control).toHaveText(/Avery/);
   await control.click();
-  await page.addScriptTag({ content: axe.source });
+  await page.evaluate((source) => {
+    const script = document.createElement("script");
+    script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+    script.textContent = source;
+    document.head.appendChild(script);
+  }, axe.source);
   const issues = await page.evaluate(async () =>
     (
       await (window as typeof window & { axe: typeof axe }).axe.run(document, {
@@ -182,7 +197,12 @@ test("public navigation supports desktop disclosure and a keyboard-operable mobi
     "true",
   );
   await explore.click();
-  await page.addScriptTag({ content: axe.source });
+  await page.evaluate((source) => {
+    const script = document.createElement("script");
+    script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+    script.textContent = source;
+    document.head.appendChild(script);
+  }, axe.source);
   const issues = await page.evaluate(async () =>
     (
       await (window as typeof window & { axe: typeof axe }).axe.run(document, {

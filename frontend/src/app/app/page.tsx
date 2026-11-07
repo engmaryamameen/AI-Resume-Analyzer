@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icon";
 import { Badge, ButtonLink, ErrorState, Loading, PageHeader } from "@/components/ui";
-import { api } from "@/lib/api";
+import { analysesApi } from "@/features/analyses/api";
+import { jobDescriptionsApi } from "@/features/job-descriptions/api";
+import { resumesApi } from "@/features/resumes/api";
 import { formatDateTime } from "@/lib/copy";
-import { useAsync } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks";
 
 export default function Overview() {
-  const resumes = useAsync(() => api.resumes(), []);
-  const jobs = useAsync(() => api.jobs(), []);
-  const runs = useAsync(() => api.analyses(), []);
+  const resumes = useQuery(["resumes"], (signal) => resumesApi.resumes(0, signal));
+  const jobs = useQuery(["jobs"], (signal) => jobDescriptionsApi.jobs(0, signal));
+  const runs = useQuery(["analyses"], (signal) => analysesApi.analyses(0, signal));
   if (resumes.loading || jobs.loading || runs.loading) return <Loading />;
   const error = resumes.error || jobs.error || runs.error;
   if (error)

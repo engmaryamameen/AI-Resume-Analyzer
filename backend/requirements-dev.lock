@@ -35,8 +35,8 @@ pydantic==2.14.1
 pydantic-settings==2.16.1
 pydantic_core==2.50.1
 Pygments==2.21.0
-pypdf==6.21.2
-pytest==8.4.2
+pypdf==6.21.4
+pytest==9.0.3
 pytest-cov==6.3.0
 python-dotenv==1.2.4
 python-multipart==0.0.32

@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { AnalysisResults } from "@/components/analysis-view";
+import { AnalysisResults } from "@/features/analyses/components/analysis-report";
 import { Button, ButtonLink, ErrorState, Loading, Notice, PageHeader } from "@/components/ui";
-import { api } from "@/lib/api";
+import { analysesApi } from "@/features/analyses/api";
 import { STALE_REASON, analysisFailure, formatDateTime, friendlyError } from "@/lib/copy";
-import { useAsync, usePolling } from "@/lib/hooks";
+import { useQuery, usePolling } from "@/lib/hooks";
 import type { Analysis } from "@/lib/types";
 
 // A re-run starts from the newest version of both inputs.
@@ -20,7 +20,7 @@ function rerunQuery(run: Analysis): string {
 
 export default function AnalysisPage() {
   const { id } = useParams<{ id: string }>();
-  const a = useAsync(() => api.analysis(id), [id]);
+  const a = useQuery(["analysis", id], (signal) => analysesApi.analysis(id, signal));
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const active = a.data?.status === "queued" || a.data?.status === "running";
@@ -34,7 +34,7 @@ export default function AnalysisPage() {
     setCancelling(true);
     setCancelError(null);
     try {
-      await api.cancelAnalysis(id);
+      await analysesApi.cancelAnalysis(id);
       a.reload();
     } catch (e) {
       setCancelError(friendlyError(e));
@@ -54,7 +54,7 @@ export default function AnalysisPage() {
               {(["md", "csv", "json"] as const).map((f) => (
                 <a
                   key={f}
-                  href={api.reportUrl(id, f)}
+                  href={analysesApi.reportUrl(id, f)}
                   download
                   className="inline-flex min-h-[44px] items-center rounded-lg border border-line bg-surface px-4 text-sm hover:bg-raised"
                 >

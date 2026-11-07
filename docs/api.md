@@ -105,3 +105,30 @@ carry `unexpected_<ErrorType>`, `worker_lost` or `job_lost`.
 Per minute, per user or address: 120 general, 10 for uploads and for creating analyses, 10 for
 authentication per address (and half that per address and account for logins), 20 for the demo. They are
 in-process, so enforce limits at the gateway as well.
+
+## Account lifecycle and client transport
+
+`POST /auth/forgot-password` and `POST /auth/request-verification` accept `{email}` and return the same
+empty 204 for known/unknown addresses. Delivery configuration failure is a generic 503; throttling is
+429. `POST /auth/verify-email` accepts `{token,password}` and establishes the mailbox owner's password while revoking all sessions; `POST /auth/reset-password` accepts `{token,password}`.
+Both return 204 on success, 422 for invalid/expired/used tokens, and 429 for throttling. Reset revokes
+all sessions and account tokens; it does not automatically sign the user in. `GET /auth/sessions`
+returns current user's active session IDs and timestamps; `DELETE /auth/sessions/{id}` is owner scoped,
+CSRF protected and idempotent. An unverified public user receives `email_unverified` (403) on workspace
+routes; `/auth/me` remains available so verification and sign-out can be presented safely.
+
+GET transport retries network interruptions/502/503/504 at most twice, with abortable backoff and one
+overall timeout. Writes never retry automatically. Preserve an idempotency key for identical payload
+retries; changed file/JD/analysis selections require another key. After uncertain guest submission,
+read guest state before attempting another mutation. A successful prior request can consume the quota
+even if its response was lost; changing text does not reset an allowance. Processing responses must be
+polled until a terminal state; acceptance is not analysis completion.
+
+Successful JSON DTOs are validated against generated OpenAPI schemas before UI rendering. A malformed
+or non-JSON 200 is `invalid_response`, a transport failure is `network_error`, and a deadline is
+`request_timeout`. Caller cancellation propagates silently through the query lifecycle. HTTP errors
+keep the backend's stable code/message/request ID when the envelope is well formed.
+
+Registration returns `{user,email_verification_required}`. Local mode returns the created user and
+session cookies. Public mode always returns `user: null` with verification required, for new and
+existing accounts alike, and issues no session. It never fabricates an account identifier.

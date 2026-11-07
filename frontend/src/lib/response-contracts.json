@@ -1,0 +1,1867 @@
+{
+  "components": {
+    "schemas": {
+      "AccountPasswordIn": {
+        "properties": {
+          "password": {
+            "maxLength": 256,
+            "title": "Password",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 256,
+            "minLength": 32,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": ["token", "password"],
+        "title": "AccountPasswordIn",
+        "type": "object"
+      },
+      "AnalysisCreateIn": {
+        "properties": {
+          "jd_version_id": {
+            "format": "uuid",
+            "title": "Jd Version Id",
+            "type": "string"
+          },
+          "resume_version_id": {
+            "format": "uuid",
+            "title": "Resume Version Id",
+            "type": "string"
+          }
+        },
+        "required": ["resume_version_id", "jd_version_id"],
+        "title": "AnalysisCreateIn",
+        "type": "object"
+      },
+      "AnalysisDetailOut": {
+        "properties": {
+          "assessments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Assessment"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessments"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EngineInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "jd_version_id": {
+            "format": "uuid",
+            "title": "Jd Version Id",
+            "type": "string"
+          },
+          "latest_jd_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Jd Version Id"
+          },
+          "latest_resume_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Resume Version Id"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchOut"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "mentions": {
+            "items": {
+              "$ref": "#/components/schemas/Mention"
+            },
+            "title": "Mentions",
+            "type": "array"
+          },
+          "pipeline_version": {
+            "title": "Pipeline Version",
+            "type": "string"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          },
+          "resume_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Document Id"
+          },
+          "resume_version_id": {
+            "format": "uuid",
+            "title": "Resume Version Id",
+            "type": "string"
+          },
+          "resume_version_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Version No"
+          },
+          "staleness": {
+            "$ref": "#/components/schemas/Staleness"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/AnalysisWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "resume_version_id",
+          "resume_document_id",
+          "resume_version_no",
+          "jd_version_id",
+          "latest_resume_version_id",
+          "latest_jd_version_id",
+          "pipeline_version",
+          "engine",
+          "error_code",
+          "created_at",
+          "completed_at",
+          "staleness",
+          "assessments",
+          "warnings",
+          "recommendations",
+          "limitations",
+          "matches",
+          "mentions"
+        ],
+        "title": "AnalysisDetailOut",
+        "type": "object"
+      },
+      "AnalysisOut": {
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EngineInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "jd_version_id": {
+            "format": "uuid",
+            "title": "Jd Version Id",
+            "type": "string"
+          },
+          "latest_jd_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Jd Version Id"
+          },
+          "latest_resume_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Resume Version Id"
+          },
+          "pipeline_version": {
+            "title": "Pipeline Version",
+            "type": "string"
+          },
+          "resume_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Document Id"
+          },
+          "resume_version_id": {
+            "format": "uuid",
+            "title": "Resume Version Id",
+            "type": "string"
+          },
+          "resume_version_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Version No"
+          },
+          "staleness": {
+            "$ref": "#/components/schemas/Staleness"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "resume_version_id",
+          "resume_document_id",
+          "resume_version_no",
+          "jd_version_id",
+          "latest_resume_version_id",
+          "latest_jd_version_id",
+          "pipeline_version",
+          "engine",
+          "error_code",
+          "created_at",
+          "completed_at",
+          "staleness"
+        ],
+        "title": "AnalysisOut",
+        "type": "object"
+      },
+      "AnalysisWarning": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "default": "warn",
+            "enum": ["info", "warn", "error"],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"],
+        "title": "AnalysisWarning",
+        "type": "object"
+      },
+      "Assessment": {
+        "properties": {
+          "id": {
+            "enum": [
+              "requirement_evidence",
+              "document_structure",
+              "writing_style",
+              "extraction_reliability"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/Metric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": ["id", "label", "summary"],
+        "title": "Assessment",
+        "type": "object"
+      },
+      "Body_start_api_v1_guest_analyze_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "job_text": {
+            "title": "Job Text",
+            "type": "string"
+          }
+        },
+        "required": ["file", "job_text"],
+        "title": "Body_start_api_v1_guest_analyze_post",
+        "type": "object"
+      },
+      "Body_upload_resume_api_v1_resumes_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": ["file"],
+        "title": "Body_upload_resume_api_v1_resumes_post",
+        "type": "object"
+      },
+      "ContactCorrection": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "title": "ContactCorrection",
+        "type": "object"
+      },
+      "CorrectionIn": {
+        "properties": {
+          "base_version_no": {
+            "minimum": 1.0,
+            "title": "Base Version No",
+            "type": "integer"
+          },
+          "block_edits": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 200,
+            "title": "Block Edits",
+            "type": "object"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactCorrection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["base_version_no"],
+        "title": "CorrectionIn",
+        "type": "object"
+      },
+      "Credentials": {
+        "properties": {
+          "email": {
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": ["email", "password"],
+        "title": "Credentials",
+        "type": "object"
+      },
+      "DeleteAccountIn": {
+        "properties": {
+          "password": {
+            "maxLength": 256,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": ["password"],
+        "title": "DeleteAccountIn",
+        "type": "object"
+      },
+      "DemoAnalyzeIn": {
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "job_text": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Text"
+          },
+          "resume_id": {
+            "maxLength": 40,
+            "title": "Resume Id",
+            "type": "string"
+          }
+        },
+        "required": ["resume_id"],
+        "title": "DemoAnalyzeIn",
+        "type": "object"
+      },
+      "EmailRequest": {
+        "properties": {
+          "email": {
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": ["email"],
+        "title": "EmailRequest",
+        "type": "object"
+      },
+      "EngineInfo": {
+        "properties": {
+          "calibrated": {
+            "default": false,
+            "title": "Calibrated",
+            "type": "boolean"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "mode": {
+            "enum": ["learned", "semantic", "rules"],
+            "title": "Mode",
+            "type": "string"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRef"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": ["mode", "fingerprint"],
+        "title": "EngineInfo",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "required": ["code", "message"],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": ["error"],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EvidenceRef": {
+        "description": "Exact r\u00e9sum\u00e9 text that a conclusion rests on. The excerpt is always verbatim, never generated.",
+        "properties": {
+          "block_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Id"
+          },
+          "derived": {
+            "default": false,
+            "title": "Derived",
+            "type": "boolean"
+          },
+          "excerpt": {
+            "maxLength": 400,
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "highlights": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Highlights",
+            "type": "array"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "enum": ["supports", "mentions_only", "contradicts", "insufficient"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "retrieval_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieval Method"
+          },
+          "retrieval_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieval Score"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "section_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Kind"
+          }
+        },
+        "required": ["block_id", "section_kind", "excerpt"],
+        "title": "EvidenceRef",
+        "type": "object"
+      },
+      "JobCreateIn": {
+        "properties": {
+          "text": {
+            "maxLength": 100000,
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["title", "text"],
+        "title": "JobCreateIn",
+        "type": "object"
+      },
+      "JobDetailOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_version": {
+            "$ref": "#/components/schemas/JobVersionOut"
+          },
+          "raw_text": {
+            "title": "Raw Text",
+            "type": "string"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/RequirementOut"
+            },
+            "title": "Requirements",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/JobVersionOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/AnalysisWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created_at",
+          "latest_version",
+          "raw_text",
+          "requirements",
+          "versions"
+        ],
+        "title": "JobDetailOut",
+        "type": "object"
+      },
+      "JobOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_version": {
+            "$ref": "#/components/schemas/JobVersionOut"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["id", "title", "created_at", "latest_version"],
+        "title": "JobOut",
+        "type": "object"
+      },
+      "JobVersionOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": ["id", "version_no", "source", "created_at"],
+        "title": "JobVersionOut",
+        "type": "object"
+      },
+      "MatchOut": {
+        "properties": {
+          "conflict": {
+            "title": "Conflict",
+            "type": "boolean"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "requirement": {
+            "$ref": "#/components/schemas/RequirementOut"
+          },
+          "status": {
+            "enum": ["supported", "mentioned_only", "contradicted", "insufficient", "no_evidence"],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requirement",
+          "status",
+          "conflict",
+          "probability",
+          "reasons",
+          "evidence",
+          "explanation"
+        ],
+        "title": "MatchOut",
+        "type": "object"
+      },
+      "Mention": {
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "passage_id": {
+            "title": "Passage Id",
+            "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": ["affirmed", "listed", "mentioned", "negated", "hedged"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "role_probs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Probs"
+          },
+          "source": {
+            "enum": ["rules", "learned"],
+            "title": "Source",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "enum": ["SKILL", "DEGREE", "FIELD", "ORG", "TITLE", "CERT"],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": ["passage_id", "start", "end", "text", "type", "source"],
+        "title": "Mention",
+        "type": "object"
+      },
+      "Metric": {
+        "properties": {
+          "definition": {
+            "title": "Definition",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "enum": ["count", "percent", "months", "text"],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": ["name", "value", "unit", "definition"],
+        "title": "Metric",
+        "type": "object"
+      },
+      "ModelRef": {
+        "properties": {
+          "base_model": {
+            "title": "Base Model",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "license": {
+            "title": "License",
+            "type": "string"
+          },
+          "origin": {
+            "enum": ["pretrained", "fine_tuned"],
+            "title": "Origin",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          }
+        },
+        "required": ["id", "origin", "base_model", "revision", "license"],
+        "title": "ModelRef",
+        "type": "object"
+      },
+      "ModelStatusOut": {
+        "properties": {
+          "available_method": {
+            "default": "rules",
+            "title": "Available Method",
+            "type": "string"
+          },
+          "learned_models_approved": {
+            "title": "Learned Models Approved",
+            "type": "boolean"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRef"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": ["learned_models_approved", "models", "note"],
+        "title": "ModelStatusOut",
+        "type": "object"
+      },
+      "Page_AnalysisOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnalysisOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "total", "limit", "offset"],
+        "title": "Page[AnalysisOut]",
+        "type": "object"
+      },
+      "Page_JobOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/JobOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "total", "limit", "offset"],
+        "title": "Page[JobOut]",
+        "type": "object"
+      },
+      "Page_ResumeOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "total", "limit", "offset"],
+        "title": "Page[ResumeOut]",
+        "type": "object"
+      },
+      "Recommendation": {
+        "description": "Advice anchored in the r\u00e9sum\u00e9's own text. `fill_in` is a blank for the user, not generated prose.",
+        "properties": {
+          "block_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Id"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "fill_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fill In"
+          },
+          "kind": {
+            "enum": ["add_evidence", "resolve_conflict", "clarify", "add_dates", "style_note"],
+            "title": "Kind",
+            "type": "string"
+          },
+          "requirement_ordinal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirement Ordinal"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["kind", "title", "detail"],
+        "title": "Recommendation",
+        "type": "object"
+      },
+      "RegistrationOut": {
+        "properties": {
+          "email_verification_required": {
+            "title": "Email Verification Required",
+            "type": "boolean"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["user", "email_verification_required"],
+        "title": "RegistrationOut",
+        "type": "object"
+      },
+      "RequirementInput": {
+        "properties": {
+          "category": {
+            "default": "responsibility",
+            "enum": [
+              "skill",
+              "experience_years",
+              "education",
+              "certification",
+              "responsibility",
+              "soft_skill"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "kind": {
+            "enum": ["required", "preferred"],
+            "title": "Kind",
+            "type": "string"
+          },
+          "min_years": {
+            "anyOf": [
+              {
+                "maximum": 60.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Years"
+          },
+          "text": {
+            "maxLength": 500,
+            "minLength": 2,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": ["text", "kind"],
+        "title": "RequirementInput",
+        "type": "object"
+      },
+      "RequirementOut": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "min_years": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Years"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "source_span": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Span"
+          },
+          "terms": {
+            "items": {},
+            "title": "Terms",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ordinal",
+          "text",
+          "kind",
+          "category",
+          "origin",
+          "terms",
+          "min_years",
+          "source_span"
+        ],
+        "title": "RequirementOut",
+        "type": "object"
+      },
+      "RequirementsReplaceIn": {
+        "properties": {
+          "base_version_no": {
+            "minimum": 1.0,
+            "title": "Base Version No",
+            "type": "integer"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/RequirementInput"
+            },
+            "maxItems": 80,
+            "title": "Requirements",
+            "type": "array"
+          }
+        },
+        "required": ["base_version_no", "requirements"],
+        "title": "RequirementsReplaceIn",
+        "type": "object"
+      },
+      "ResumeDetailOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_version": {
+            "$ref": "#/components/schemas/ResumeVersionOut"
+          },
+          "normalized": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeVersionOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": ["id", "title", "created_at", "latest_version", "normalized", "versions"],
+        "title": "ResumeDetailOut",
+        "type": "object"
+      },
+      "ResumeOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_version": {
+            "$ref": "#/components/schemas/ResumeVersionOut"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["id", "title", "created_at", "latest_version"],
+        "title": "ResumeOut",
+        "type": "object"
+      },
+      "ResumeVersionOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "parseability": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parseability"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "source",
+          "status",
+          "error_code",
+          "parseability",
+          "created_at"
+        ],
+        "title": "ResumeVersionOut",
+        "type": "object"
+      },
+      "SessionOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": ["id", "created_at", "expires_at", "current"],
+        "title": "SessionOut",
+        "type": "object"
+      },
+      "Staleness": {
+        "properties": {
+          "is_stale": {
+            "title": "Is Stale",
+            "type": "boolean"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": ["is_stale", "reasons"],
+        "title": "Staleness",
+        "type": "object"
+      },
+      "UserOut": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "email_verification_required": {
+            "default": false,
+            "title": "Email Verification Required",
+            "type": "boolean"
+          },
+          "email_verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verified At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": ["id", "email", "role"],
+        "title": "UserOut",
+        "type": "object"
+      }
+    }
+  },
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/auth/register",
+      "schema": {
+        "$ref": "#/components/schemas/RegistrationOut"
+      },
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "schema": {
+        "$ref": "#/components/schemas/UserOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "schema": {
+        "$ref": "#/components/schemas/UserOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/auth/sessions",
+      "schema": {
+        "items": {
+          "$ref": "#/components/schemas/SessionOut"
+        },
+        "title": "Response Sessions Api V1 Auth Sessions Get",
+        "type": "array"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/resumes",
+      "schema": {
+        "$ref": "#/components/schemas/ResumeOut"
+      },
+      "status": 202
+    },
+    {
+      "method": "GET",
+      "path": "/resumes",
+      "schema": {
+        "$ref": "#/components/schemas/Page_ResumeOut_"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/resumes/{document_id}",
+      "schema": {
+        "$ref": "#/components/schemas/ResumeDetailOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/resumes/{document_id}/corrections",
+      "schema": {
+        "$ref": "#/components/schemas/ResumeVersionOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/job-descriptions",
+      "schema": {
+        "$ref": "#/components/schemas/JobDetailOut"
+      },
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/job-descriptions",
+      "schema": {
+        "$ref": "#/components/schemas/Page_JobOut_"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/job-descriptions/{job_id}",
+      "schema": {
+        "$ref": "#/components/schemas/JobDetailOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/job-descriptions/{job_id}/requirements",
+      "schema": {
+        "$ref": "#/components/schemas/JobDetailOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/analyses",
+      "schema": {
+        "$ref": "#/components/schemas/AnalysisOut"
+      },
+      "status": 202
+    },
+    {
+      "method": "GET",
+      "path": "/analyses",
+      "schema": {
+        "$ref": "#/components/schemas/Page_AnalysisOut_"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/analyses/compare",
+      "schema": {
+        "additionalProperties": true,
+        "title": "Response Compare Api V1 Analyses Compare Get",
+        "type": "object"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/analyses/{analysis_id}",
+      "schema": {
+        "$ref": "#/components/schemas/AnalysisDetailOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/analyses/{analysis_id}/cancel",
+      "schema": {
+        "$ref": "#/components/schemas/AnalysisOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/demo/samples",
+      "schema": {
+        "additionalProperties": true,
+        "title": "Response Samples Api V1 Demo Samples Get",
+        "type": "object"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/demo/analyze",
+      "schema": {
+        "additionalProperties": true,
+        "title": "Response Demo Analyze Api V1 Demo Analyze Post",
+        "type": "object"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/admin/overview",
+      "schema": {
+        "additionalProperties": true,
+        "title": "Response Overview Api V1 Admin Overview Get",
+        "type": "object"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/admin/maintenance",
+      "schema": {
+        "additionalProperties": true,
+        "title": "Response Maintenance Api V1 Admin Maintenance Post",
+        "type": "object"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/system/models",
+      "schema": {
+        "$ref": "#/components/schemas/ModelStatusOut"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/guest",
+      "schema": {
+        "additionalProperties": true,
+        "title": "Response Status Api V1 Guest Get",
+        "type": "object"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/guest/progress",
+      "schema": {
+        "additionalProperties": true,
+        "title": "Response Progress Api V1 Guest Progress Post",
+        "type": "object"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/guest/analyze",
+      "schema": {
+        "additionalProperties": true,
+        "title": "Response Start Api V1 Guest Analyze Post",
+        "type": "object"
+      },
+      "status": 202
+    }
+  ]
+}

@@ -6,48 +6,77 @@ export interface AsyncState<T> {
   data: T | null;
   error: unknown;
   loading: boolean;
+  refreshing: boolean;
   reload: () => void;
 }
 
-export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): AsyncState<T> {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const [loading, setLoading] = useState(true);
+type QueryKey = readonly (string | number | boolean | null | undefined)[];
+
+/** Data belongs to one explicit key; a different key never exposes the previous result. */
+export function useQuery<T>(
+  queryKey: QueryKey,
+  queryFn: (signal: AbortSignal) => Promise<T>,
+): AsyncState<T> {
+  const key = JSON.stringify(queryKey);
+  const [result, setResult] = useState<{
+    key: string;
+    data: T | null;
+    error: unknown;
+    pending: boolean;
+  }>({ key, data: null, error: null, pending: true });
   const [tick, setTick] = useState(0);
-  const hasData = useRef(false);
-  const loadRef = useRef(load);
-  loadRef.current = load;
-
+  const pendingRef = useRef(false);
+  const loadRef = useRef(queryFn);
+  loadRef.current = queryFn;
   useEffect(() => {
-    let cancelled = false; // background reloads keep the current data visible instead of flashing
-    loadRef.current().then(
-      (v) => {
-        if (!cancelled) {
-          hasData.current = true;
-          setData(v);
-          setError(null);
-          setLoading(false);
-        }
-      },
-      (e) => {
-        if (!cancelled) {
-          setError(e);
-          setLoading(false);
-        }
-      },
-    );
+    const controller = new AbortController();
+    pendingRef.current = true;
+    setResult((previous) => ({
+      key,
+      data: previous.key === key ? previous.data : null,
+      error: null,
+      pending: true,
+    }));
+    Promise.resolve()
+      .then(() => {
+        if (controller.signal.aborted) throw controller.signal.reason;
+        return loadRef.current(controller.signal);
+      })
+      .then(
+        (data) => {
+          if (!controller.signal.aborted) {
+            pendingRef.current = false;
+            setResult({ key, data, error: null, pending: false });
+          }
+        },
+        (error) => {
+          if (!controller.signal.aborted) {
+            pendingRef.current = false;
+            setResult((previous) => ({
+              key,
+              data: previous.key === key ? previous.data : null,
+              error,
+              pending: false,
+            }));
+          }
+        },
+      );
     return () => {
-      cancelled = true;
+      controller.abort();
+      pendingRef.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, tick]);
-
+  }, [key, tick]);
   const reload = useCallback(() => {
-    setError(null);
-    setLoading(!hasData.current);
-    setTick((t) => t + 1);
+    if (!pendingRef.current) setTick((value) => value + 1);
   }, []);
-  return { data, error, loading, reload };
+  const current = result.key === key;
+  return {
+    data: current ? result.data : null,
+    error: current ? result.error : null,
+    loading: !current || (result.pending && result.data === null),
+    refreshing: current && result.pending && result.data !== null,
+    reload,
+  };
 }
 
 /** Re-runs `reload` every `ms` while `active` is true (used while a file or analysis is processing). */

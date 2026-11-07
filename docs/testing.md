@@ -72,3 +72,22 @@ retrieval, support, unrelated text, negation and suppression of uncalibrated pro
 CI job repeats this with the CPU runtime. These are inference integration checks, not an accuracy study.
 For a provisioned full stack, `E2E_SEMANTIC=1 npm run e2e -- --workers=1` also asserts the actual model
 method on completed guest/account reports. Use a fresh disposable application database.
+
+## Engineering review evidence
+
+See [local verification](verification.md) for the 2026-11-07 results, environment differences and
+remaining image findings. New regressions cover query identity/cancellation, guest retry payloads,
+account-token concurrency/expiry/pre-registration, registration atomicity, bounded maintenance and real
+worker-process kills. The suite forcibly clears SMTP host/from so a developer's real mailbox settings
+cannot send mail during tests. `E2E_RECORD_VIDEO=1` records synthetic browser journeys for a local demo.
+
+Before CI, run both contract checks from the repository root:
+
+```bash
+.venv/bin/python frontend/scripts/export-contracts.py --check
+node frontend/scripts/compile-contracts.mjs --check
+```
+
+Regenerate without `--check` after intentional API changes. The generator reads the repository's
+Prettier configuration so formatting checks and drift checks agree. No runtime validator compilation
+or script-eval CSP exception is required.

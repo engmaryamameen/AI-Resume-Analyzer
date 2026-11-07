@@ -8,6 +8,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     trace: "retain-on-failure",
+    video: process.env.E2E_RECORD_VIDEO ? "on" : "retain-on-failure",
     channel: process.env.E2E_CHANNEL,
   },
   reporter: [["list"]],

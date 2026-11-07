@@ -51,6 +51,32 @@ class UserOut(BaseModel):
     id: uuid.UUID
     email: str
     role: str
+    email_verified_at: datetime | None = None
+    email_verification_required: bool = False
+
+
+class RegistrationOut(BaseModel):
+    user: UserOut | None
+    email_verification_required: bool
+
+
+class EmailRequest(BaseModel):
+    email: str = Field(max_length=320)
+
+
+class AccountTokenIn(BaseModel):
+    token: str = Field(min_length=32, max_length=256)
+
+
+class AccountPasswordIn(AccountTokenIn):
+    password: str = Field(max_length=256)
+
+
+class SessionOut(BaseModel):
+    id: uuid.UUID
+    created_at: datetime
+    expires_at: datetime
+    current: bool
 
 
 class ResumeVersionOut(BaseModel):

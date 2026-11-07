@@ -44,7 +44,7 @@ def register(db: Session, email: str, password: str, request_id: str | None) -> 
             request_id=request_id,
         )
     )
-    db.commit()
+    db.flush()
     return user
 
 

@@ -1,11 +1,12 @@
 "use client";
 
+import { SessionList } from "@/features/auth/components/session-list";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ModelStatusPanel } from "@/components/model-status";
 import { Button, Card, Notice, PageHeader, TextField } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authApi } from "@/features/auth/api";
 import { friendlyError } from "@/lib/copy";
 import { useUser } from "@/lib/user-context";
 
@@ -22,7 +23,7 @@ export default function Settings() {
     setBusy(true);
     setError(null);
     try {
-      await api.deleteAccount(password);
+      await authApi.deleteAccount(password);
       router.replace("/");
     } catch (err) {
       // A wrong password is a 403: the session is still good, so stay here and say so.
@@ -47,6 +48,7 @@ export default function Settings() {
             .
           </p>
         </Card>
+        <SessionList />
         <ModelStatusPanel />
         <Card>
           <h2 className="font-serif text-xl">Delete everything</h2>

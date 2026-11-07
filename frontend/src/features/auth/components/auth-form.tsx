@@ -1,47 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { api } from "@/lib/api";
-import { friendlyError } from "@/lib/copy";
-import { Icon } from "./icon";
-import { Button, Notice, TextField } from "./ui";
+import { useAuthForm } from "../use-auth-form";
+import { Icon } from "@/components/icon";
+import { Button, Notice, TextField } from "@/components/ui";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [fields, setFields] = useState<{ email?: string; password?: string }>({});
-  const isRegister = mode === "register";
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const invalid = {
-      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-        ? undefined
-        : "Enter a valid email address.",
-      password: !password
-        ? "Enter your password."
-        : isRegister && password.length < 12
-          ? "Use at least 12 characters."
-          : undefined,
-    };
-    setFields(invalid);
-    if (invalid.email || invalid.password) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await (isRegister ? api.register : api.login)(email, password);
-      router.push("/app");
-    } catch (err) {
-      setError(friendlyError(err));
-      setBusy(false);
-    }
-  }
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    error,
+    busy,
+    showPassword,
+    setShowPassword,
+    fields,
+    isRegister,
+    submit,
+  } = useAuthForm(mode);
 
   return (
     <div className="auth-layout">
@@ -118,6 +95,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             {isRegister ? "Create account" : "Sign in"}
           </Button>
         </form>
+        {!isRegister && (
+          <p className="mt-4 text-sm">
+            <Link href="/forgot-password" className="text-accent underline">
+              Forgot your password?
+            </Link>
+          </p>
+        )}
         <p className="auth-guest-link">
           <Icon name="document" size={16} />
           <Link href="/#analyze">Try one résumé analysis without an account</Link>
