@@ -13,7 +13,12 @@ for (const width of [320, 390, 1440]) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
-      await page.addScriptTag({ content: axe.source });
+      await page.evaluate((source) => {
+        const script = document.createElement("script");
+        script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+        script.textContent = source;
+        document.head.appendChild(script);
+      }, axe.source);
       const violations = await page.evaluate(
         async () =>
           (
@@ -23,6 +28,12 @@ for (const width of [320, 390, 1440]) {
           ).violations,
       );
       expect(violations, `${route} at ${width}px`).toEqual([]);
+      if (width === 1440 && ["/app", "/app/billing"].includes(route))
+        await page.screenshot({
+          path: test.info().outputPath(route === "/app" ? "workspace.png" : "billing.png"),
+          fullPage: true,
+          animations: "disabled",
+        });
     }
   });
 }
@@ -40,6 +51,24 @@ test("a demo reviewer can inspect sources and filter actual findings", async ({ 
   await expect(page.getByText(/No requirements match these filters/)).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.getByRole("heading", { name: "Python", exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "REST APIs Nice-to-have · Skill Backed up", exact: true })
+    .click();
+  await page.evaluate((source) => {
+    const script = document.createElement("script");
+    script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+    script.textContent = source;
+    document.head.appendChild(script);
+  }, axe.source);
+  const violations = await page.evaluate(
+    async () =>
+      (
+        await (window as typeof window & { axe: typeof axe }).axe.run(document, {
+          runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+        })
+      ).violations,
+  );
+  expect(violations).toEqual([]);
 });
 
 for (const width of [390, 1440]) {
@@ -60,15 +89,23 @@ for (const width of [390, 1440]) {
       "/app/analyses",
       "/app/analyses/new",
       "/app/analyses/compare",
+      "/app/billing",
       "/app/settings",
     ]) {
       await page.goto(route);
+      await expect(page.locator(".workspace-shell")).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: /\S/ })).toHaveCount(0);
       await expect(page.locator("h1")).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         route,
       ).toBe(true);
-      await page.addScriptTag({ content: axe.source });
+      await page.evaluate((source) => {
+        const script = document.createElement("script");
+        script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+        script.textContent = source;
+        document.head.appendChild(script);
+      }, axe.source);
       const violations = await page.evaluate(async () =>
         (
           await (window as typeof window & { axe: typeof axe }).axe.run(document, {
@@ -80,6 +117,12 @@ for (const width of [390, 1440]) {
         })),
       );
       expect(violations, `${route} at ${width}px`).toEqual([]);
+      if (width === 1440 && ["/app", "/app/billing"].includes(route))
+        await page.screenshot({
+          path: test.info().outputPath(route === "/app" ? "workspace.png" : "billing.png"),
+          fullPage: true,
+          animations: "disabled",
+        });
     }
   });
 }
@@ -99,7 +142,12 @@ test("dropdown options are styled, keyboard accessible and dismiss without commi
   await control.press("Enter");
   await expect(control).toHaveText(/Avery/);
   await control.click();
-  await page.addScriptTag({ content: axe.source });
+  await page.evaluate((source) => {
+    const script = document.createElement("script");
+    script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+    script.textContent = source;
+    document.head.appendChild(script);
+  }, axe.source);
   const issues = await page.evaluate(async () =>
     (
       await (window as typeof window & { axe: typeof axe }).axe.run(document, {
@@ -136,7 +184,7 @@ test("long reports begin compact and reveal one requirement's evidence", async (
     true,
   );
   await page.getByRole("tab", { name: "Document insights" }).click();
-  await expect(page.getByRole("heading", { name: /Four readings/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Document checks, at a glance" })).toBeVisible();
   await expect(page.locator(".assessment-metrics[open]")).toHaveCount(0);
   await page.getByRole("tab", { name: "Document insights" }).press("Home");
   await expect(page.getByRole("tab", { name: "Next steps", exact: true })).toBeFocused();
@@ -151,26 +199,26 @@ test("long reports begin compact and reveal one requirement's evidence", async (
   );
 });
 
-test("public navigation supports desktop disclosure and a keyboard-operable mobile menu", async ({
+test("public navigation exposes desktop destinations and a keyboard-operable mobile menu", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/demo");
-  const explore = page.locator(".site-nav-dropdown > summary");
-  await explore.click();
+  const navigation = page.getByRole("navigation", { name: "Main", exact: true });
   await expect(
-    page
-      .getByRole("navigation", { name: "Main", exact: true })
-      .getByRole("link", { name: /View example/ }),
-  ).toBeVisible();
-  await explore.press("Escape");
-  await expect(page.locator(".site-nav-dropdown")).not.toHaveAttribute("open");
-  await expect(explore).toBeFocused();
+    navigation.getByRole("link", { name: "Sample report", exact: true }),
+  ).toHaveAttribute("href", "/demo");
+  await expect(navigation.getByRole("link", { name: "How it works", exact: true })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Privacy", exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("navigation", { name: "Main", exact: true })).toBeHidden();
+  const menuToggle = page.getByRole("button", { name: "Open navigation" });
+  // Finish the responsive reflow before measuring. A trial click waits for the
+  // toggle to be visible and stable without opening the drawer.
+  await menuToggle.click({ trial: true });
   const headingTop = (await page.locator("h1").boundingBox())?.y;
-  await page.getByRole("button", { name: "Open navigation" }).click();
+  await menuToggle.click();
   const drawer = page.getByRole("dialog", { name: "Navigation", exact: true });
   await expect(drawer).toBeVisible();
   const bounds = await drawer.boundingBox();
@@ -181,8 +229,12 @@ test("public navigation supports desktop disclosure and a keyboard-operable mobi
     "aria-expanded",
     "true",
   );
-  await explore.click();
-  await page.addScriptTag({ content: axe.source });
+  await page.evaluate((source) => {
+    const script = document.createElement("script");
+    script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+    script.textContent = source;
+    document.head.appendChild(script);
+  }, axe.source);
   const issues = await page.evaluate(async () =>
     (
       await (window as typeof window & { axe: typeof axe }).axe.run(document, {
@@ -194,14 +246,12 @@ test("public navigation supports desktop disclosure and a keyboard-operable mobi
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await explore.press("Escape");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Open navigation" })).toBeFocused();
   await page.getByRole("button", { name: "Open navigation" }).click();
   await page.mouse.click(380, 500);
   await expect(drawer).toBeHidden();
   await page.getByRole("button", { name: "Open navigation" }).click();
-  await explore.click();
   await page
     .getByRole("navigation", { name: "Main", exact: true })
     .getByRole("link", { name: /^Privacy/ })

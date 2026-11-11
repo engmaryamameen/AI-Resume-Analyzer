@@ -4,8 +4,9 @@ The shape of the system, the boundaries between its parts, and the rules that ke
 consistent. The machine-learning pipeline has its own document:
 [local-models.md](local-models.md).
 
-**Status.** Implemented and statically reviewed. It has not been run: no test, build, migration or server
-start has been executed, so read "does" as "is written to do".
+**Verification.** Backend unit tests run without PostgreSQL. Database migrations, multi-worker
+integration tests and learned-model inference still require an environment with their dependencies.
+Do not infer production reliability from the unit suite.
 
 ## Shape
 
@@ -21,7 +22,8 @@ flowchart LR
   W[Worker] --> P
   W --> S
   W -->|resource-limited child process| X[Extractor: pypdf / DOCX XML]
-  W --> M[Local models in the worker's memory]
+  W --> M[Local matching models in worker memory]
+  W --> R[Optional private Ollama reviewer]
 ```
 
 - The browser only talks to the Next.js origin, which proxies `/api/v1/*` to the API, so cookies are
@@ -29,7 +31,7 @@ flowchart LR
 - The API never loads models and never runs jobs. The worker owns text extraction and all inference.
 - The queue is a table in PostgreSQL (`FOR UPDATE SKIP LOCKED`). No Redis, Kafka or vector database:
   nothing here needs one ([job decision](decisions.md#postgresql-jobs)).
-- There is no network call to any AI service anywhere in the system.
+- Optional editorial review calls an operator-controlled Ollama service on the private network. No hosted AI provider is required. This service is provisioned explicitly and has no published port.
 
 ## Modules
 
@@ -118,7 +120,7 @@ Single ownership of outcomes: only the worker moves a job to a terminal state, a
 
 ### Lock order
 
-Every transaction that touches more than one of {user, document, version, run, job} first takes the
+Document/job transactions that touch more than one of {user, document, version, run, job} first take the
 per-user advisory lock (`pg_advisory_xact_lock`), then row locks. The worker's commit, cancellation,
 deletion, correction and account deletion all follow this order, so none of them can deadlock with
 another. A lock that cannot be taken within 10 seconds fails the request with `user_busy` (503) instead of
@@ -165,3 +167,25 @@ The frontend uses locally bundled Inter and Source Serif 4, shared SVG icons and
 controls. Reports start with a short editing plan; evidence and measurements use tabs and disclosures.
 The white public header and responsive hero keep the document workflow prominent. Motion respects
 reduced-motion preferences. Font licenses are retained under `frontend/public/fonts`.
+
+## Operational boundaries
+
+The in-process limiter caps active keys at 50,000 per API process; unknown keys receive 429 when full.
+Multi-replica limits require gateway enforcement. Workers renew the PostgreSQL lease through
+final database settlement. Attempt fencing prevents stale workers from committing results.
+Guest creation commits the quota, owner, résumé, job description and extraction job together while
+holding a network advisory lock. A failed upload rolls back the reservation; orphaned blobs are
+reclaimed by maintenance. Maintenance leaves incomplete legacy reservations untouched until their normal expiry,
+rather than guessing whether an upload is still active. It must run periodically.
+
+## Credential and retention boundaries
+
+Authentication locks the user row before verifying the current credential and retains it through session issuance. Reset and verification acquire the same row lock before changing credentials and revoking sessions. Destructive account deletion rechecks its session and password under the advisory/user-row lock order, rather than trusting an earlier principal snapshot. They do not acquire the document advisory lock, so they cannot invert its acquisition order.
+
+Retention's bounded candidate selection is advisory only: the deletion transaction obtains user/document locks and rechecks whether any version is newer than the cutoff. A correction committed after scanning therefore prevents expiry. Manual deletion has no age requirement.
+
+Client query invalidations during an in-flight read are coalesced into one follow-up read. Guest requests with uncertain outcomes retain the original payload/key until an explicit idempotent retry or an authenticated progress response resolves the uncertainty.
+
+## Editorial review and optional role context
+
+An analysis may reference a résumé revision without a job revision. Such runs perform document checks and, when configured, local editorial review without requirement matching. The reviewer accepts bounded, contact-redacted blocks and optional role text. Strict output validation requires allowed passage references; the server attaches exact source quotations rather than accepting generated quote text. Invalid output fails the run and follows normal failure settlement, including credit or guest-allowance recovery. Model identity, digest, prompt version, and input coverage are stored with the report. See [reviewer setup](local-reviewer.md).

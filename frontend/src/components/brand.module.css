@@ -1,0 +1,8 @@
+.wordmark {
+  font-family: var(--font-sans);
+  font-size: 25px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.065em;
+  font-feature-settings: "ss01" on;
+}

@@ -30,6 +30,7 @@ backend/dist/
 
 # Local evaluation artifacts
 frontend-audit-*.json
+frontend/npm-audit-report.json
 ml/data/generated/
 ml/runs/
 /models/*

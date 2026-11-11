@@ -60,7 +60,8 @@ def _rows(version_id: uuid.UUID, drafts: list[RequirementDraft]) -> list[JobRequ
 
 
 def create_job(
-    db: Session, settings: Settings, user_id: uuid.UUID, title: str, raw_text: str
+    db: Session, settings: Settings, user_id: uuid.UUID, title: str, raw_text: str,
+    *, commit: bool = True
 ) -> tuple[JobDescription, JobDescriptionVersion, list[AnalysisWarning]]:
     text = clean_text(raw_text, settings)
     drafts, warnings = extract_requirements(text)
@@ -73,7 +74,8 @@ def create_job(
     db.add(version)
     db.flush()
     db.add_all(_rows(version.id, drafts))
-    db.commit()
+    if commit:
+        db.commit()
     return job, version, warnings
 
 
@@ -171,10 +173,11 @@ def replace_requirements(
             raise ValidationFailed(
                 "A requirement does not belong to this job description.", code="unknown_requirement"
             )
-        unchanged = (
-            prior is not None and prior.text_ == item.text and prior.category == item.category
-        )
         text = item.text.strip()
+        # A source span describes the posting text, not the user's classification or year threshold.
+        unchanged = (
+            prior is not None and prior.text_ == text and prior.category == item.category
+        )
         terms = list(prior.terms) if unchanged and prior else _terms_for(item.category, text)
         category = item.category
         if category in {"skill", "soft_skill"} and not terms:
@@ -189,9 +192,12 @@ def replace_requirements(
                 category=category,
                 origin=prior.origin if unchanged and prior else "user",
                 terms=terms,
-                min_years=item.min_years
-                if item.min_years is not None
-                else (prior.min_years if prior else None),
+                # Omission preserves the previous value for older clients; explicit null clears it.
+                min_years=(
+                    item.min_years
+                    if "min_years" in item.model_fields_set
+                    else (prior.min_years if prior else None)
+                ),
                 source_span=prior.source_span if unchanged and prior else None,
             )
         )

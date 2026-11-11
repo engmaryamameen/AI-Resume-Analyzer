@@ -41,7 +41,7 @@ export function ComparisonView({ c }: { c: Comparison }) {
         </div>
       )}
       <section aria-labelledby="metrics">
-        <h2 id="metrics" className="font-serif text-2xl">
+        <h2 id="metrics" className="font-sans font-medium text-2xl">
           Readings
         </h2>
         {c.metric_changes.length === 0 ? (
@@ -77,7 +77,7 @@ export function ComparisonView({ c }: { c: Comparison }) {
         )}
       </section>
       <section className="mt-10" aria-labelledby="reqs">
-        <h2 id="reqs" className="font-serif text-2xl">
+        <h2 id="reqs" className="font-sans font-medium text-2xl">
           Requirements
         </h2>
         <ul className="mt-3 space-y-3">

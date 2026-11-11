@@ -64,7 +64,7 @@ class TestExportSafety:
         report = _report("Python")
         for rendered in (to_json(report), to_markdown(report)):
             assert "a@b.com" not in rendered
-        assert json.loads(to_json(report))["report_version"] == 2
+        assert json.loads(to_json(report))["report_version"] == 3
 
     def test_recommendations_are_cleaned_too(self):
         report = _report("Python")

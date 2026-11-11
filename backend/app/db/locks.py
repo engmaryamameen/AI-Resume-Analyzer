@@ -32,3 +32,11 @@ def lock_user(db: Session, user_id: uuid.UUID, timeout_ms: int = 10_000) -> None
                 code="user_busy",
             ) from exc
         raise
+
+
+def lock_guest_network(db: Session, network_key: str) -> None:
+    """Serialize quota changes for one pseudonymous network within a transaction."""
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(:key)"),
+        {"key": int.from_bytes(bytes.fromhex(network_key)[:8], signed=True)},
+    )

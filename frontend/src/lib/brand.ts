@@ -1,7 +1,7 @@
 /** Product identity stays separate from infrastructure names and persisted data. */
 export const BRAND = {
-  name: "Rolemark",
-  wordmark: "rolemark",
+  name: "Rolemaker",
+  wordmark: "Rolemaker",
   description:
-    "A clearer résumé. A more considered next move. Private, source-linked feedback for the role you want.",
+    "Understand how your résumé fits the role. Inspect the evidence, clarify the gaps, and decide what to edit.",
 } as const;

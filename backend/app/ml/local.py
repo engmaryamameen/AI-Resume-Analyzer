@@ -157,7 +157,7 @@ class LocalEngine:
     def retrieve(
         self, queries: Sequence[Query], passages: Sequence[Passage], k: int, budget: Budget
     ) -> dict[str, list[Candidate]]:
-        if not passages:
+        if not queries or not passages:
             return {q.id: [] for q in queries}
         with _guard_memory(), torch.inference_mode():
             passage_vectors = self._embed([p.text for p in passages], budget)

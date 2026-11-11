@@ -18,14 +18,14 @@ worker commits with deletion. Revisit polling and worker capacity when queue mea
 ## Local processing
 
 One engine interface supports the pretrained semantic/rules hybrid, a rules-only reader and an experimental custom-trained profile. No hosted
-AI service or generative rewriting is used. A failed learned reading is rerun completely with rules and
-records its fallback reason. Model quality remains a separate evaluation problem.
+AI provider is used. Optional local editorial review produces source-cited feedback through a private Ollama service. A failed learned matching pass is rerun completely with rules and
+records its fallback reason. Editorial review instead fails explicitly on invalid or unavailable output. Model quality remains a separate evaluation problem.
 
 ## Server-side sessions
 
 Opaque session tokens are stored as keyed hashes and sent in HttpOnly cookies. State-changing account
 requests require a CSRF token and an allowed Origin. Sessions can be revoked immediately. Email
-verification, password recovery, MFA and a multi-device session list are not implemented.
+verification, password recovery and an active-session list are implemented with expiring, hashed, single-use tokens and session revocation. MFA is not implemented.
 
 ## Immutable versions
 

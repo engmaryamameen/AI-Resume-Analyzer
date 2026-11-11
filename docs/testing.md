@@ -37,6 +37,21 @@ The guest test consumes the network allowance, which intentionally survives repo
 separate Compose project/volumes for QA rather than clearing the real application's quota.
 `E2E_BASE_URL` selects the test server; `E2E_CHANNEL=chrome` selects an installed Chrome.
 
+For an isolated Compose E2E stack, the **browser origin must match the API origin allowlist**.
+For example, if the E2E web container is published at `http://localhost:3001`, set
+`E2E_BASE_URL=http://localhost:3001` for Playwright and
+`CORS_ALLOWED_ORIGINS=http://localhost:3001` for the API container **before creating it**.
+Check the effective setting with `docker compose -p resume-e2e --env-file /tmp/resume-e2e.env
+-f compose.yaml -f /tmp/resume-e2e-ports.yml config`; rebuild/recreate the API
+if the allowed origin changes. The middleware and guest analyze endpoint both require a
+matching Origin for POST requests; do not disable their checks for tests.
+
+The guest test requires a **new disposable database/volume for each run**. A failed
+first attempt may already have consumed the quota, so simply rerunning the test,
+clearing the browser, or deleting the guest report does not restore the allowance.
+The test fails early with a descriptive error if the allowance was already consumed.
+Never remove a real user/database volume to reset E2E state.
+
 Coverage includes guest upload, registration, extraction review, requirement edits, source inspection,
 user-authored corrections, reruns, comparisons, exports, deletion and failed sign-out. Responsive tests
 exercise upload, processing and limited states at ten widths, asserting column geometry as well as
@@ -57,3 +72,30 @@ retrieval, support, unrelated text, negation and suppression of uncalibrated pro
 CI job repeats this with the CPU runtime. These are inference integration checks, not an accuracy study.
 For a provisioned full stack, `E2E_SEMANTIC=1 npm run e2e -- --workers=1` also asserts the actual model
 method on completed guest/account reports. Use a fresh disposable application database.
+
+## Failure and isolation coverage
+
+The suite covers query identity/cancellation, frozen guest retry payloads, account-token concurrency and expiry, registration atomicity, bounded maintenance, and worker-process termination. SMTP host/from are cleared during tests to prevent delivery through developer mailbox settings. `E2E_RECORD_VIDEO=1` records synthetic browser journeys.
+
+Before CI, run both contract checks from the repository root:
+
+```bash
+.venv/bin/python frontend/scripts/export-contracts.py --check
+node frontend/scripts/compile-contracts.mjs --check
+```
+
+Regenerate without `--check` after intentional API changes, then format `frontend/src/lib/response-contracts.json` with the frontend's Prettier configuration. The JSON drift check compares schema structures independently of formatting. No runtime validator compilation or script-eval CSP exception is required.
+
+Destructive integration fixtures require a disposable PostgreSQL database whose name ends in `_test`; this guard does not replace checking that the database contains no application data.
+
+## Concurrency and transport failures
+
+The account tests use separate PostgreSQL connections and a lock timeout to prove reset/verification cannot occur between credential verification and session issuance. Retention tests commit an actual newer version between candidate selection and deletion. The guest API test proves same-key cookie recovery without exposing a report through network identity. Its browser journey forwards the first request to the real API, then aborts the committed response and clears the cookie before asking the UI to recover with the same key. Only the transport fault is injected; extraction and analysis use the actual local worker.
+
+The query tests resolve an older read after a simulated mutation invalidation and require a second non-overlapping read, including when the older read fails. Account-link tests run both modes under React Strict Mode. Prometheus fixtures include real scrape labels and an independently progressing instance.
+
+## Résumé-only reviews and interface behavior
+
+`test_resume_only.py` covers optional job descriptions, exports, comparison boundaries, and reviewer failure settlement. `test_resume_reviewer.py` validates model identity, output schema, exact quotations, and local endpoint restrictions using a controlled transport; these tests do not establish model quality.
+
+`resume-only.spec.ts` exercises account upload, parsing, and review through the running backend. `public-interface.spec.ts` checks desktop navigation, compact footer, intermediate disclosure heights, reduced motion, and list alignment at mobile/tablet/desktop widths. Its controlled guest-availability response isolates presentation from the durable quota.

@@ -45,6 +45,10 @@ def current_principal(
 
 
 def current_user(principal: Principal = Depends(current_principal)) -> User:
+    if get_settings().email_verification_required and principal.user.email_verified_at is None:
+        raise Forbidden(
+            "Verify your email address before using the workspace.", code="email_unverified"
+        )
     return principal.user
 
 

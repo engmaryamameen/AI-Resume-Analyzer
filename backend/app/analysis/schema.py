@@ -2,6 +2,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.analysis.reviewer import ResumeReview
 from app.ml.contracts import EngineInfo, Mention
 
 RequirementKind = Literal["required", "preferred"]
@@ -91,6 +92,7 @@ class AnalysisWarning(BaseModel):
 
 
 class AnalysisResult(BaseModel):
+    review: ResumeReview | None = None
     pipeline_version: str
     engine: EngineInfo
     requirements: list[RequirementDraft]

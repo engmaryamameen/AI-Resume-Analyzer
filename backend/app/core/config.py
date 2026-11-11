@@ -2,11 +2,12 @@ from functools import lru_cache
 from ipaddress import IPv4Network, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PIPELINE_VERSION = "pipeline-2"
+PIPELINE_VERSION = "pipeline-3"
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -29,6 +30,26 @@ class Settings(BaseSettings):
     parser_timeout_seconds: int = 20
     parser_memory_mb: int = 512
     session_ttl_hours: int = 72
+    public_app_url: str = "http://localhost:3000"
+    reviewer_enabled: bool = False
+    reviewer_url: str = "http://review-model:11434"
+    reviewer_model: str = "qwen3:4b-instruct"
+    reviewer_model_digest: str = ""
+    reviewer_timeout_seconds: int = Field(default=300, ge=30, le=600)
+    billing_require_credits: bool = False
+    billing_enabled: bool = False
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 465
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
+    @property
+    def email_verification_required(self) -> bool:
+        return self.is_production
+
     retention_days: int = 90
 
     job_max_attempts: int = Field(default=3, ge=1)
@@ -72,6 +93,23 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _resolve_paths_and_refuse_unsafe_production(self) -> "Settings":
+        review_url = urlparse(self.reviewer_url)
+        if (
+            review_url.scheme != "http"
+            or review_url.hostname not in {"review-model", "localhost", "127.0.0.1", "::1"}
+            or review_url.username
+            or review_url.password
+            or review_url.path not in {"", "/"}
+            or review_url.query
+            or review_url.fragment
+        ):
+            raise ValueError("REVIEWER_URL must be a local Ollama service URL")
+        self.reviewer_url = self.reviewer_url.rstrip("/")
+        if self.billing_enabled and (
+            not self.stripe_secret_key.startswith("sk_test_")
+            or not self.stripe_webhook_secret.startswith("whsec_")
+        ):
+            raise ValueError("Billing requires Stripe test keys and a webhook signing secret")
         self.storage_dir = (
             self.storage_dir if self.storage_dir.is_absolute() else REPO_ROOT / self.storage_dir
         )

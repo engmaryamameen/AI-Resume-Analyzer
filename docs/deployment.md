@@ -15,8 +15,7 @@ restoration checks and capacity measurements on the target infrastructure.
 | Web | `npm start` (from `frontend/`) | stateless; proxies `/api/v1` to the API |
 | PostgreSQL | managed or self-hosted | single primary; also holds the job queue |
 
-Inference is a logical module inside the worker, not a separate service. Run more worker processes for
-more concurrent jobs; each one holds its own copy of the models in memory.
+Matching inference runs inside the worker; each worker loads its own matching models. Optional editorial review uses a separate private Ollama service. Worker count does not increase that service's configured parallel capacity. See [local reviewer setup](local-reviewer.md) before enabling it.
 
 ## Offline operation
 
@@ -87,7 +86,7 @@ worker's actual state is whatever each analysis recorded.
 
 ## Configuration
 
-Everything comes from environment variables (`.env.example` lists them, with placeholders only). In
+Everything comes from environment variables (`.env.example` lists them, with local example values, not production credentials). In
 production (the default when `APP_ENV` is unset) the application refuses to start with a placeholder
 `SECRET_KEY` or database credential.
 
@@ -101,7 +100,7 @@ production (the default when `APP_ENV` is unset) the application refuses to star
 | `ML_ENABLED`, `ML_DEVICE`, `ML_THREADS`, `ML_BATCH_SIZE`, `ML_MAX_SECONDS` | `true`, `cpu`, 4, 16, 120 | learned-engine settings |
 | `JOB_MAX_ATTEMPTS`, `JOB_LOCK_SECONDS` | 3, 120 | retries and heartbeat window |
 | `MAX_UPLOAD_BYTES`, `MAX_PDF_PAGES`, `MAX_JD_CHARS`, `PARSER_TIMEOUT_SECONDS`, `PARSER_MEMORY_MB` | 5 MB, 8, 20 000, 20 s, 512 MB | input limits |
-| `SESSION_TTL_HOURS`, `RETENTION_DAYS` | 72, 90 | sessions and data retention (90 is a placeholder; decide before launch) |
+| `SESSION_TTL_HOURS`, `RETENTION_DAYS` | 72, 90 | sessions and data retention (configure for your retention policy) |
 | `METRICS_TOKEN` | empty | `/metrics` is disabled unless set |
 | `RATE_LIMIT_*` | see `app/core/config.py` | per-minute limits |
 
@@ -185,3 +184,21 @@ Run the checks in [testing.md](testing.md), then verify on the target infrastruc
 - retention scheduling, storage capacity, latency and queue depth under expected load.
 
 Learned-model approval additionally requires the evaluation in [local-models.md](local-models.md).
+
+## Account email
+
+Account email uses implicit TLS SMTP. Configure `SMTP_HOST`, `SMTP_PORT` (465), `SMTP_USERNAME`,
+`SMTP_PASSWORD`, `SMTP_FROM`, and `PUBLIC_APP_URL` in the ignored local `.env`. Gmail uses
+`smtp.gmail.com`, the full mailbox address as username/from, and a separate Google app password.
+Never put the password in `.env.example`, source control, screenshots or chat. No real email is sent
+by the test suite. Public mode requires an HTTPS `PUBLIC_APP_URL` and configured delivery; local mode
+does not require verification to use synthetic workflows. A provider using STARTTLS on port 587 is
+not compatible with the current implicit-TLS transport; use its TLS endpoint on 465.
+
+Production registration issues no session and returns a generic response. An email link proves
+ownership before workspace access. Recovery links expire after 30 minutes and reset all sessions.
+Existing accounts need verification if public mode is enabled. Request another link after a delivery
+failure; each request invalidates the older link. MFA is not implemented.
+
+Mailbox verification requires choosing a password and revokes every session/token. This prevents a
+pre-registered account from retaining an attacker-chosen credential after its real owner verifies.

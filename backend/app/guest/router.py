@@ -11,18 +11,20 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Header, Request, Response, UploadFile
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.analysis import job_descriptions
 from app.analysis import service as analyses
 from app.api.analyses_router import get_analysis
 from app.api.deps import get_store
+from app.api.schemas import GuestStateOut
 from app.core.config import Settings, get_settings
 from app.core.errors import Forbidden, NotFound, RateLimited, ValidationFailed
 from app.core.net import client_ip
 from app.core.ratelimit import limiter
 from app.core.security import constant_time_equal, hash_token
+from app.db.locks import lock_guest_network as _lock
 from app.db.locks import lock_user
 from app.db.models import AnalysisRun, GuestAllowance, GuestAnalysis, ResumeVersion, User
 from app.db.session import get_db
@@ -47,13 +49,6 @@ def _network(request: Request, settings: Settings) -> str:
 def _origin(request: Request, settings: Settings) -> None:
     if request.headers.get("origin") not in settings.cors_origins:
         raise Forbidden("Use the form on this site to start an analysis.", code="guest_origin")
-
-
-def _lock(db: Session, key: str) -> None:
-    db.execute(
-        text("SELECT pg_advisory_xact_lock(:key)"),
-        {"key": int.from_bytes(bytes.fromhex(key)[:8], signed=True)},
-    )
 
 
 def _visitor(db: Session, request: Request, settings: Settings) -> GuestAnalysis | None:
@@ -91,33 +86,25 @@ def _state(
     resume = db.get(ResumeVersion, guest.resume_version_id) if guest.resume_version_id else None
     if resume is None:
         state["status"] = "preparing"
-        if guest.created_at < _now() - timedelta(minutes=5):
-            _lock(db, guest.network_key)
-            alive = db.scalar(select(GuestAnalysis.id).where(GuestAnalysis.id == guest.id))
-            original = (
-                db.get(GuestAllowance, guest.network_key, populate_existing=True) if alive else None
-            )
-            if original:
-                original.next_allowed_at = _now()
-                db.commit()
-            state.update(
-                status="failed",
-                error_code="guest_interrupted",
-                available=True,
-                next_allowed_at=None,
-            )
+        # Legacy incomplete rows expire with the guest allowance; age alone is not a failure.
         return state
     if resume.status == "failed":
         state.update(status="failed", error_code=resume.error_code)
     elif resume.status == "processing":
         state["status"] = "extracting"
-    elif guest.jd_version_id:
+    else:
         run = db.execute(
             select(AnalysisRun).where(AnalysisRun.user_id == guest.user_id)
         ).scalar_one_or_none()
         if run is None and advance:
             run = analyses.create_analysis(
-                db, settings, guest.user_id, resume.id, guest.jd_version_id, f"guest-{guest.id}"
+                db,
+                settings,
+                guest.user_id,
+                resume.id,
+                guest.jd_version_id,
+                f"guest-{guest.id}",
+                charge_credit=False,
             )
         state["status"] = "analyzing"
         if run and run.status == "failed":
@@ -137,21 +124,21 @@ def _state(
         original = (
             db.get(GuestAllowance, guest.network_key, populate_existing=True) if alive else None
         )
-        if original:
+        if original and original.next_allowed_at == guest.expires_at:
             original.next_allowed_at = _now()
-        db.commit()
-        state.update(available=True, next_allowed_at=None)
+            db.commit()
+            state.update(available=True, next_allowed_at=None)
     return state
 
 
-@router.get("")
+@router.get("", response_model=GuestStateOut)
 def status(
     request: Request, db: Session = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> dict[str, Any]:
     return _state(db, _visitor(db, request, settings), _network(request, settings), settings)
 
 
-@router.post("/progress")
+@router.post("/progress", response_model=GuestStateOut)
 def progress(
     request: Request, db: Session = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> dict[str, Any]:
@@ -162,12 +149,12 @@ def progress(
     return _state(db, guest, _network(request, settings), settings, advance=True)
 
 
-@router.post("/analyze", status_code=202)
+@router.post("/analyze", status_code=202, response_model=GuestStateOut)
 def start(
     request: Request,
     response: Response,
     file: UploadFile = File(...),
-    job_text: str = Form(...),
+    job_text: str = Form(default=""),
     idempotency_key: str = Header(alias="Idempotency-Key"),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -178,7 +165,7 @@ def start(
     limiter.check(f"guest-upload:{network}", settings.rate_limit_upload_per_minute)
     if len(idempotency_key) < 16 or len(idempotency_key) > 128:
         raise ValidationFailed("A valid request key is required.")
-    cleaned = job_descriptions.clean_text(job_text, settings)
+    cleaned = job_descriptions.clean_text(job_text, settings) if job_text.strip() else ""
     upload = validate_upload(
         file.filename, file.file.read(settings.max_upload_bytes + 1), settings.max_upload_bytes
     )
@@ -236,37 +223,52 @@ def start(
             )
         )
         db.flush()
+        deadline = _now() + WINDOW
         guest = GuestAnalysis(
             network_key=network,
             token_hash=token_hash,
             request_hash=fingerprint,
             user_id=owner_id,
-            expires_at=_now() + WINDOW,
+            expires_at=deadline,
         )
         db.add(guest)
         if allowance:
-            allowance.next_allowed_at = _now() + WINDOW
+            allowance.next_allowed_at = deadline
         else:
-            db.add(GuestAllowance(network_key=network, next_allowed_at=_now() + WINDOW))
-        db.commit()
-        for key in expired_keys:
-            if key:
-                store.delete(key)
+            db.add(GuestAllowance(network_key=network, next_allowed_at=deadline))
+        new_blob_key = None
+        committing = False
         try:
-            _, resume = documents.ingest_upload(db, store, settings, owner_id, upload, uuid.uuid4())
-            _, job, _ = job_descriptions.create_job(
-                db, settings, owner_id, "Guest target role", cleaned
+            _, resume = documents.ingest_upload(
+                db, store, settings, owner_id, upload, uuid.uuid4(), commit=False
             )
-            guest.resume_version_id, guest.jd_version_id = resume.id, job.id
+            new_blob_key = resume.storage_key
+            guest.resume_version_id = resume.id
+            if cleaned:
+                _, job, _ = job_descriptions.create_job(
+                    db, settings, owner_id, "Guest target role", cleaned, commit=False
+                )
+                guest.jd_version_id = job.id
+            # Reservation, private workspace, both versions and queued extraction
+            # become visible together. A crash before this point leaves no quota.
+            committing = True
             db.commit()
         except Exception:
             db.rollback()
-            current = db.get(GuestAllowance, network)
-            if current:
-                current.next_allowed_at = _now()
-                db.commit()
-            delete_account(db, store, owner_id, None)
+            # A connection failure during COMMIT has an uncertain outcome.
+            # Preserve the file until the orphan sweep can compare durable rows.
+            if new_blob_key and not committing:
+                try:
+                    store.delete(new_blob_key)
+                except OSError:
+                    pass  # the orphan-file sweep handles an unsuccessful unlink
             raise
+        for key in expired_keys:
+            if key:
+                try:
+                    store.delete(key)
+                except OSError:
+                    pass
     response.set_cookie(
         COOKIE,
         token,

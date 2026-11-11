@@ -6,9 +6,12 @@ re-reading the cancel flag, so cancellation and deletion can never interleave wi
 """
 
 import signal
+import threading
 import time
 import uuid
-from collections.abc import Callable
+from _thread import LockType
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, nullcontext
 
 from app.core.config import get_settings
 from app.core.errors import AppError
@@ -36,65 +39,124 @@ def _heartbeat(job: ClaimedJob) -> Callable[[], None]:
     return beat
 
 
-def _finish(job: ClaimedJob, kind: JobKind, result: object | None) -> None:
-    with session_scope() as db:
-        lock_user(db, job.user_id)
-        row = queue.lock_job(db, job.id)
-        if (
-            row is None
-            or row.status != "running"
-            or row.attempts != job.attempts
-            or (row.locked_until is None or row.locked_until <= queue._now())
-        ):
-            return  # deleted meanwhile, or already settled by another attempt
-        if row.cancel_requested:
-            kind.on_cancelled(db, job.target_id)
-            queue.mark_cancelled(row)
-            return
-        if result is not None:
-            kind.commit(db, job.target_id, result)
-        queue.mark_succeeded(row)
+@contextmanager
+def _lease_heartbeat(
+    job: ClaimedJob, settlement_lock: LockType | None = None
+) -> Iterator[Callable[[], None]]:
+    """Renew a claim even while inference blocks; never commit after a lost lease."""
+    heartbeat = _heartbeat(job)
+    interval = max(0.1, get_settings().job_lock_seconds / 3)
+    stop = threading.Event()
+    lost = threading.Event()
+    renewal_lock = settlement_lock or threading.Lock()
+
+    def renew() -> None:
+        while not stop.wait(interval):
+            try:
+                with renewal_lock:
+                    if stop.is_set():
+                        return
+                    heartbeat()
+            except Exception:
+                if not stop.is_set():
+                    lost.set()
+                return
+
+    thread = threading.Thread(target=renew, name="job-heartbeat", daemon=True)
+    thread.start()
+    try:
+        def checked_heartbeat() -> None:
+            if lost.is_set():
+                raise Transient("lease_lost")
+            with renewal_lock:
+                if lost.is_set() or stop.is_set():
+                    raise Transient("lease_lost")
+                heartbeat()
+        yield checked_heartbeat
+    finally:
+        stop.set()
+        thread.join(timeout=max(1.0, min(get_settings().job_lock_seconds, 5.0)))
+        if thread.is_alive():
+            log.warning("heartbeat_shutdown_delayed", extra={"kind": job.kind})
 
 
-def _fail_or_retry(job: ClaimedJob, kind: JobKind, code: str, *, retryable: bool) -> None:
+def _finish(
+    job: ClaimedJob, kind: JobKind, result: object | None,
+    settlement_lock: LockType | None = None,
+) -> None:
     with session_scope() as db:
         lock_user(db, job.user_id)
-        row = queue.lock_job(db, job.id)
-        if (
-            row is None
-            or row.status != "running"
-            or row.attempts != job.attempts
-            or (row.locked_until is None or row.locked_until <= queue._now())
-        ):
-            return
-        if row.cancel_requested:
-            kind.on_cancelled(db, job.target_id)
-            queue.mark_cancelled(row)
-        elif retryable and row.attempts < row.max_attempts:
-            queue.schedule_retry(row, code)
-        else:
-            queue.mark_failed(row, code)
-            kind.on_failed(db, job.target_id, code)
+        # Once the job row is locked, no other worker can reclaim this attempt.
+        # Serialize local renewal with settlement to avoid competing row updates.
+        with settlement_lock or nullcontext():
+            row = queue.lock_job(db, job.id)
+            if (
+                row is not None
+                and row.status == "running"
+                and row.attempts == job.attempts
+                and row.locked_until is not None
+                and row.locked_until > queue._now()
+            ):
+                if row.cancel_requested:
+                    kind.on_cancelled(db, job.target_id)
+                    queue.mark_cancelled(row)
+                else:
+                    if result is not None:
+                        kind.commit(db, job.target_id, result)
+                    queue.mark_succeeded(row)
+            db.commit()
+
+
+def _fail_or_retry(
+    job: ClaimedJob, kind: JobKind, code: str, *, retryable: bool,
+    settlement_lock: LockType | None = None,
+) -> None:
+    with session_scope() as db:
+        lock_user(db, job.user_id)
+        with settlement_lock or nullcontext():
+            row = queue.lock_job(db, job.id)
+            if (
+                row is not None
+                and row.status == "running"
+                and row.attempts == job.attempts
+                and row.locked_until is not None
+                and row.locked_until > queue._now()
+            ):
+                if row.cancel_requested:
+                    kind.on_cancelled(db, job.target_id)
+                    queue.mark_cancelled(row)
+                elif retryable and row.attempts < row.max_attempts:
+                    queue.schedule_retry(row, code)
+                else:
+                    queue.mark_failed(row, code)
+                    kind.on_failed(db, job.target_id, code)
+            db.commit()
 
 
 def _execute(job: ClaimedJob, engine: Engine) -> None:
     kind = registry.get(job.kind)
-    try:
-        with session_scope() as db:
-            prepared = kind.prepare(db, job.target_id)
-        result = (
-            None
-            if prepared is None
-            else kind.compute(prepared, JobContext(engine, _heartbeat(job)))
-        )
-        _finish(job, kind, result)
-    except Transient as exc:
-        _fail_or_retry(job, kind, exc.code, retryable=True)
-    except AppError as exc:  # deterministic: retrying cannot help
-        _fail_or_retry(job, kind, exc.code, retryable=False)
-    except Exception as exc:  # noqa: BLE001 - boundary: record and retry within bounds, never crash the loop
-        log.error("job_error", extra={"kind": job.kind, "error_type": type(exc).__name__})
-        _fail_or_retry(job, kind, f"unexpected_{type(exc).__name__}", retryable=True)
+    # The lease stays renewable until the final job/target transaction commits.
+    # The attempt number and expiry are checked again under the row lock.
+    settlement_lock = threading.Lock()
+    with _lease_heartbeat(job, settlement_lock) as heartbeat:
+        try:
+            with session_scope() as db:
+                prepared = kind.prepare(db, job.target_id)
+            result = (
+                None if prepared is None else kind.compute(prepared, JobContext(engine, heartbeat))
+            )
+            heartbeat()
+            _finish(job, kind, result, settlement_lock)
+        except Transient as exc:
+            _fail_or_retry(job, kind, exc.code, retryable=True, settlement_lock=settlement_lock)
+        except AppError as exc:
+            _fail_or_retry(job, kind, exc.code, retryable=False, settlement_lock=settlement_lock)
+        except Exception as exc:  # noqa: BLE001 - worker boundary
+            log.error("job_error", extra={"kind": job.kind, "error_type": type(exc).__name__})
+            _fail_or_retry(
+                job, kind, f"unexpected_{type(exc).__name__}", retryable=True,
+                settlement_lock=settlement_lock,
+            )
 
 
 def _settle_exhausted() -> bool:

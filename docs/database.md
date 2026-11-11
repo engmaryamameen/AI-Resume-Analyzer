@@ -1,15 +1,18 @@
 # Database
 
 PostgreSQL, accessed with SQLAlchemy 2 and migrated with Alembic. The schema is defined in
-`backend/app/db/models.py` and created by a single migration, `backend/alembic/versions/0001_initial_schema.py`.
+`backend/app/db/models.py`. Alembic revisions `0001_initial_schema`, `0002_guest_analysis`, `0003_account_lifecycle`, and `0004_review_credits` create the current schema.
 A test compares the models with the migrated database to catch drift (`test_migrations_match_models`).
-Neither has been run yet.
+The integration suite applies migrations to an isolated database and checks model/schema agreement. See the dated verification record for actual execution results.
 
 ## Tables
 
 | Table | Holds | Notes |
 | --- | --- | --- |
 | `users` | email (unique, normalised), Argon2id hash, role | `role` is `user` or `admin`; admin is granted only by `python -m app.cli grant-admin` |
+| `account_tokens` | hashed, purpose-bound verification/recovery tokens and expiry | single-use; reissue replaces older tokens; reset revokes tokens and sessions |
+| `guest_allowances` | keyed network hash and next allowed time | durable rolling quota; deletion does not reset it |
+| `guest_analyses` | private guest token hash, owner and input references, expiry | separate temporary principal; cleanup cascades private documents |
 | `sessions` | keyed hash of the session token, hash of the CSRF token, expiry | raw tokens exist only in the browser |
 | `resume_documents` | one logical résumé per row | content lives in versions |
 | `resume_versions` | immutable versions: status, error code, storage key, extension, SHA-256, size, `normalized`, `parseability` | `source` is `upload` or `user_correction`; unique `(document_id, version_no)` |
@@ -21,7 +24,7 @@ Neither has been run yet.
 | `idempotency_keys` | claimed keys with a request hash and the result id | unique `(user_id, scope, key)` |
 | `audit_events` | action, target type/id, request id, detail | no content; `user_id` becomes NULL when the user is deleted |
 
-Every private table carries `user_id` (denormalised where needed) so each ownership check is one predicate.
+Document-owned tables carry `user_id` (denormalised where needed) so ownership checks are explicit. Guest network allowances use a keyed address hash rather than an account identity.
 Deleting a user cascades to everything private.
 
 ## Integrity rules enforced by the database
@@ -40,7 +43,7 @@ Deleting a user cascades to everything private.
 ## Concurrency
 
 - The queue is claimed with `SELECT … FOR UPDATE SKIP LOCKED`.
-- Every transaction touching several of {user, document, version, run, job} first takes
+- Document/job transactions touching several of {user, document, version, run, job} first take
   `pg_advisory_xact_lock` for the user, then row locks (`backend/app/db/locks.py`). See
   [architecture.md](architecture.md#lock-order).
 - Version creation locks the parent row and checks `base_version_no` against the latest version
@@ -58,7 +61,17 @@ not normalised into tables.
 
 ## Migrations
 
-There is one initial migration because no deployed data exists yet. Once a database is in use, add
+The five schema revisions must be applied in order with `alembic upgrade head`. Add further
 migrations; make destructive changes in two steps (expand, then contract) so old and new code can run
 side by side. Run migrations with a separate role from the application's (see
 [deployment.md](deployment.md#database)).
+
+Credential verification/session issuance and password reset use the same user-row lock. Retention rechecks latest-version age inside the deletion lock, so a fresh revision cannot be removed merely because its parent appeared in an earlier scan.
+
+## Review credits (migration 0004)
+
+`billing_orders` records an account's Checkout intent, request key, unique Stripe session and settlement flag. `credit_entries` is a signed account ledger with constrained purchase/review/refund amounts and unique references. The account is the owner; deleting it cascades both tables. Ledger references to runs deliberately survive report deletion so a completed review does not become free by deleting it. Balance changes serialize on the existing owner advisory lock. See [billing.md](billing.md).
+
+## Optional target role (migration 0005)
+
+`analysis_runs.jd_version_id` is nullable for résumé-only review. No synthetic job row is created. Both résumé-only and targeted runs preserve immutable résumé input references. Cross-mode comparison is rejected. Downgrade refuses to make the column non-nullable while résumé-only runs exist, preserving their data. Source-cited editorial feedback and model provenance live in the run summary.

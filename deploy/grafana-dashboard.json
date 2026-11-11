@@ -1,0 +1,14 @@
+{
+  "title": "Resume Analyzer Operations",
+  "uid": "resume-operations",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {"id": 1, "title": "Oldest queued job (seconds)", "type": "timeseries", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "job_backlog_oldest_seconds", "legendFormat": "{{kind}}"}]},
+    {"id": 2, "title": "Expired leases and retries", "type": "timeseries", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "job_expired_leases", "legendFormat": "expired leases"}, {"expr": "job_retrying", "legendFormat": "retry backlog"}]},
+    {"id": 3, "title": "Upload storage free fraction", "type": "timeseries", "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}, "targets": [{"expr": "storage_free_bytes / storage_total_bytes"}]},
+    {"id": 4, "title": "Seconds without job progress", "type": "timeseries", "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}, "targets": [{"expr": "job_last_progress_age_seconds"}]}
+  ]
+}

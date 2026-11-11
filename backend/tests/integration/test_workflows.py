@@ -87,7 +87,9 @@ def test_full_workflow_from_upload_to_report(make_user, run_jobs):
 
 def test_duplicate_upload_with_same_key_creates_one_logical_document(make_user, run_jobs):
     _, c = make_user()
-    a, b = upload(c, "upload-key-0001"), upload(c, "upload-key-0001")
+    files = docx_file()  # Reuse identical bytes: separately built ZIPs have time-dependent metadata.
+    a, b = upload(c, "upload-key-0001", files=files), upload(c, "upload-key-0001", files=files)
+    assert a.status_code == b.status_code == 202, (a.text, b.text)
     assert a.json()["id"] == b.json()["id"]
     assert count(ResumeVersion) == 1 and count(ProcessingJob) == 1
     other = upload(c, "upload-key-0001", files=docx_file("Someone Else\nSKILLS\nGo\n"))
@@ -299,6 +301,186 @@ def test_requirement_correction_versions_the_job_description(make_user, run_jobs
     texts = {x["text"]: x["origin"] for x in r.json()["requirements"]}
     assert "Rust" not in texts and texts["Python"] == "extracted"
     assert c.get(f"{API}/job-descriptions/{jd_id}", params={"version": 1}).json()["requirements"]  # v1 intact
+
+
+def test_requirement_min_years_can_be_cleared_without_changing_older_versions(make_user):
+    _, c = make_user()
+    jd_id, _ = make_job(c)
+    url = f"{API}/job-descriptions/{jd_id}"
+    original = c.get(url).json()
+    year_req = next(r for r in original["requirements"] if r["min_years"] is not None)
+    assert year_req["min_years"] == 3
+
+    item = {key: year_req[key] for key in ("id", "text", "kind", "category")}
+    cleared = c.put(f"{url}/requirements", json={
+        "base_version_no": 1, "requirements": [{**item, "min_years": None}],
+    })
+    assert cleared.status_code == 200, cleared.text
+    updated = cleared.json()["requirements"][0]
+    assert updated["min_years"] is None
+    assert updated["origin"] == year_req["origin"]
+    assert updated["source_span"] == year_req["source_span"]
+    assert c.get(url, params={"version": 1}).json()["requirements"] == original["requirements"]
+    assert c.get(url, params={"version": 2}).json()["requirements"][0]["min_years"] is None
+
+    # IDs are version-scoped. The next edit must refer to the new version's requirement.
+    current_item = {key: updated[key] for key in ("id", "text", "kind", "category")}
+    omitted = c.put(f"{url}/requirements", json={
+        "base_version_no": 2, "requirements": [current_item],
+    })
+    assert omitted.status_code == 200, omitted.text
+    assert omitted.json()["requirements"][0]["min_years"] is None
+
+
+def test_requirement_min_years_omission_preserves_existing_value(make_user):
+    _, c = make_user()
+    jd_id, _ = make_job(c)
+    url = f"{API}/job-descriptions/{jd_id}"
+    year_req = next(r for r in c.get(url).json()["requirements"] if r["min_years"] is not None)
+    item = {key: year_req[key] for key in ("id", "text", "kind", "category")}
+    updated = c.put(f"{url}/requirements", json={
+        "base_version_no": 1, "requirements": [item],
+    })
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["requirements"][0]["min_years"] == 3
+
+
+def test_requirement_kind_edit_preserves_posting_text_provenance(make_user):
+    _, c = make_user()
+    jd_id, _ = make_job(c)
+    url = f"{API}/job-descriptions/{jd_id}"
+    original = c.get(url).json()["requirements"]
+    req = next(r for r in original if r["origin"] == "extracted")
+    new_kind = "preferred" if req["kind"] == "required" else "required"
+    updated = c.put(f"{url}/requirements", json={
+        "base_version_no": 1,
+        "requirements": [{"id": req["id"], "text": req["text"],
+                          "category": req["category"], "kind": new_kind}],
+    })
+    assert updated.status_code == 200, updated.text
+    result = updated.json()["requirements"][0]
+    assert result["kind"] == new_kind
+    assert result["origin"] == req["origin"]
+    assert result["source_span"] == req["source_span"]
+
+
+def test_requirement_replacement_preserves_other_items_and_accepts_zero(make_user):
+    _, c = make_user()
+    job_id, _ = make_job(c)
+    url = f"{API}/job-descriptions/{job_id}"
+    original = c.get(url).json()["requirements"]
+    years = next(r for r in original if r["min_years"] is not None)
+    payload = [
+        {
+            "id": r["id"], "text": r["text"], "kind": r["kind"],
+            "category": r["category"],
+            **({"min_years": None} if r["id"] == years["id"] else {}),
+        }
+        for r in original
+    ]
+    response = c.put(f"{url}/requirements", json={"base_version_no": 1, "requirements": payload})
+    assert response.status_code == 200, response.text
+    current = response.json()["requirements"]
+    assert len(current) == len(original)
+    assert [r["text"] for r in current] == [r["text"] for r in original]
+    assert next(r for r in current if r["text"] == years["text"])["min_years"] is None
+    for before, after in zip(original, current):
+        if before["id"] != years["id"]:
+            assert after["min_years"] == before["min_years"]
+            assert after["origin"] == before["origin"]
+            assert after["source_span"] == before["source_span"]
+
+    payload = [
+        {
+            "id": r["id"], "text": r["text"], "kind": r["kind"],
+            "category": r["category"],
+            **({"min_years": 0} if r["text"] == years["text"] else {}),
+        }
+        for r in current
+    ]
+    zero = c.put(f"{url}/requirements", json={"base_version_no": 2, "requirements": payload})
+    assert zero.status_code == 200, zero.text
+    assert next(r for r in zero.json()["requirements"] if r["text"] == years["text"])["min_years"] == 0
+    assert c.get(url, params={"version": 1}).json()["requirements"] == original
+    assert next(r for r in c.get(url, params={"version": 2}).json()["requirements"]
+                if r["text"] == years["text"])["min_years"] is None
+
+
+@pytest.mark.parametrize("bad_value", [-1, 61, "not-a-number"])
+def test_requirement_replacement_rejects_invalid_years(make_user, bad_value):
+    _, c = make_user()
+    job_id, _ = make_job(c)
+    url = f"{API}/job-descriptions/{job_id}"
+    item = next(r for r in c.get(url).json()["requirements"] if r["min_years"] is not None)
+    payload = {"id": item["id"], "text": item["text"], "kind": item["kind"],
+               "category": item["category"], "min_years": bad_value}
+    response = c.put(f"{url}/requirements", json={"base_version_no": 1, "requirements": [payload]})
+    assert response.status_code == 422, response.text
+    assert c.get(url).json()["latest_version"]["version_no"] == 1
+
+
+def test_requirement_replacement_rejects_stale_version_without_mutation(make_user):
+    _, c = make_user()
+    job_id, _ = make_job(c)
+    url = f"{API}/job-descriptions/{job_id}"
+    original = c.get(url).json()["requirements"]
+    item = next(r for r in original if r["min_years"] is not None)
+    payload = {"id": item["id"], "text": item["text"], "kind": item["kind"],
+               "category": item["category"], "min_years": None}
+    first = c.put(f"{url}/requirements", json={"base_version_no": 1, "requirements": [payload]})
+    assert first.status_code == 200, first.text
+    stale = c.put(f"{url}/requirements", json={"base_version_no": 1, "requirements": [payload]})
+    assert stale.status_code == 409, stale.text
+    assert stale.json()["error"]["code"] == "stale_base_version"
+    assert c.get(url).json()["latest_version"]["version_no"] == 2
+    assert c.get(url, params={"version": 1}).json()["requirements"] == original
+
+
+def test_requirement_consecutive_updates_preserve_omitted_non_null_threshold(make_user):
+    _, c = make_user()
+    job_id, _ = make_job(c)
+    url = f"{API}/job-descriptions/{job_id}"
+    original = c.get(url).json()["requirements"]
+    years = next(r for r in original if r["min_years"] is not None)
+    assert years["min_years"] == 3
+
+    for base_version in (1, 2):
+        current = c.get(url).json()["requirements"]
+        payload = [
+            {key: r[key] for key in ("id", "text", "kind", "category")}
+            for r in current
+        ]
+        response = c.put(f"{url}/requirements", json={
+            "base_version_no": base_version,
+            "requirements": payload,
+        })
+        assert response.status_code == 200, response.text
+        assert response.json()["latest_version"]["version_no"] == base_version + 1
+        assert len(response.json()["requirements"]) == len(original)
+        assert next(r for r in response.json()["requirements"]
+                    if r["text"] == years["text"])["min_years"] == 3
+
+    for version in (1, 2, 3):
+        previous = c.get(url, params={"version": version})
+        assert previous.status_code == 200
+        assert next(r for r in previous.json()["requirements"]
+                    if r["text"] == years["text"])["min_years"] == 3
+
+
+def test_requirement_text_edit_resets_source_provenance(make_user):
+    _, c = make_user()
+    job_id, _ = make_job(c)
+    url = f"{API}/job-descriptions/{job_id}"
+    original = c.get(url).json()["requirements"]
+    item = next(r for r in original if r["origin"] == "extracted")
+    edited = {"id": item["id"], "text": item["text"] + " (revised)",
+              "kind": item["kind"], "category": item["category"]}
+    response = c.put(f"{url}/requirements", json={"base_version_no": 1, "requirements": [edited]})
+    assert response.status_code == 200, response.text
+    result = response.json()["requirements"][0]
+    assert result["origin"] == "user"
+    assert result["source_span"] is None
+    assert c.get(url, params={"version": 1}).json()["requirements"] == original
 
 
 def test_the_rule_based_engine_is_recorded_so_a_later_model_change_marks_results_as_different(make_user, run_jobs):

@@ -15,9 +15,10 @@ import {
   TextArea,
   TextField,
 } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/http/client";
+import { resumesApi } from "@/features/resumes/api";
 import { SECTION_LABEL, failureMessage, formatDate, friendlyError, years } from "@/lib/copy";
-import { useAsync, usePolling } from "@/lib/hooks";
+import { useQuery, usePolling } from "@/lib/hooks";
 import type { ContactField } from "@/lib/types";
 
 function confidenceNote(f: ContactField): string | undefined {
@@ -28,7 +29,7 @@ function confidenceNote(f: ContactField): string | undefined {
 export default function ResumeReview() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const detail = useAsync(() => api.resume(id), [id]);
+  const detail = useQuery(["resume", id], (signal) => resumesApi.resume(id, undefined, signal));
   const doc = detail.data?.normalized ?? null;
   const latest = detail.data?.versions.at(-1);
 
@@ -65,7 +66,7 @@ export default function ResumeReview() {
       return;
     setDeleting(true);
     try {
-      await api.deleteResume(id);
+      await resumesApi.deleteResume(id);
       router.replace("/app/resumes");
     } catch (e) {
       setMessage({ tone: "bad", text: friendlyError(e) });
@@ -73,9 +74,20 @@ export default function ResumeReview() {
     }
   }
 
-  if (detail.loading) return <Loading />;
+  if (detail.loading)
+    return (
+      <>
+        <PageHeader title="Résumé" />
+        <Loading />
+      </>
+    );
   if (detail.error || !detail.data || !latest)
-    return <ErrorState error={detail.error} onRetry={detail.reload} />;
+    return (
+      <>
+        <PageHeader title="Résumé" />
+        <ErrorState error={detail.error} onRetry={detail.reload} />
+      </>
+    );
   const r = detail.data;
   const deleteButton = (
     <Button variant="danger" busy={deleting} onClick={remove}>
@@ -119,7 +131,7 @@ export default function ResumeReview() {
     setSaving(true);
     setMessage(null);
     try {
-      const v = await api.correctResume(id, {
+      const v = await resumesApi.correctResume(id, {
         base_version_no: latest!.version_no,
         block_edits: edits,
         contact,
@@ -148,7 +160,7 @@ export default function ResumeReview() {
         actions={
           <>
             <ButtonLink href={`/app/analyses/new?resume=${latest.id}`}>
-              Analyze against a job
+              Review this résumé
             </ButtonLink>
             {deleteButton}
           </>
@@ -198,7 +210,7 @@ export default function ResumeReview() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-1">
           <Card>
-            <h2 className="font-serif text-xl">Contact details</h2>
+            <h2 className="font-sans font-medium text-xl">Contact details</h2>
             <div className="mt-3 space-y-3">
               <TextField
                 disabled={saving}
@@ -225,7 +237,7 @@ export default function ResumeReview() {
             </div>
           </Card>
           <Card>
-            <h2 className="font-serif text-xl">At a glance</h2>
+            <h2 className="font-sans font-medium text-xl">At a glance</h2>
             <ul className="mt-2 space-y-1 text-sm">
               <li>
                 Sections found:{" "}
@@ -250,7 +262,7 @@ export default function ResumeReview() {
             .filter((s) => s.block_ids.length > 0)
             .map((s) => (
               <Card key={s.id}>
-                <h2 className="font-serif text-xl">
+                <h2 className="font-sans font-medium text-xl">
                   {SECTION_LABEL[s.kind] ?? s.kind}
                   {s.heading && s.heading !== SECTION_LABEL[s.kind] ? (
                     <span className="ml-2 text-sm text-muted">(“{s.heading}”)</span>
@@ -311,7 +323,7 @@ export default function ResumeReview() {
       </div>
 
       <section className="mt-10" aria-labelledby="versions">
-        <h2 id="versions" className="font-serif text-2xl">
+        <h2 id="versions" className="font-sans font-medium text-2xl">
           Versions
         </h2>
         <ul className="mt-2 text-sm text-muted">

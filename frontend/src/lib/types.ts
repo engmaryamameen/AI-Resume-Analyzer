@@ -30,6 +30,13 @@ export interface User {
   id: string;
   email: string;
   role: string;
+  email_verified_at?: string | null;
+  email_verification_required?: boolean;
+}
+
+export interface Registration {
+  user: User | null;
+  email_verification_required: boolean;
 }
 
 export interface Signal {
@@ -143,6 +150,8 @@ export interface EngineInfo {
   notes: string[];
 }
 export interface ModelStatus {
+  reviewer_enabled?: boolean;
+  reviewer_model?: string | null;
   available_method?: "learned" | "semantic" | "rules";
   learned_models_approved: boolean;
   models: ModelRef[];
@@ -159,7 +168,7 @@ export interface Analysis {
   resume_version_id: string;
   resume_document_id: string | null;
   resume_version_no: number | null;
-  jd_version_id: string;
+  jd_version_id: string | null;
   latest_resume_version_id: string | null;
   latest_jd_version_id: string | null;
   pipeline_version: string;
@@ -226,6 +235,7 @@ export interface Mention {
 }
 
 export interface AnalysisDetail extends Analysis {
+  review?: AiResumeReview | null;
   assessments: Assessment[] | null;
   warnings: Signal[];
   recommendations: Recommendation[];
@@ -277,4 +287,22 @@ export interface GuestState {
   status: "idle" | "preparing" | "extracting" | "analyzing" | "succeeded" | "failed";
   error_code: string | null;
   report: AnalysisDetail | null;
+}
+
+export interface ReviewFinding {
+  title: string;
+  detail: string;
+  evidence: { block_id: string; excerpt: string }[];
+}
+export interface AiResumeReview {
+  summary: string;
+  strengths: ReviewFinding[];
+  concerns: ReviewFinding[];
+  next_steps: ReviewFinding[];
+  model: string;
+  model_digest: string;
+  prompt_version: string;
+  reviewed_blocks: number;
+  total_blocks: number;
+  seconds: number;
 }

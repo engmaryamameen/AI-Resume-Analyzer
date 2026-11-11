@@ -49,7 +49,7 @@ test("the demo shows no score, meter or grade", async ({ page }) => {
   await selectOption(page.getByLabel("Target role"), { index: 1 });
   await page.getByRole("button", { name: "Analyze these documents" }).click();
   await page.getByRole("tab", { name: "Document insights" }).click();
-  await expect(page.getByRole("heading", { name: /Four readings/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Document checks, at a glance" })).toBeVisible();
   await expect(page.locator('[role="meter"]')).toHaveCount(0);
   await expect(page.getByText(/Looks strong|Needs work/)).toHaveCount(0);
 });
@@ -82,7 +82,7 @@ test("register, upload, review the reading, analyze, edit from a suggestion, com
 
   await page.getByRole("link", { name: "Analyze a résumé" }).click();
   await selectOption(page.getByLabel("Résumé", { exact: true }), { index: 1 });
-  await selectOption(page.getByLabel("Job description", { exact: true }), { index: 1 });
+  await selectOption(page.getByLabel("Job description (optional)", { exact: true }), { index: 1 });
   await page.getByRole("button", { name: "Start analysis" }).click();
   await page.getByRole("tab", { name: "Evidence", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Requirement by requirement" })).toBeVisible({
@@ -96,7 +96,7 @@ test("register, upload, review the reading, analyze, edit from a suggestion, com
   const firstAnalysis = page.url();
 
   // Kubernetes is only listed in the fixture, so there is a suggestion to show it in use.
-  await page.getByRole("link", { name: "Suggestions" }).click();
+  await page.getByRole("link", { name: "Edit résumé" }).click();
   await expect(
     page.getByText(/A template for you to fill in with true details/).first(),
   ).toBeVisible();

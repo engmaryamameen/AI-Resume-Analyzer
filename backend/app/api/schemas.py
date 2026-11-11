@@ -2,11 +2,12 @@
 
 import uuid
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.analysis.job_descriptions import RequirementInput
+from app.analysis.reviewer import ResumeReview
 from app.analysis.schema import (
     AnalysisWarning,
     Assessment,
@@ -51,6 +52,32 @@ class UserOut(BaseModel):
     id: uuid.UUID
     email: str
     role: str
+    email_verified_at: datetime | None = None
+    email_verification_required: bool = False
+
+
+class RegistrationOut(BaseModel):
+    user: UserOut | None
+    email_verification_required: bool
+
+
+class EmailRequest(BaseModel):
+    email: str = Field(max_length=320)
+
+
+class AccountTokenIn(BaseModel):
+    token: str = Field(min_length=32, max_length=256)
+
+
+class AccountPasswordIn(AccountTokenIn):
+    password: str = Field(max_length=256)
+
+
+class SessionOut(BaseModel):
+    id: uuid.UUID
+    created_at: datetime
+    expires_at: datetime
+    current: bool
 
 
 class ResumeVersionOut(BaseModel):
@@ -132,7 +159,7 @@ class RequirementsReplaceIn(BaseModel):
 
 class AnalysisCreateIn(BaseModel):
     resume_version_id: uuid.UUID
-    jd_version_id: uuid.UUID
+    jd_version_id: uuid.UUID | None = None
 
 
 class Staleness(BaseModel):
@@ -156,7 +183,7 @@ class AnalysisOut(BaseModel):
     resume_version_id: uuid.UUID
     resume_document_id: uuid.UUID | None
     resume_version_no: int | None
-    jd_version_id: uuid.UUID
+    jd_version_id: uuid.UUID | None = None
     latest_resume_version_id: uuid.UUID | None  # what "run it again" should use
     latest_jd_version_id: uuid.UUID | None
     pipeline_version: str
@@ -168,6 +195,7 @@ class AnalysisOut(BaseModel):
 
 
 class AnalysisDetailOut(AnalysisOut):
+    review: ResumeReview | None = None
     assessments: list[Assessment] | None
     warnings: list[AnalysisWarning]
     recommendations: list[Recommendation]
@@ -177,6 +205,8 @@ class AnalysisDetailOut(AnalysisOut):
 
 
 class ModelStatusOut(BaseModel):
+    reviewer_enabled: bool = False
+    reviewer_model: str | None = None
     available_method: str = "rules"
     learned_models_approved: bool
     models: list[ModelRef]
@@ -187,3 +217,11 @@ class DemoAnalyzeIn(BaseModel):
     resume_id: str = Field(max_length=40)
     job_id: str | None = Field(default=None, max_length=40)
     job_text: str | None = Field(default=None, max_length=20_000)
+
+
+class GuestStateOut(BaseModel):
+    available: bool
+    next_allowed_at: datetime | None
+    status: Literal["idle", "preparing", "extracting", "analyzing", "succeeded", "failed"]
+    report: AnalysisDetailOut | None
+    error_code: str | None

@@ -7,8 +7,7 @@ from app.ml.manifest import REQUIRED_MODELS, ArtifactError, fingerprint, load_ma
 router = APIRouter(prefix="/system", tags=["system"])
 
 
-@router.get("/models", response_model=ModelStatusOut)
-def models(settings: Settings = Depends(get_settings)) -> ModelStatusOut:
+def _matching_models(settings: Settings) -> ModelStatusOut:
     """Which local models are approved on this server. The worker's actual state is recorded per analysis."""
     if not settings.ml_enabled:
         return ModelStatusOut(
@@ -45,3 +44,11 @@ def models(settings: Settings = Depends(get_settings)) -> ModelStatusOut:
             else "The local models are not all approved yet; analyses use the rule-based reading."
         ),
     )
+
+
+@router.get("/models", response_model=ModelStatusOut)
+def models(settings: Settings = Depends(get_settings)) -> ModelStatusOut:
+    status = _matching_models(settings)
+    status.reviewer_enabled = settings.reviewer_enabled
+    status.reviewer_model = settings.reviewer_model if settings.reviewer_enabled else None
+    return status
