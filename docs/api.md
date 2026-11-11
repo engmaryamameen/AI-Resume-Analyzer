@@ -109,7 +109,7 @@ in-process, so enforce limits at the gateway as well.
 ## Account lifecycle and client transport
 
 `POST /auth/forgot-password` and `POST /auth/request-verification` accept `{email}` and return the same
-empty 204 for known/unknown addresses. Delivery configuration failure is a generic 503; throttling is
+empty 204 when accepted. Password recovery returns 422 `account_not_found` for an unregistered address; verification keeps the same response for known/unknown addresses. Delivery configuration failure is a generic 503; throttling is
 429. `POST /auth/verify-email` accepts `{token,password}` and establishes the mailbox owner's password while revoking all sessions; `POST /auth/reset-password` accepts `{token,password}`.
 Both return 204 on success, 422 for invalid/expired/used tokens, and 429 for throttling. Reset revokes
 all sessions and account tokens; it does not automatically sign the user in. `GET /auth/sessions`

@@ -169,7 +169,7 @@ function AppSidebar({ path, user }: { path: string; user: User }) {
             href="/app/analyses/new"
             aria-current={path === "/app/analyses/new" ? "page" : undefined}
             onClick={() => setMenuOpen(false)}
-            className="flex min-h-[43px] items-center justify-center gap-2 rounded-md bg-[#eeeee9] px-3 py-2 text-sm font-medium text-[#23242b] hover:opacity-90"
+            className="workspace-new-analysis"
           >
             <Icon name="plus" size={17} /> New analysis
           </Link>

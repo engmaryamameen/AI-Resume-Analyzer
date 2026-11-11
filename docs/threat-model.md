@@ -8,7 +8,7 @@ stored data and backups. Reports support document editing rather than automated 
 |---|---|---|
 | Anonymous browser → ingress | body/time caps, aggregate throttles, XFF replacement, CSP nonce, security headers | configure HTTPS and DNS at the deployment boundary |
 | Browser → API | backend authentication/ownership, CSRF for session mutations, Origin checks, input schemas and pagination bounds | mailbox delivery requires operator-configured SMTP |
-| Account recovery attacker | generic responses, per-IP/identity throttles, random hashed tokens, expiry/reissue/single use, reset revokes sessions | mailbox compromise is not solved by email recovery; MFA is not implemented |
+| Account recovery attacker | explicit missing-account recovery response, per-IP/identity throttles, random hashed tokens, expiry/reissue/single use, reset revokes sessions | recovery reveals whether an email is registered; mailbox compromise is not solved by email recovery; MFA is not implemented |
 | Malicious document → extractor | signature/ZIP/PDF validation, resource-limited child, private file modes, bounded output, worker isolation | resource limits are not a complete syscall/filesystem sandbox |
 | Competing/crashed workers | DB leases, heartbeat, SKIP LOCKED, attempt fencing, atomic settlement, deletion ordering | measure recovery and capacity under the deployed workload |
 | Model artifact supply chain | immutable upstream revisions, SHA-256/size checks, safetensors only, no remote code, offline runtime | independent model accuracy is unmeasured |

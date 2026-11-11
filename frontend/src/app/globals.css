@@ -1571,3 +1571,91 @@ input[aria-invalid="true"]:focus-visible {
   vertical-align: middle;
   margin-right: 8px;
 }
+
+.account-link-layout {
+  min-height: calc(100svh - 90px);
+  display: grid;
+  place-items: start center;
+  padding: clamp(32px, 7vw, 88px) 20px;
+}
+.account-link-card {
+  width: 100%;
+  max-width: 480px;
+  padding: clamp(24px, 4vw, 40px);
+  background: rgb(var(--surface));
+  border: 1px solid rgb(var(--line));
+  border-radius: 12px;
+}
+.account-link-brand {
+  display: inline-block;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  margin-bottom: 32px;
+}
+.account-link-card h1 {
+  font-size: clamp(26px, 4vw, 32px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+}
+.account-link-description {
+  margin-top: 12px;
+  color: rgb(var(--muted));
+  font-size: 14px;
+  line-height: 1.7;
+}
+.account-link-card form {
+  margin-top: 28px;
+}
+.account-link-card [role="status"] {
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.account-link-back {
+  display: block;
+  color: rgb(var(--accent));
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.account-link-footer {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid rgb(var(--line));
+  font-size: 13px;
+  color: rgb(var(--muted));
+}
+.account-link-footer a {
+  color: rgb(var(--ink));
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.workspace-new-analysis {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border: 1px solid rgb(var(--line));
+  border-radius: 6px;
+  color: rgb(var(--accent));
+  background: rgb(var(--surface));
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+.workspace-new-analysis:hover,
+.workspace-new-analysis[aria-current="page"] {
+  background: rgb(var(--raised));
+  border-color: rgb(var(--accent) / 0.5);
+}
+.workspace-new-analysis:focus-visible {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 3px;
+}

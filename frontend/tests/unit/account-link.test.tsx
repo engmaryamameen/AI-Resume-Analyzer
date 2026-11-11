@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { AccountLinkForm } from "@/features/auth/components/account-link-form";
+import { ApiError } from "@/lib/http/client";
 import { authApi } from "@/features/auth/api";
 
 afterEach(() => {
@@ -82,3 +83,27 @@ it.each(["reset-password", "verify-email"] as const)(
     await waitFor(() => expect(request).toHaveBeenCalledWith(token, "Lime#427"));
   },
 );
+
+it("keeps recovery editable when the account does not exist", async () => {
+  vi.spyOn(authApi, "forgotPassword").mockRejectedValue(
+    new ApiError(422, "account_not_found", "Missing account"),
+  );
+  render(<AccountLinkForm mode="forgot-password" />);
+  await userEvent.type(screen.getByLabelText("Email"), "missing@example.test");
+  await userEvent.click(screen.getByRole("button", { name: "Send email link" }));
+  expect(await screen.findByText(/No account exists with this email address/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Email")).toHaveValue("missing@example.test");
+  expect(screen.queryByText("Check your inbox")).not.toBeInTheDocument();
+});
+
+it("identifies the recovery address and lets the user retry", async () => {
+  const send = vi.spyOn(authApi, "forgotPassword").mockResolvedValue();
+  render(<AccountLinkForm mode="forgot-password" />);
+  await userEvent.type(screen.getByLabelText("Email"), "owner@example.test");
+  await userEvent.click(screen.getByRole("button", { name: "Send email link" }));
+  expect(await screen.findByText("Check your inbox")).toBeInTheDocument();
+  expect(screen.getByText(/requested for owner@example.test/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Try again or use another email" }));
+  expect(screen.getByLabelText("Email")).toHaveValue("owner@example.test");
+  expect(send).toHaveBeenCalledTimes(1);
+});

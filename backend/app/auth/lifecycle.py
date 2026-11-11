@@ -73,7 +73,7 @@ def deliver(settings: Settings, email: str, subject: str, text: str) -> None:
 
 
 def send_account_link(settings: Settings, email: str, purpose: Purpose) -> None:
-    """Runs after the generic HTTP response, for both known and unknown identities.
+    """Runs after an accepted HTTP response; rechecks the current account state.
 
     Delivery failure never logs an address, token or SMTP exception text. Request a new link to retry.
     """
