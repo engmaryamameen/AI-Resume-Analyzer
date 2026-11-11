@@ -26,13 +26,11 @@ export default function Privacy() {
               The models
             </h2>
             <p className="mt-2">
-              When learned models are in use, they are open-weight models stored on the same server
-              and run there. Each analysis lists which models were used, where they came from, their
-              exact revision and licence, and whether they were published models used as they are or
-              fine-tuned for this task. Requirement matching can use a clearly labeled rule-based
-              reader when semantic models are unavailable. The optional AI editorial reviewer runs
-              locally and rejects responses that fail source validation; an unsuccessful AI review
-              is reported as a failure.
+              Analysis runs on this server. Optional learned models support requirement matching,
+              and an optional local AI reviewer provides editorial feedback through Ollama. Each
+              report identifies its reading method and the AI model when one is used. Requirement
+              matching can fall back to a clearly labeled rule-based reader. An AI review that
+              cannot pass source validation is reported as a failure.
             </p>
             <p className="mt-2">
               Models can be wrong. Check the cited passages before making edits. Accuracy has not

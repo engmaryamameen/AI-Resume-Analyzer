@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a reproducible application or setup problem.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: Use synthetic documents and redact credentials, session tokens, and personal information.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include the expected behavior and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest reproducible example, using synthetic data.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Commit or version, operating system, browser, Docker or native setup, and enabled processing modes.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant logs or screenshots
+      description: Include request IDs and error codes when available; remove private data.

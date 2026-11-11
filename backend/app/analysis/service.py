@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.analysis.job_descriptions import get_version_by_id as get_jd_version_by_id
 from app.analysis.pipeline import analyze
-from app.analysis.reviewer import review_document
+from app.analysis.reviewer import PROMPT_VERSION, review_document
 from app.analysis.schema import AnalysisResult, RequirementDraft
 from app.billing import service as billing
 from app.core.config import PIPELINE_VERSION, Settings, get_settings
@@ -264,6 +264,7 @@ def staleness(db: Session, run: AnalysisRun, current_fingerprint: str) -> dict[s
         and (
             not reviewed
             or reviewed.get("model") != settings.reviewer_model
+            or reviewed.get("prompt_version") != PROMPT_VERSION
             or (
                 settings.reviewer_model_digest
                 and reviewed.get("model_digest") != settings.reviewer_model_digest

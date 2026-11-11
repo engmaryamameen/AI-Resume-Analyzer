@@ -61,9 +61,10 @@ def test_quota_survives_cookie_loss_and_limiter_restart(client, db_engine):
 
 def test_retry_reuses_one_upload_and_does_not_reset_deadline(client, db_engine):
     key = str(uuid.uuid4())
-    first = submit(client, key=key)
-    again = submit(client, key=key)
-    assert first.status_code == again.status_code == 202
+    document = ("cv.docx", make_docx(SAMPLE_RESUME.splitlines()), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    first = submit(client, key=key, data=document)
+    again = submit(client, key=key, data=document)
+    assert first.status_code == again.status_code == 202, (first.text, again.text)
     assert first.json()["next_allowed_at"] == again.json()["next_allowed_at"]
     with session_scope() as db:
         assert db.scalar(select(func.count()).select_from(ProcessingJob)) == 1

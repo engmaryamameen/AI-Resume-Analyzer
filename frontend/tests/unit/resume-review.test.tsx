@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
+import { ResumeReviewPanel } from "@/features/analyses/components/resume-review";
 import { AnalysisResults } from "@/features/analyses/components/analysis-report";
 import type { AiResumeReview } from "@/lib/types";
 import userEvent from "@testing-library/user-event";
@@ -68,4 +69,14 @@ describe("source-grounded résumé review", () => {
     expect(document.querySelector(".ai-resume-review img")).toBeNull();
     expect(screen.getByText(/<img src=x/)).toBeInTheDocument();
   });
+});
+
+it("explains empty concerns and editing priorities without inventing feedback", () => {
+  render(<ResumeReviewPanel review={{ ...review, concerns: [], next_steps: [] }} />);
+  expect(
+    screen.getByText("No material wording concerns were identified in the passages reviewed."),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText("No priority edits were identified in the passages reviewed."),
+  ).toBeInTheDocument();
 });

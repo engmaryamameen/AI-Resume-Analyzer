@@ -51,6 +51,24 @@ test("a demo reviewer can inspect sources and filter actual findings", async ({ 
   await expect(page.getByText(/No requirements match these filters/)).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.getByRole("heading", { name: "Python", exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "REST APIs Nice-to-have · Skill Backed up", exact: true })
+    .click();
+  await page.evaluate((source) => {
+    const script = document.createElement("script");
+    script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+    script.textContent = source;
+    document.head.appendChild(script);
+  }, axe.source);
+  const violations = await page.evaluate(
+    async () =>
+      (
+        await (window as typeof window & { axe: typeof axe }).axe.run(document, {
+          runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+        })
+      ).violations,
+  );
+  expect(violations).toEqual([]);
 });
 
 for (const width of [390, 1440]) {

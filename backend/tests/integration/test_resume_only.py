@@ -97,3 +97,26 @@ def test_failed_ai_review_fails_the_run_instead_of_faking_feedback(
     result = c.get("/api/v1/analyses/" + started.json()["id"]).json()
     assert result["status"] == "failed" and result["error_code"] == "ai_review_unavailable"
     assert result["review"] is None and result["recommendations"] == []
+
+
+def test_changed_reviewer_prompt_marks_completed_feedback_stale(make_user, run_jobs, monkeypatch):
+    from app.analysis.reviewer import PROMPT_VERSION
+
+    _, client = make_user()
+    _, resume_version = ready_resume(client, run_jobs)
+    created = client.post("/api/v1/analyses", json={"resume_version_id": resume_version})
+    assert created.status_code == 202
+    run_jobs()
+    settings = get_settings()
+    monkeypatch.setattr(settings, "reviewer_enabled", True)
+    with session_scope() as db:
+        run = db.get(AnalysisRun, uuid.UUID(created.json()["id"]))
+        review = {
+            "model": settings.reviewer_model,
+            "model_digest": settings.reviewer_model_digest,
+            "prompt_version": PROMPT_VERSION,
+        }
+        run.summary = {"review": review}
+        assert not service.staleness(db, run, run.model_fingerprint)["is_stale"]
+        run.summary = {"review": {**review, "prompt_version": "older-prompt"}}
+        assert "ai_reviewer_changed" in service.staleness(db, run, run.model_fingerprint)["reasons"]

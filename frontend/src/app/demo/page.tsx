@@ -203,7 +203,12 @@ export default function Demo() {
                         Résumé &amp; role <Icon name="chevronDown" size={14} />
                       </span>
                     </summary>
-                    <div className="source-columns">
+                    <div
+                      className="source-columns"
+                      role="region"
+                      aria-label="Source documents"
+                      tabIndex={0}
+                    >
                       <div>
                         <h3>Résumé · extracted text</h3>
                         {result.resume.normalized.blocks.map((b) => (

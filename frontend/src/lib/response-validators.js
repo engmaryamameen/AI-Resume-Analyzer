@@ -12354,7 +12354,6 @@ const schema99 = {
     concerns: {
       items: { $ref: "#/components/schemas/ReviewFinding" },
       maxItems: 3,
-      minItems: 1,
       title: "Concerns",
       type: "array",
     },
@@ -12363,7 +12362,6 @@ const schema99 = {
     next_steps: {
       items: { $ref: "#/components/schemas/ReviewFinding" },
       maxItems: 3,
-      minItems: 1,
       title: "Next Steps",
       type: "array",
     },
@@ -12373,7 +12371,6 @@ const schema99 = {
     strengths: {
       items: { $ref: "#/components/schemas/ReviewFinding" },
       maxItems: 3,
-      minItems: 1,
       title: "Strengths",
       type: "array",
     },
@@ -12880,39 +12877,26 @@ function validate74(
                   ];
                   return false;
                 } else {
-                  if (data0.length < 1) {
-                    validate74.errors = [
-                      {
-                        instancePath: instancePath + "/concerns",
-                        schemaPath: "#/properties/concerns/minItems",
-                        keyword: "minItems",
-                        params: { limit: 1 },
-                        message: "must NOT have fewer than 1 items",
-                      },
-                    ];
-                    return false;
-                  } else {
-                    var valid1 = true;
-                    const len0 = data0.length;
-                    for (let i0 = 0; i0 < len0; i0++) {
-                      const _errs4 = errors;
-                      if (
-                        !validate75(data0[i0], {
-                          instancePath: instancePath + "/concerns/" + i0,
-                          parentData: data0,
-                          parentDataProperty: i0,
-                          rootData,
-                          dynamicAnchors,
-                        })
-                      ) {
-                        vErrors =
-                          vErrors === null ? validate75.errors : vErrors.concat(validate75.errors);
-                        errors = vErrors.length;
-                      }
-                      var valid1 = _errs4 === errors;
-                      if (!valid1) {
-                        break;
-                      }
+                  var valid1 = true;
+                  const len0 = data0.length;
+                  for (let i0 = 0; i0 < len0; i0++) {
+                    const _errs4 = errors;
+                    if (
+                      !validate75(data0[i0], {
+                        instancePath: instancePath + "/concerns/" + i0,
+                        parentData: data0,
+                        parentDataProperty: i0,
+                        rootData,
+                        dynamicAnchors,
+                      })
+                    ) {
+                      vErrors =
+                        vErrors === null ? validate75.errors : vErrors.concat(validate75.errors);
+                      errors = vErrors.length;
+                    }
+                    var valid1 = _errs4 === errors;
+                    if (!valid1) {
+                      break;
                     }
                   }
                 }
@@ -12989,41 +12973,28 @@ function validate74(
                         ];
                         return false;
                       } else {
-                        if (data4.length < 1) {
-                          validate74.errors = [
-                            {
-                              instancePath: instancePath + "/next_steps",
-                              schemaPath: "#/properties/next_steps/minItems",
-                              keyword: "minItems",
-                              params: { limit: 1 },
-                              message: "must NOT have fewer than 1 items",
-                            },
-                          ];
-                          return false;
-                        } else {
-                          var valid2 = true;
-                          const len1 = data4.length;
-                          for (let i1 = 0; i1 < len1; i1++) {
-                            const _errs11 = errors;
-                            if (
-                              !validate75(data4[i1], {
-                                instancePath: instancePath + "/next_steps/" + i1,
-                                parentData: data4,
-                                parentDataProperty: i1,
-                                rootData,
-                                dynamicAnchors,
-                              })
-                            ) {
-                              vErrors =
-                                vErrors === null
-                                  ? validate75.errors
-                                  : vErrors.concat(validate75.errors);
-                              errors = vErrors.length;
-                            }
-                            var valid2 = _errs11 === errors;
-                            if (!valid2) {
-                              break;
-                            }
+                        var valid2 = true;
+                        const len1 = data4.length;
+                        for (let i1 = 0; i1 < len1; i1++) {
+                          const _errs11 = errors;
+                          if (
+                            !validate75(data4[i1], {
+                              instancePath: instancePath + "/next_steps/" + i1,
+                              parentData: data4,
+                              parentDataProperty: i1,
+                              rootData,
+                              dynamicAnchors,
+                            })
+                          ) {
+                            vErrors =
+                              vErrors === null
+                                ? validate75.errors
+                                : vErrors.concat(validate75.errors);
+                            errors = vErrors.length;
+                          }
+                          var valid2 = _errs11 === errors;
+                          if (!valid2) {
+                            break;
                           }
                         }
                       }
@@ -13120,41 +13091,28 @@ function validate74(
                                 ];
                                 return false;
                               } else {
-                                if (data9.length < 1) {
-                                  validate74.errors = [
-                                    {
-                                      instancePath: instancePath + "/strengths",
-                                      schemaPath: "#/properties/strengths/minItems",
-                                      keyword: "minItems",
-                                      params: { limit: 1 },
-                                      message: "must NOT have fewer than 1 items",
-                                    },
-                                  ];
-                                  return false;
-                                } else {
-                                  var valid3 = true;
-                                  const len2 = data9.length;
-                                  for (let i2 = 0; i2 < len2; i2++) {
-                                    const _errs20 = errors;
-                                    if (
-                                      !validate75(data9[i2], {
-                                        instancePath: instancePath + "/strengths/" + i2,
-                                        parentData: data9,
-                                        parentDataProperty: i2,
-                                        rootData,
-                                        dynamicAnchors,
-                                      })
-                                    ) {
-                                      vErrors =
-                                        vErrors === null
-                                          ? validate75.errors
-                                          : vErrors.concat(validate75.errors);
-                                      errors = vErrors.length;
-                                    }
-                                    var valid3 = _errs20 === errors;
-                                    if (!valid3) {
-                                      break;
-                                    }
+                                var valid3 = true;
+                                const len2 = data9.length;
+                                for (let i2 = 0; i2 < len2; i2++) {
+                                  const _errs20 = errors;
+                                  if (
+                                    !validate75(data9[i2], {
+                                      instancePath: instancePath + "/strengths/" + i2,
+                                      parentData: data9,
+                                      parentDataProperty: i2,
+                                      rootData,
+                                      dynamicAnchors,
+                                    })
+                                  ) {
+                                    vErrors =
+                                      vErrors === null
+                                        ? validate75.errors
+                                        : vErrors.concat(validate75.errors);
+                                    errors = vErrors.length;
+                                  }
+                                  var valid3 = _errs20 === errors;
+                                  if (!valid3) {
+                                    break;
                                   }
                                 }
                               }

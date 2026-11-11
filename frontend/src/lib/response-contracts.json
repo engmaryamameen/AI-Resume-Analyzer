@@ -1653,7 +1653,6 @@
               "$ref": "#/components/schemas/ReviewFinding"
             },
             "maxItems": 3,
-            "minItems": 1,
             "title": "Concerns",
             "type": "array"
           },
@@ -1670,7 +1669,6 @@
               "$ref": "#/components/schemas/ReviewFinding"
             },
             "maxItems": 3,
-            "minItems": 1,
             "title": "Next Steps",
             "type": "array"
           },
@@ -1691,7 +1689,6 @@
               "$ref": "#/components/schemas/ReviewFinding"
             },
             "maxItems": 3,
-            "minItems": 1,
             "title": "Strengths",
             "type": "array"
           },

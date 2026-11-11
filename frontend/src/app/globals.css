@@ -610,7 +610,7 @@ select:focus {
   align-items: center;
   gap: 8px;
   border: 1px solid rgb(var(--line));
-  background: white;
+  background: rgb(var(--surface));
   border-radius: 7px;
   padding: 0 12px;
   flex: 1;
@@ -630,7 +630,7 @@ select:focus {
   border: 1px solid rgb(var(--line));
   border-radius: 7px;
   padding: 8px 12px;
-  background: white;
+  background: rgb(var(--surface));
 }
 .evidence-summary {
   display: flex;
@@ -642,7 +642,7 @@ select:focus {
   border: 1px solid rgb(var(--line));
   border-radius: 6px;
   padding: 8px 11px;
-  background: white;
+  background: rgb(var(--surface));
   font-size: 11px;
   color: rgb(var(--muted));
   transition:
@@ -1181,7 +1181,7 @@ select:focus {
   gap: 16px;
   width: 100%;
   text-align: left;
-  background: white;
+  background: rgb(var(--surface));
 }
 .requirement-toggle:disabled {
   cursor: default;

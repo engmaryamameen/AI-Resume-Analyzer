@@ -84,9 +84,7 @@ Before CI, run both contract checks from the repository root:
 node frontend/scripts/compile-contracts.mjs --check
 ```
 
-Regenerate without `--check` after intentional API changes. The generator reads the repository's
-Prettier configuration so formatting checks and drift checks agree. No runtime validator compilation
-or script-eval CSP exception is required.
+Regenerate without `--check` after intentional API changes, then format `frontend/src/lib/response-contracts.json` with the frontend's Prettier configuration. The JSON drift check compares schema structures independently of formatting. No runtime validator compilation or script-eval CSP exception is required.
 
 Destructive integration fixtures require a disposable PostgreSQL database whose name ends in `_test`; this guard does not replace checking that the database contains no application data.
 
