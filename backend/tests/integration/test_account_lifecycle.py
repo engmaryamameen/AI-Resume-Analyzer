@@ -104,7 +104,8 @@ def test_recovery_distinguishes_missing_account_without_sending_mail(make_user, 
     assert unknown.status_code == 422
     assert unknown.json()["error"]["code"] == "account_not_found"
     assert len(messages) == 1
-    assert "#token=" in messages[0][-1]
+    assert "#token=" in messages[0][-2]
+    assert "Choose a new password" in messages[0][-1]
 
 
 def test_unverified_user_cannot_use_workspace_in_production(make_user, monkeypatch):

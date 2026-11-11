@@ -30,7 +30,7 @@ html {
 }
 .site-nav > a {
   color: #d5ddce;
-  font-size: 13px;
+  font-size: 15px;
 }
 .site-nav > a:hover {
   color: #abf565;
@@ -178,7 +178,7 @@ html {
   padding: 12px 20px;
   background: #10b981;
   color: #031e11;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   border-radius: 3px;
   white-space: nowrap;
@@ -226,11 +226,11 @@ html {
   font-size: 20px;
 }
 .site-footer-inner > p {
-  font-size: 12px;
+  font-size: 14px;
 }
 .footer-links > a {
   padding-block: 8px;
-  font-size: 12px;
+  font-size: 14px;
 }
 @media (max-width: 1100px) {
   .site-footer-inner {
@@ -318,7 +318,7 @@ html {
   font-weight: 550;
 }
 .ai-review-heading > p {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.9;
   max-width: 900px;
 }
@@ -326,7 +326,7 @@ html {
   display: block;
   margin-top: 18px;
   color: rgb(var(--muted));
-  font-size: 12px;
+  font-size: 14px;
 }
 .ai-review-columns {
   display: grid;
@@ -351,7 +351,7 @@ html {
   line-height: 1.5;
 }
 .ai-review-findings article > p {
-  font-size: 14px;
+  font-size: 16px;
   color: rgb(var(--muted));
   line-height: 1.9;
   margin-top: 12px;
@@ -362,20 +362,20 @@ html {
   padding: 4px 0 4px 16px;
 }
 .ai-review-findings blockquote > span {
-  font-size: 10px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: rgb(var(--muted));
 }
 .ai-review-findings blockquote > p {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.8;
   margin-top: 6px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .ai-review-limit {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.8;
   color: rgb(var(--muted));
   border-top: 1px solid rgb(var(--line));

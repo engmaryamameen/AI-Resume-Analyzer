@@ -53,10 +53,10 @@ body {
   display: flex;
   align-items: center;
   gap: 11px;
-  min-height: 42px;
-  padding: 10px 13px;
-  font-size: 13px;
-  font-weight: 600;
+  min-height: 46px;
+  padding: 12px 13px;
+  font-size: 15px;
+  font-weight: 500;
   color: rgb(var(--muted));
   transition:
     background 0.18s,
@@ -982,7 +982,7 @@ select:focus {
   background: white;
   color: rgb(var(--ink));
   text-align: left;
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.5;
   transition:
     border-color 0.18s,
@@ -1048,7 +1048,7 @@ select:focus {
   border-radius: 6px;
   color: rgb(var(--ink));
   cursor: pointer;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.5;
 }
 .select-option + .select-option {
@@ -1068,7 +1068,7 @@ select:focus {
   font-weight: 570;
 }
 .select-option-description {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.65;
   color: rgb(var(--muted));
   font-weight: 400;
@@ -1085,7 +1085,7 @@ select:focus {
 }
 .evidence-toolbar .select-trigger {
   min-height: 40px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .select-field[class*="border"] {
   padding: 0 !important;
@@ -1150,7 +1150,7 @@ select:focus {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
+  font-size: 13px;
   color: rgb(var(--accent));
   cursor: pointer;
 }
@@ -1243,7 +1243,7 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .report-disclosure > div,
 .report-disclosure > ul {
@@ -1262,7 +1262,7 @@ select:focus {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 14px;
   color: rgb(var(--accent));
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -1602,14 +1602,14 @@ input[aria-invalid="true"]:focus-visible {
 .account-link-description {
   margin-top: 12px;
   color: rgb(var(--muted));
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.7;
 }
 .account-link-card form {
   margin-top: 28px;
 }
 .account-link-card [role="status"] {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
@@ -1658,4 +1658,12 @@ input[aria-invalid="true"]:focus-visible {
 .workspace-new-analysis:focus-visible {
   outline: 2px solid rgb(var(--accent));
   outline-offset: 3px;
+}
+
+/* Form text stays readable without triggering automatic zoom on mobile browsers. */
+.field-input-wrap input {
+  font-size: 16px;
+}
+.workspace-new-analysis {
+  font-size: 15px;
 }

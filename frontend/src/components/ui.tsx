@@ -32,7 +32,7 @@ export function Button({
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       className={cx(
-        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-4 py-2.5 text-[15px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
         styles,
         className,
       )}
@@ -63,7 +63,7 @@ export function ButtonLink({
     <Link
       href={href}
       className={cx(
-        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition",
+        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-4 py-2.5 text-[15px] font-medium transition",
         styles,
         className,
       )}
@@ -205,7 +205,7 @@ export function TextField({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium">
+      <label htmlFor={id} className="block text-[15px] font-medium">
         {label}
       </label>
       {hint && (
@@ -243,7 +243,7 @@ export function TextArea({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium">
+      <label htmlFor={id} className="block text-[15px] font-medium">
         {label}
       </label>
       {hint && (
