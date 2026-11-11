@@ -213,8 +213,12 @@ test("public navigation exposes desktop destinations and a keyboard-operable mob
   await expect(navigation.getByRole("link", { name: "Privacy", exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("navigation", { name: "Main", exact: true })).toBeHidden();
+  const menuToggle = page.getByRole("button", { name: "Open navigation" });
+  // Finish the responsive reflow before measuring. A trial click waits for the
+  // toggle to be visible and stable without opening the drawer.
+  await menuToggle.click({ trial: true });
   const headingTop = (await page.locator("h1").boundingBox())?.y;
-  await page.getByRole("button", { name: "Open navigation" }).click();
+  await menuToggle.click();
   const drawer = page.getByRole("dialog", { name: "Navigation", exact: true });
   await expect(drawer).toBeVisible();
   const bounds = await drawer.boundingBox();
