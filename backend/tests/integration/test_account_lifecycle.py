@@ -251,3 +251,39 @@ def test_account_deletion_rechecks_a_principal_loaded_before_reset(make_user, tm
             )
     with session_scope() as db:
         assert db.scalar(select(User).where(User.id == principal.user.id)) is not None
+
+
+@pytest.mark.parametrize(
+    "purpose,route", [("reset_password", "reset-password"), ("verify_email", "verify-email")]
+)
+def test_account_links_accept_eight_characters_and_preserve_token_after_short_password(
+    make_user, purpose, route
+):
+    _, client = make_user()
+    settings = get_settings()
+    with session_scope() as db:
+        user = db.scalar(select(User))
+        token = lifecycle.issue_token(db, settings, user, purpose)
+    short = client.post(f"/api/v1/auth/{route}", json={"token": token, "password": "Lime#42"})
+    assert short.status_code == 422
+    assert short.json()["error"]["code"] == "weak_password"
+    accepted = client.post(f"/api/v1/auth/{route}", json={"token": token, "password": "Lime#427"})
+    assert accepted.status_code == 204
+    assert (
+        client.post(
+            "/api/v1/auth/login", json={"email": "user@example.com", "password": "Lime#427"}
+        ).status_code
+        == 200
+    )
+
+
+def test_registration_password_minimum_is_eight_characters(client):
+    short = client.post(
+        "/api/v1/auth/register", json={"email": "boundary@example.test", "password": "Lime#42"}
+    )
+    assert short.status_code == 422
+    assert short.json()["error"]["code"] == "weak_password"
+    accepted = client.post(
+        "/api/v1/auth/register", json={"email": "boundary@example.test", "password": "Lime#427"}
+    )
+    assert accepted.status_code == 201

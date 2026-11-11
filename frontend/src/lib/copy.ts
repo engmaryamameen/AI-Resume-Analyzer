@@ -123,7 +123,7 @@ const MESSAGES: Record<string, string> = {
   invalid_credentials: "That email and password don't match.",
   password_incorrect: "That password isn't right.",
   email_taken: "There's already an account with that email. Try signing in instead.",
-  weak_password: "Please pick a longer, less guessable password (at least 12 characters).",
+  weak_password: "Please pick a longer, less guessable password (at least 8 characters).",
   invalid_email: "That email address doesn't look right.",
   rate_limited: "You're going a little fast. Give it a moment and try again.",
   csrf_failed: "Your session has expired. Please sign in again.",

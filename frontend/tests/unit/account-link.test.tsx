@@ -54,3 +54,31 @@ it.each(["reset-password", "verify-email"] as const)(
     );
   },
 );
+
+it.each(["reset-password", "verify-email"] as const)(
+  "accepts an eight-character password for %s",
+  async (mode) => {
+    const token = "c".repeat(43);
+    window.history.replaceState(null, "", `/${mode}#token=${token}`);
+    const request = vi
+      .spyOn(authApi, mode === "reset-password" ? "resetPassword" : "verifyEmail")
+      .mockResolvedValue();
+    const user = userEvent.setup();
+    render(<AccountLinkForm mode={mode} />);
+    const input = await screen.findByLabelText("New password");
+    await user.type(input, "Lime#42");
+    await user.click(
+      screen.getByRole("button", {
+        name: mode === "reset-password" ? "Reset password" : "Verify email",
+      }),
+    );
+    expect(request).not.toHaveBeenCalled();
+    await user.type(input, "7");
+    await user.click(
+      screen.getByRole("button", {
+        name: mode === "reset-password" ? "Reset password" : "Verify email",
+      }),
+    );
+    await waitFor(() => expect(request).toHaveBeenCalledWith(token, "Lime#427"));
+  },
+);

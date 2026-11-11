@@ -17,7 +17,7 @@ test, compliance certification or guarantee against a determined attacker.
 
 ## Controls
 
-**Accounts.** Passwords are hashed with Argon2id (at least 12 characters, at most 256). Login performs a
+**Accounts.** Passwords are hashed with Argon2id (at least 8 characters, at most 256). Login performs a
 dummy hash for unknown emails so timing does not reveal which accounts exist. Sessions store only keyed
 hashes of the session and CSRF tokens. Deleting an account needs the current password, and a wrong password
 returns 403 so a client does not mistake it for being signed out. Administrators are created only on the

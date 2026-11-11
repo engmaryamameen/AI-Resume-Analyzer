@@ -22,8 +22,8 @@ export function useAuthForm(mode: "login" | "register") {
         : "Enter a valid email address.",
       password: !password
         ? "Enter your password."
-        : isRegister && password.length < 12
-          ? "Use at least 12 characters."
+        : isRegister && password.length < 8
+          ? "Use at least 8 characters."
           : undefined,
     };
     setFields(invalid);

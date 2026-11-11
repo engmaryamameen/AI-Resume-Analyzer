@@ -48,8 +48,8 @@ def normalise_email(email: str) -> str:
 
 
 def password_policy_violation(password: str) -> str | None:
-    if len(password) < 12:
-        return "Use at least 12 characters."
+    if len(password) < 8:
+        return "Use at least 8 characters."
     if len(password) > 256:
         return "Use at most 256 characters."
     if len(set(password)) < 5:

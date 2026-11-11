@@ -88,7 +88,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={isRegister ? "new-password" : "current-password"}
-            hint={isRegister ? "At least 12 characters. A few random words works well." : undefined}
+            hint={
+              isRegister
+                ? "At least 8 characters. You can also use a longer passphrase."
+                : undefined
+            }
           />
           {error && <Notice tone="bad">{error}</Notice>}
           <Button type="submit" busy={busy} className="w-full">

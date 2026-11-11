@@ -28,6 +28,10 @@ export function AccountLinkForm({ mode }: { mode: Mode }) {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (busy) return;
+    if (token && mode !== "forgot-password" && password.length < 8) {
+      setError("Use at least 8 characters.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -75,7 +79,8 @@ export function AccountLinkForm({ mode }: { mode: Mode }) {
               label="New password"
               type="password"
               autoComplete="new-password"
-              minLength={12}
+              hint="At least 8 characters. You can also use a longer passphrase."
+              minLength={8}
               maxLength={256}
               required
               value={password}
