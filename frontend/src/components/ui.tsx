@@ -32,7 +32,7 @@ export function Button({
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       className={cx(
-        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
         styles,
         className,
       )}
@@ -63,7 +63,7 @@ export function ButtonLink({
     <Link
       href={href}
       className={cx(
-        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition",
+        "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition",
         styles,
         className,
       )}
@@ -119,8 +119,8 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-line bg-surface px-6 py-12 text-center">
-      <h2 className="text-xl font-extrabold tracking-tight">{title}</h2>
+    <div className="border-t border-line px-6 py-12 text-center">
+      <h2 className="text-xl font-medium tracking-tight">{title}</h2>
       {children && <p className="mx-auto mt-2 max-w-prose text-muted">{children}</p>}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </div>
@@ -129,8 +129,8 @@ export function EmptyState({
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   return (
-    <div role="alert" className="rounded-xl border border-bad/40 bg-bad/5 p-5">
-      <h2 className="font-medium text-bad">That didn&apos;t work</h2>
+    <div role="alert" className="rounded-md border-l-2 border-bad bg-bad/5 p-5">
+      <h2 className="font-medium text-bad">Unable to complete this request</h2>
       <p className="mt-1 text-sm">{friendlyError(error)}</p>
       {onRetry && (
         <Button variant="secondary" className="mt-3" onClick={onRetry}>
@@ -159,7 +159,7 @@ export function Notice({
   return (
     <div
       role={tone === "bad" ? "alert" : "note"}
-      className={cx("rounded-lg border px-4 py-3 text-sm", tones)}
+      className={cx("rounded-md border-l-2 px-4 py-3 text-sm", tones)}
     >
       {title && <p className="font-medium">{title}</p>}
       <div className={title ? "mt-1" : undefined}>{children}</div>
@@ -175,19 +175,14 @@ export function Badge({
   children: React.ReactNode;
 }) {
   const tones = {
-    good: "bg-good/10 text-good",
-    warn: "bg-warn/10 text-warn",
-    bad: "bg-bad/10 text-bad",
-    info: "bg-info/10 text-info",
-    plain: "bg-raised text-muted",
+    good: "text-good",
+    warn: "text-warn",
+    bad: "text-bad",
+    info: "text-info",
+    plain: "text-muted",
   }[tone];
   return (
-    <span
-      className={cx(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium",
-        tones,
-      )}
-    >
+    <span className={cx("inline-flex items-center gap-1.5 py-0.5 text-xs font-medium", tones)}>
       {children}
     </span>
   );
@@ -286,7 +281,7 @@ export function PageHeader({
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
         {children && <p className="mt-1 max-w-prose text-muted">{children}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}

@@ -11,6 +11,7 @@ import json
 import re
 from typing import Any
 
+from app.analysis.reviewer import ResumeReview
 from app.core.logging import redact
 from app.core.textclean import strip_controls
 from app.db.models import AnalysisRun
@@ -18,7 +19,7 @@ from app.db.models import AnalysisRun
 _FORMULA_PREFIX = ("=", "+", "-", "@", "\t", "\r")
 _MD_SPECIAL = re.compile(r"([\\`*_{}\[\]()#+!|<>~])")
 _DISCLAIMER = (
-    "Generated from the wording of a résumé and a job description by locally executed analysis. It describes "
+    "Generated from the wording of a résumé and, when supplied, a job description by locally executed analysis. It describes "
     "what the résumé's text claims; it does not verify those claims or predict hiring outcomes."
 )
 
@@ -74,8 +75,24 @@ def build_report(
             }
         )
     summary = run.summary or {}
+    review = (
+        ResumeReview.model_validate(summary["review"]).model_dump(mode="json")
+        if summary.get("review")
+        else None
+    )
+
+    def scrub(value: Any) -> Any:
+        if isinstance(value, str):
+            return redact(strip_controls(value, keep_whitespace=True))
+        if isinstance(value, list):
+            return [scrub(item) for item in value]
+        if isinstance(value, dict):
+            return {key: scrub(item) for key, item in value.items()}
+        return value
+
     return {
-        "report_version": 2,
+        "review": scrub(review),
+        "report_version": 3,
         "disclaimer": _DISCLAIMER,
         "analysis": {
             "id": str(run.id),
@@ -138,6 +155,23 @@ def to_csv(report: dict[str, Any]) -> str:
                 )
             ]
         )
+    review = report.get("review")
+    if review:
+        for category in ("strengths", "concerns", "next_steps"):
+            for finding in review[category]:
+                writer.writerow(
+                    [
+                        csv_safe(finding["title"]),
+                        "resume_review",
+                        category,
+                        "local_ai",
+                        "review_note",
+                        "",
+                        "",
+                        csv_safe(finding["detail"]),
+                        csv_safe(finding["evidence"][0]["excerpt"]),
+                    ]
+                )
     return buffer.getvalue()
 
 
@@ -152,6 +186,22 @@ def to_markdown(report: dict[str, Any]) -> str:
         f"Engine: {md_safe(engine.get('mode', 'unknown'))}",
         "",
     ]
+    review = report.get("review")
+    if review:
+        lines += [
+            "## AI résumé review",
+            "",
+            md_safe(review["summary"]),
+            "",
+            "Model: " + md_safe(review["model"]),
+            "",
+        ]
+        for category in ("strengths", "concerns", "next_steps"):
+            lines += ["### " + category.replace("_", " ").title(), ""]
+            for finding in review[category]:
+                lines += ["#### " + md_safe(finding["title"]), "", md_safe(finding["detail"]), ""]
+                lines += ["> " + md_safe(c["excerpt"]) for c in finding["evidence"]]
+                lines.append("")
     for assessment in analysis["assessments"]:
         lines += [f"## {md_safe(assessment['label'])}", md_safe(assessment["summary"]), ""]
         lines += [

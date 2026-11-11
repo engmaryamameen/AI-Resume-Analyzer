@@ -2,19 +2,19 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AnalysisResults } from "@/features/analyses/components/analysis-report";
+import { AssessmentCard, EnginePanel } from "@/features/analyses/components/engine-and-assessments";
 import {
-  AnalysisResults,
-  AssessmentCard,
-  EnginePanel,
   EvidenceCard,
   Probability,
   RequirementCard,
   StatusBadge,
-} from "@/components/analysis-view";
+} from "@/features/analyses/components/requirement-evidence";
 import { ComparisonView } from "@/components/comparison-view";
 import { Diff, diffWords } from "@/components/diff";
-import { ModelStatusView } from "@/components/model-status";
-import { ApiError } from "@/lib/api";
+import { ModelStatusPanel, ModelStatusView } from "@/components/model-status";
+import { systemApi } from "@/features/system/api";
+import { ApiError } from "@/lib/http/client";
 import { analysisFailure, failureMessage, friendlyError, percent } from "@/lib/copy";
 import type { Assessment, Comparison, EngineInfo, Evidence, Match, ModelStatus } from "@/lib/types";
 
@@ -387,9 +387,9 @@ describe("AnalysisResults", () => {
       screen.getByText(/1 requirement has missing or conflicting evidence/),
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Requirement by requirement" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: /Four readings/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /Document checks/ })).toBeNull();
     await userEvent.click(screen.getByRole("tab", { name: "Document insights" }));
-    expect(screen.getByRole("heading", { name: /Four readings/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Document checks/ })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: /Suggestions/ }));
     expect(screen.getByRole("heading", { name: "Suggestions" })).toBeInTheDocument();
     expect(screen.getByText("Models can be wrong.")).toBeInTheDocument();
@@ -572,4 +572,23 @@ describe("error messages", () => {
     expect(analysisFailure("worker_lost")).toMatch(/interrupted/);
     expect(analysisFailure("unexpected_RuntimeError")).toContain("unexpected_RuntimeError");
   });
+});
+
+it("shows a recoverable reading-method error instead of silently removing the panel", async () => {
+  const query = vi
+    .spyOn(systemApi, "modelStatus")
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValue({
+      available_method: "rules",
+      learned_models_approved: false,
+      models: [],
+      note: "Local rules",
+    });
+  render(<ModelStatusPanel />);
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(
+    await screen.findByText(/document and requirement checks use the local rule-based reader/),
+  ).toBeInTheDocument();
+  expect(query).toHaveBeenCalledTimes(2);
 });

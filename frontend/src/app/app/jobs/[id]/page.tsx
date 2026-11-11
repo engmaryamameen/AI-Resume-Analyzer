@@ -15,9 +15,10 @@ import {
   PageHeader,
   TextField,
 } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/http/client";
+import { jobDescriptionsApi } from "@/features/job-descriptions/api";
 import { CATEGORY_LABEL, formatDate, friendlyError } from "@/lib/copy";
-import { useAsync } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks";
 import type { RequirementCategory, RequirementKind, RequirementOrigin } from "@/lib/types";
 
 interface Row {
@@ -35,7 +36,9 @@ export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [version, setVersion] = useState<number | undefined>(undefined);
-  const job = useAsync(() => api.job(id, version), [id, version]);
+  const job = useQuery(["job", id, version], (signal) =>
+    jobDescriptionsApi.job(id, version, signal),
+  );
   const [rows, setRows] = useState<Row[]>([]);
   const [focus, setFocus] = useState<{ start: number; end: number } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -59,8 +62,20 @@ export default function JobDetail() {
     setFocus(null);
   }, [job.data]);
 
-  if (job.loading) return <Loading />;
-  if (job.error || !job.data) return <ErrorState error={job.error} onRetry={job.reload} />;
+  if (job.loading)
+    return (
+      <>
+        <PageHeader title="Target role" />
+        <Loading />
+      </>
+    );
+  if (job.error || !job.data)
+    return (
+      <>
+        <PageHeader title="Target role" />
+        <ErrorState error={job.error} onRetry={job.reload} />
+      </>
+    );
   const j = job.data;
   const latestNo = j.versions.at(-1)!.version_no;
   const viewing = version !== undefined && version !== latestNo;
@@ -106,7 +121,7 @@ export default function JobDetail() {
           category: r.category,
           min_years: r.minYears.trim() === "" ? null : Number(r.minYears),
         }));
-      await api.saveRequirements(id, latestNo, keep);
+      await jobDescriptionsApi.saveRequirements(id, latestNo, keep);
       setMsg({
         tone: "good",
         text: "Saved as a new version. Earlier analyses keep the version they used.",
@@ -128,7 +143,7 @@ export default function JobDetail() {
     if (!window.confirm("Delete this job description and every analysis that used it?")) return;
     setDeleting(true);
     try {
-      await api.deleteJob(id);
+      await jobDescriptionsApi.deleteJob(id);
       router.replace("/app/jobs");
     } catch (e) {
       setMsg({ tone: "bad", text: friendlyError(e) });
@@ -283,7 +298,7 @@ export default function JobDetail() {
       )}
 
       <section className="mt-10" aria-labelledby="posting">
-        <h2 id="posting" className="font-serif text-2xl">
+        <h2 id="posting" className="font-sans font-medium text-2xl">
           The original posting
         </h2>
         <pre className="mt-3 whitespace-pre-wrap rounded-xl border border-line bg-surface p-4 text-sm">
@@ -302,7 +317,7 @@ export default function JobDetail() {
       </section>
 
       <section className="mt-10" aria-labelledby="jv">
-        <h2 id="jv" className="font-serif text-2xl">
+        <h2 id="jv" className="font-sans font-medium text-2xl">
           Versions
         </h2>
         <ul className="mt-2 space-y-1 text-sm">

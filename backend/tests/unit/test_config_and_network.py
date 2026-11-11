@@ -61,3 +61,12 @@ class TestClientAddress:
 
     def test_missing_peer_is_unknown(self):
         assert client_ip(FakeRequest(None), self.SETTINGS) == "unknown"
+
+    @pytest.mark.parametrize('forwarded', ['not-an-ip', '198.51.100.7, bad', '1.2.3.4:80', ','.join(['1.2.3.4'] * 17)])
+    def test_invalid_forwarding_chain_falls_back_to_peer(self, forwarded):
+        assert client_ip(FakeRequest('10.0.0.5', forwarded), self.SETTINGS) == '10.0.0.5'
+
+    def test_ipv6_and_equivalent_ipv4_addresses_are_canonical(self):
+        settings = Settings(_env_file=None, trusted_proxies='::1/128', **GOOD)
+        assert client_ip(FakeRequest('::1', '2001:0db8:0:0:0:0:0:1'), settings) == '2001:db8::1'
+        assert client_ip(FakeRequest('::ffff:203.0.113.9'), settings) == '203.0.113.9'

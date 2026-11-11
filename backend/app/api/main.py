@@ -15,10 +15,12 @@ from app.api.jobs_router import router as jobs_router
 from app.api.resumes_router import router as resumes_router
 from app.api.schemas import ErrorResponse
 from app.api.system_router import router as system_router
+from app.billing.router import router as billing_router
 from app.core.config import Settings, get_settings
 from app.core.errors import Forbidden, NotFound, ServiceUnavailable, install_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import BodyLimitMiddleware, RequestContextMiddleware
+from app.core.operational_metrics import refresh as refresh_operational_metrics
 from app.core.security import constant_time_equal
 from app.db.session import get_db
 from app.demo.router import router as demo_router
@@ -62,6 +64,7 @@ def create_app() -> FastAPI:
 
     for r in (
         auth_router,
+        billing_router,
         resumes_router,
         jobs_router,
         analyses_router,
@@ -90,13 +93,16 @@ def create_app() -> FastAPI:
 
     @app.get("/metrics", include_in_schema=False)
     def metrics(
-        authorization: str | None = Header(default=None), s: Settings = Depends(get_settings)
+        authorization: str | None = Header(default=None),
+        s: Settings = Depends(get_settings),
+        db: Session = Depends(get_db),
     ) -> Response:
         if not s.metrics_token:
             raise NotFound("Not found.")
         supplied = (authorization or "").removeprefix("Bearer ").strip()
         if not supplied or not constant_time_equal(supplied, s.metrics_token):
             raise Forbidden("Invalid metrics token.", code="metrics_forbidden")
+        refresh_operational_metrics(db, s)
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     return app

@@ -18,6 +18,7 @@ from app.analysis import job_descriptions
 from app.analysis import service as analyses
 from app.api.analyses_router import get_analysis
 from app.api.deps import get_store
+from app.api.schemas import GuestStateOut
 from app.core.config import Settings, get_settings
 from app.core.errors import Forbidden, NotFound, RateLimited, ValidationFailed
 from app.core.net import client_ip
@@ -91,13 +92,19 @@ def _state(
         state.update(status="failed", error_code=resume.error_code)
     elif resume.status == "processing":
         state["status"] = "extracting"
-    elif guest.jd_version_id:
+    else:
         run = db.execute(
             select(AnalysisRun).where(AnalysisRun.user_id == guest.user_id)
         ).scalar_one_or_none()
         if run is None and advance:
             run = analyses.create_analysis(
-                db, settings, guest.user_id, resume.id, guest.jd_version_id, f"guest-{guest.id}"
+                db,
+                settings,
+                guest.user_id,
+                resume.id,
+                guest.jd_version_id,
+                f"guest-{guest.id}",
+                charge_credit=False,
             )
         state["status"] = "analyzing"
         if run and run.status == "failed":
@@ -124,14 +131,14 @@ def _state(
     return state
 
 
-@router.get("")
+@router.get("", response_model=GuestStateOut)
 def status(
     request: Request, db: Session = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> dict[str, Any]:
     return _state(db, _visitor(db, request, settings), _network(request, settings), settings)
 
 
-@router.post("/progress")
+@router.post("/progress", response_model=GuestStateOut)
 def progress(
     request: Request, db: Session = Depends(get_db), settings: Settings = Depends(get_settings)
 ) -> dict[str, Any]:
@@ -142,12 +149,12 @@ def progress(
     return _state(db, guest, _network(request, settings), settings, advance=True)
 
 
-@router.post("/analyze", status_code=202)
+@router.post("/analyze", status_code=202, response_model=GuestStateOut)
 def start(
     request: Request,
     response: Response,
     file: UploadFile = File(...),
-    job_text: str = Form(...),
+    job_text: str = Form(default=""),
     idempotency_key: str = Header(alias="Idempotency-Key"),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -158,7 +165,7 @@ def start(
     limiter.check(f"guest-upload:{network}", settings.rate_limit_upload_per_minute)
     if len(idempotency_key) < 16 or len(idempotency_key) > 128:
         raise ValidationFailed("A valid request key is required.")
-    cleaned = job_descriptions.clean_text(job_text, settings)
+    cleaned = job_descriptions.clean_text(job_text, settings) if job_text.strip() else ""
     upload = validate_upload(
         file.filename, file.file.read(settings.max_upload_bytes + 1), settings.max_upload_bytes
     )
@@ -236,10 +243,12 @@ def start(
                 db, store, settings, owner_id, upload, uuid.uuid4(), commit=False
             )
             new_blob_key = resume.storage_key
-            _, job, _ = job_descriptions.create_job(
-                db, settings, owner_id, "Guest target role", cleaned, commit=False
-            )
-            guest.resume_version_id, guest.jd_version_id = resume.id, job.id
+            guest.resume_version_id = resume.id
+            if cleaned:
+                _, job, _ = job_descriptions.create_job(
+                    db, settings, owner_id, "Guest target role", cleaned, commit=False
+                )
+                guest.jd_version_id = job.id
             # Reservation, private workspace, both versions and queued extraction
             # become visible together. A crash before this point leaves no quota.
             committing = True

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { QueryActivity } from "@/components/query-activity";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -14,9 +15,9 @@ import {
   PageHeader,
   Pagination,
 } from "@/components/ui";
-import { api } from "@/lib/api";
+import { analysesApi } from "@/features/analyses/api";
 import { formatDateTime } from "@/lib/copy";
-import { useAsync } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks";
 import type { Analysis } from "@/lib/types";
 
 const STATUS_TEXT: Record<string, string> = {
@@ -30,7 +31,7 @@ const STATUS_TEXT: Record<string, string> = {
 export default function History() {
   const router = useRouter();
   const [offset, setOffset] = useState(0);
-  const list = useAsync(() => api.analyses(offset), [offset]);
+  const list = useQuery(["analyses", offset], (signal) => analysesApi.analyses(offset, signal));
   const [picked, setPicked] = useState<Analysis[]>([]);
 
   const header = (
@@ -69,6 +70,7 @@ export default function History() {
   return (
     <>
       {header}
+      <QueryActivity active={list.refreshing} />
       {items.length === 0 ? (
         <EmptyState
           title="Nothing here yet"

@@ -1,102 +1,186 @@
-# Rolemark
+# Rolemaker — AI Resume Analyzer
 
-Self-hosted résumé feedback with source-linked findings. Upload a résumé, add a target role, and review
-what the document demonstrates, merely mentions or leaves unclear. Suggestions help you revise with
-true details; the application does not generate accomplishments or predict hiring outcomes.
+Understand what your résumé communicates—and which passages support the feedback.
 
-![Guest review of a synthetic résumé](docs/images/review.jpg)
+Self-hosted résumé review with source citations, optional job-description matching,
+and optional local AI feedback through Ollama.
 
-## Run locally
+![Rolemaker — source-cited résumé review](docs/images/landing.jpg)
 
-Docker with Compose is required. Preserve any existing `.env`; otherwise copy the example:
+## See it in action
 
-```sh
-cp .env.example .env
-docker compose --profile setup run --build --rm model-setup
-docker compose up --build -d
+Start with the built-in synthetic demonstration at `/demo` after running the application locally. Choose a sample résumé and role, run the comparison, and open a finding to inspect its source passages. The demo uses the actual **rules-based pipeline**, not the optional Ollama reviewer, and does not require uploading personal documents.
+
+![Source passage behind a requirement finding in the synthetic rules-based demo](docs/images/evidence.png)
+
+## Quick start
+
+Requires Docker Engine with Compose. From the repository root:
+
+```bash
+[ -f .env ] || cp .env.example .env
 ```
 
-Open [localhost:3000](http://localhost:3000). The setup command downloads about 420 MB of pinned,
-checksum-verified pretrained weights once. The CPU worker then runs semantic retrieval and natural
-language inference locally, with rules for entities and dates. No AI API key or hosted inference service
-is used. Allow roughly 3 GB of worker memory; no GPU is required. Setup/build need internet access;
-analysis runs on an internal network. See [setup](docs/quickstart.md).
+Configure `.env` with `APP_ENV=development`, database settings, and a signing key. To start with deterministic checks, set both `ML_ENABLED=false` and `REVIEWER_ENABLED=false`:
 
-For a recording, upload a synthetic PDF/DOCX on the home page or create an account, add a résumé and
-role, then run a review. Open **Document insights → How this was read** to verify the report used local
-semantic models. The `/demo` sample intentionally uses the rule-based reader and does not consume the
-guest allowance. Existing installations must set `ML_ENABLED=true` and restart the worker after setup.
+```bash
+docker compose up --build -d --wait
+```
+
+Open [localhost:3000](http://localhost:3000). Upload a résumé and start a review directly, or add a target role. The [synthetic demonstration](http://localhost:3000/demo) uses the actual rules pipeline without retaining personal documents.
+
+For optional models:
+
+- **Semantic requirement matching:** set `ML_ENABLED=true` and run `docker compose --profile setup run --build --rm model-setup` before recreating the worker. See [local models](docs/local-models.md).
+- **Editorial AI review:** provision the local reviewer, pin its model digest, enable `REVIEWER_ENABLED`, and start the `ai-review` Compose profile. See [reviewer setup](docs/local-reviewer.md). CPU inference can take minutes.
+
+Containers serve built images. After editing source, rebuild the affected services with `docker compose up --build -d`. To stop the application, run `docker compose stop`; include enabled profiles when stopping their services. Database and upload volumes persist. Do not use `down --volumes` when preserving data.
+
+[Quickstart](docs/quickstart.md) covers ports and troubleshooting. [Environment settings](docs/environment.md) documents configuration, including SMTP and model options. Never commit `.env` or expose server credentials through `NEXT_PUBLIC_*` variables.
 
 ## Features
 
-- One guest review per network every 24 hours, with temporary private report access.
-- PDF/DOCX extraction with visible source text, uncertainties and manual corrections.
-- Editable required/preferred job requirements tied to the original posting.
-- Requirement-level evidence, source excerpts and a focused editing plan.
-- Immutable versions, stale-result notices, comparisons and JSON/Markdown/CSV exports.
-- Account/document deletion, durable worker jobs, bounded retries and retention maintenance.
-- Keyboard-operable controls, locally bundled fonts and responsive layouts.
+- **Document processing:** text-based PDF and DOCX uploads, structured extraction, extraction uncertainties, and editable text revisions.
+- **Résumé review:** optional local language-model feedback covering strengths, concerns, and editing priorities, with validated source quotations.
+- **Role matching:** optional job descriptions, editable requirements, and requirement-level evidence with contradictions and uncertainty.
+- **Revision history:** immutable inputs, stale-report detection, reruns, and comparisons between compatible reviews.
+- **Reports:** contact-redacted JSON, Markdown, and CSV exports.
+- **Guest access:** temporary private reports with a durable network allowance and recovery after an interrupted response.
+- **Accounts:** email verification, password recovery, session management, and document/account deletion.
+- **Test payments:** optional Stripe sandbox Checkout with signed webhooks and transactional review credits.
 
-Guest access expires after 24 hours; failed processing restores the allowance. Deleting a report does
-not reset it. An account provides additional reviews and version history. Guest reports are not moved
-into a new account. The synthetic [demo](http://localhost:3000/demo) is separate from the guest quota.
+The interface supports responsive navigation, keyboard interaction, source expansion, and reduced motion. Upload, processing, empty, error, and completed states use shared components.
 
-## How reviews work
+Rolemaker reviews document content. It does not verify credentials, rank candidates, replicate an employer's ATS, or predict hiring outcomes. Model interpretations require human review; résumé-domain accuracy has not been independently established.
 
-The baseline extracts sections and date ranges, identifies job requirements, and checks each one
-against passages in the résumé. It distinguishes a listed skill from a description of using it.
-Supporting and contradictory passages remain a visible conflict. Suggestions quote the original text
-and provide structures you can complete with true details.
+## Stack
 
-The default configured profile combines published embedding/NLI models with deterministic extraction.
-It is not a model trained on your uploads, a hiring predictor or a calibrated match score. If model
-loading or inference fails, a complete rule-based review remains available and the report explicitly
-records that fallback. See [model provenance and limits](docs/local-models.md).
-
-## System
-
-| Directory | Responsibility |
+| Layer | Technology |
 | --- | --- |
-| `backend/` | FastAPI, PostgreSQL, durable worker, extraction and evidence analysis |
-| `frontend/` | Next.js/TypeScript interface and browser/component tests |
-| `ml/` | Optional local-model training, calibration and evaluation tools |
-| `models/` | Model manifests; pinned weights are provisioned separately |
-| `docs/` | Setup, architecture, API, security and operational guidance |
+| Web | Next.js 15, React 19, TypeScript, Tailwind CSS, CSS modules |
+| API | FastAPI, Pydantic, generated OpenAPI response validators |
+| Data | PostgreSQL, SQLAlchemy 2, Alembic |
+| Jobs | PostgreSQL queue, renewable leases, fenced commits, bounded retries |
+| Extraction | pypdf and bounded DOCX XML parsing in a resource-limited subprocess |
+| Analysis | Deterministic checks, optional embedding/NLI matching, optional Qwen review through local Ollama |
+| Operations | Docker Compose, nginx, Prometheus metrics and alert rules |
+| Tests | pytest, Vitest, Testing Library, Playwright, axe |
 
-The API accepts requests and stores immutable inputs; a separate worker performs extraction and
-analysis. PostgreSQL also holds the job queue. [Architecture](docs/architecture.md) and
-[decisions](docs/decisions.md) explain the transaction and isolation boundaries.
+## Architecture
 
-## Development checks
+The backend is a modular monolith. API handlers validate requests and enqueue work; workers perform extraction and analysis outside database transactions. Ownership checks, row/advisory locks, and fenced settlement coordinate mutations, cancellation, deletion, and job recovery.
 
-```sh
-.venv/bin/ruff check backend/app ml
-.venv/bin/mypy --config-file backend/pyproject.toml backend/app
-TEST_DATABASE_URL=postgresql+psycopg://... .venv/bin/pytest backend/tests -q
-cd frontend
-npm run format:check
-npm run typecheck
-npm run lint
-npm test
-npm run build
+```mermaid
+flowchart LR
+  Browser --> Edge[nginx]
+  Edge --> Web[Next.js]
+  Web --> API[FastAPI]
+  API --> DB[(PostgreSQL)]
+  API --> Storage[(Private document storage)]
+  Worker --> DB
+  Worker --> Storage
+  Worker --> Parser[Bounded extraction subprocess]
+  Worker --> Matching[Local matching models]
+  Worker --> Reviewer[Optional private Ollama service]
 ```
 
-Use a disposable test database. Browser journeys additionally need a fresh application database, API,
-worker and production frontend. See [testing](docs/testing.md) and `.github/workflows/verify.yml`.
+The browser uses the same origin for the application and `/api/v1`. Model inference stays on operator-controlled infrastructure. No hosted AI API is required. Payment and email integrations have separate outbound connections and credentials.
 
-## Limits and operations
+See [architecture](docs/architecture.md), [design decisions](docs/decisions.md), [database design](docs/database.md), and [API reference](docs/api.md).
 
-The English models compare text, not truth or qualifications. Scans need OCR, which is not
-implemented. The semantic profile uses published pretrained models; résumé-domain accuracy and hiring
-outcomes have not been validated. The separate custom-training lab remains experimental. The tool does not rank people, reproduce an ATS score or predict interviews.
+## Native development
 
-Public operation requires HTTPS, production secrets, trusted proxy configuration, restricted database
-roles, monitored backups and restoration checks. Accounts currently lack email verification and password
-recovery. Resource limits reduce parser risk but are not a complete sandbox.
+Requires Linux, PostgreSQL, Node 22.12+, npm, and Python 3.12. Configure a dedicated database in `.env` before migrating. Disable optional models until their dependencies and artifacts are installed.
 
-- [Deployment](docs/deployment.md)
-- [Security, privacy and guest retention](docs/security-and-privacy.md)
-- [API](docs/api.md) and [database](docs/database.md)
-- [Analysis and optional local models](docs/local-models.md)
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -c backend/requirements-dev.lock -e 'backend[dev]'
+.venv/bin/alembic -c backend/alembic.ini upgrade head
+npm --prefix frontend ci --ignore-scripts
+```
 
-MIT. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md). Bundled fonts retain their license notices.
+Start each process in a separate terminal from the repository root:
+
+```bash
+# API
+.venv/bin/uvicorn app.api.main:app --app-dir backend --port 8000
+```
+
+```bash
+# Worker
+PYTHONPATH=backend .venv/bin/python -m app.jobs.worker
+```
+
+```bash
+# Frontend
+npm run dev
+```
+
+The root `dev` command starts only the frontend; PostgreSQL, API, and worker must also run. `BACKEND_URL` defaults to `http://localhost:8000`. Stop any container using port 3000 before starting the native frontend.
+
+## Review pipeline
+
+1. Validate file size, extension, content type, page count, and DOCX structure.
+2. Extract text in a bounded subprocess and normalize sections, passages, entities, and dates.
+3. If supplied, extract job requirements and retrieve relevant résumé passages.
+4. Produce document checks and classify requirement evidence, retaining uncertainty and contradictions.
+5. If enabled, generate editorial feedback locally and validate its schema and exact source citations.
+6. Commit a complete report with immutable input references and processing provenance.
+
+Semantic matching may fall back to clearly labeled rules. The editorial reviewer fails explicitly on unavailable, incomplete, or invalid output; it never substitutes generic checks as AI-written feedback. Missing document evidence does not establish missing experience. Uploaded documents are not used for training.
+
+Account users can correct extraction, create another résumé revision, and rerun a review. Résumé-only runs store no job revision; comparisons require compatible review contexts. Guests receive one accepted review per network per rolling 24 hours. Failed processing restores that allowance; deleting a successful report does not.
+
+## Payments
+
+Stripe integration supports **test payments only**, with a one-time pack of five review credits for $5 USD. `BILLING_ENABLED=true` enables sandbox Checkout; `BILLING_REQUIRE_CREDITS=true` separately enables spending credits on new account reviews. Both default to false.
+
+Signed provider events settle credits; a browser redirect never confirms payment. Duplicate delivery and analysis retries do not duplicate accounting. Failed or cancelled charged reviews return their credit. Live Stripe keys and events are rejected. See [billing configuration](docs/billing.md).
+
+## Testing
+
+```bash
+.venv/bin/ruff check backend/app ml
+.venv/bin/mypy --config-file backend/pyproject.toml backend/app
+.venv/bin/python frontend/scripts/export-contracts.py --check
+node frontend/scripts/compile-contracts.mjs --check
+npm --prefix frontend run typecheck
+npm --prefix frontend run lint
+npm --prefix frontend run format:check
+npm --prefix frontend test
+npm --prefix frontend run build
+```
+
+Backend integration fixtures recreate the public schema. Use only a disposable PostgreSQL database whose name ends in `_test`:
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST/rolemaker_test .venv/bin/pytest backend/tests -q
+```
+
+Browser journeys require a separate application database, API, worker, and production frontend:
+
+```bash
+cd frontend
+npx playwright install chromium
+E2E_BASE_URL=http://localhost:3000 npm run e2e -- --workers=1
+```
+
+The suite covers real upload/review workflows, tenant isolation, concurrency, failure recovery, exports, and responsive interactions. [Testing](docs/testing.md) explains isolation, transport fault injection, model checks, and test boundaries. CI is defined in [.github/workflows/verify.yml](.github/workflows/verify.yml).
+
+## Deployment and security
+
+Deploy the web, API, workers, private storage, and PostgreSQL together behind HTTPS. Configure production secrets, allowed origins, trusted proxies, authenticated metrics, SMTP, retention, backups, and resource limits before accepting personal documents. Production accounts require mailbox verification.
+
+Sessions and account-link tokens are hashed; passwords use Argon2id. State-changing account requests require CSRF and origin checks. Private resources are owner-scoped. Extraction limits, defensive exports, cancellation fencing, and deletion locks provide additional boundaries.
+
+Use [deployment](docs/deployment.md), [operations](docs/operations.md), [security and privacy](docs/security-and-privacy.md), and the [threat model](docs/threat-model.md) for release and recovery procedures. Validate model behavior, provider delivery, image advisories, restore procedures, and capacity on the target environment before launch.
+
+## Contributing
+
+Bug reports, focused improvements, and documentation contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, validation, and pull-request guidance.
+
+Found Rolemaker useful? Give the repository a star to support the project.
+
+## License
+
+[MIT](LICENSE). Third-party fonts, dependencies, and model licenses are documented in [NOTICE.md](NOTICE.md).

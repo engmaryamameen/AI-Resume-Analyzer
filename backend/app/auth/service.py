@@ -44,7 +44,7 @@ def register(db: Session, email: str, password: str, request_id: str | None) -> 
             request_id=request_id,
         )
     )
-    db.commit()
+    db.flush()
     return user
 
 
@@ -53,7 +53,14 @@ def authenticate(db: Session, email: str, password: str, request_id: str | None)
         normalised = normalise_email(email)
     except ValueError:
         normalised = ""
-    user = db.execute(select(User).where(User.email == normalised)).scalar_one_or_none()
+    # Keep the credential locked until create_session commits. Reset/verification
+    # uses the same row lock, so no old-password session can be issued after revocation.
+    user = db.execute(
+        select(User)
+        .where(User.email == normalised)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
     ok = verify_password(
         password, user.password_hash if user else None
     )  # same work for unknown accounts

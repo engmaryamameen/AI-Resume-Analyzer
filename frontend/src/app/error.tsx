@@ -16,7 +16,9 @@ export default function ErrorPage({
     >
       <Icon name="document" size={42} />
       <span className="micro-label mt-7">AN UNEXPECTED INTERRUPTION</span>
-      <h1 className="mt-5 font-serif text-4xl tracking-tight">Let’s pick up that thread.</h1>
+      <h1 className="mt-5 font-sans font-medium text-4xl tracking-tight">
+        Let’s pick up that thread.
+      </h1>
       <p className="mt-5 text-sm leading-7 text-muted">
         This page couldn’t finish loading. Try it again, or return to your workspace to continue.
       </p>

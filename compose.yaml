@@ -35,12 +35,24 @@ services:
     restart: unless-stopped
   migrate:
     <<: *backend
+    env_file: []
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-margin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-margin_notes}
+      SECRET_KEY: migration-process-has-no-authentication-key
     command: [alembic, upgrade, head]
     depends_on:
       db: {condition: service_healthy}
     restart: 'no'
   api:
     <<: *backend
+    command: [uvicorn, app.api.main:app, --host, 0.0.0.0, --port, '8000', --no-proxy-headers]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-margin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-margin_notes}
+      STORAGE_DIR: /data/storage
+      MODEL_DIR: /app/models
+      TRUSTED_PROXIES: 172.30.44.10/32
+    networks: [private, public]
     depends_on:
       migrate: {condition: service_completed_successfully}
     healthcheck:
@@ -66,6 +78,7 @@ services:
     tmpfs: ["/tmp:size=64m,mode=1777"]
   worker:
     <<: *backend
+    env_file: []
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -76,6 +89,24 @@ services:
       STORAGE_DIR: /data/storage
       MODEL_DIR: /app/models
       SECRET_KEY: worker-does-not-use-session-signing-keys
+      REVIEWER_ENABLED: ${REVIEWER_ENABLED:-false}
+      REVIEWER_URL: http://review-model:11434
+      REVIEWER_MODEL: ${REVIEWER_MODEL:-qwen3:4b-instruct}
+      REVIEWER_MODEL_DIGEST: ${REVIEWER_MODEL_DIGEST:-}
+      REVIEWER_TIMEOUT_SECONDS: ${REVIEWER_TIMEOUT_SECONDS:-300}
+      APP_ENV: ${APP_ENV:-production}
+      ML_ENABLED: ${ML_ENABLED:-true}
+      ML_DEVICE: ${ML_DEVICE:-cpu}
+      ML_THREADS: ${ML_THREADS:-4}
+      ML_BATCH_SIZE: ${ML_BATCH_SIZE:-16}
+      ML_MAX_SECONDS: ${ML_MAX_SECONDS:-120}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
+      MAX_PDF_PAGES: ${MAX_PDF_PAGES:-8}
+      MAX_JD_CHARS: ${MAX_JD_CHARS:-20000}
+      PARSER_TIMEOUT_SECONDS: ${PARSER_TIMEOUT_SECONDS:-20}
+      PARSER_MEMORY_MB: ${PARSER_MEMORY_MB:-512}
+      JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-3}
+      JOB_LOCK_SECONDS: ${JOB_LOCK_SECONDS:-120}
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
       HF_HUB_DISABLE_TELEMETRY: "1"
@@ -88,6 +119,14 @@ services:
     mem_limit: 3g
   maintenance:
     <<: *backend
+    env_file: []
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-margin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-margin_notes}
+      STORAGE_DIR: /data/storage
+      MODEL_DIR: /app/models
+      SECRET_KEY: maintenance-process-has-no-authentication-key
+      RETENTION_DAYS: ${RETENTION_DAYS:-90}
     command: [python, -m, app.periodic_maintenance]
     depends_on:
       migrate: {condition: service_completed_successfully}
@@ -95,16 +134,68 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    ports: ["127.0.0.1:${WEB_PORT:-3000}:3000"]
     networks: [private, public]
     depends_on:
       api: {condition: service_healthy}
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     restart: unless-stopped
+  review-model:
+    profiles: [ai-review]
+    image: ollama/ollama@sha256:a372a1c0d1e15b68e9521189785c3ca17795c26c2356f8b1b10122cfb59ed0d7
+    environment:
+      OLLAMA_MODELS: /models
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NUM_PARALLEL: '1'
+      OLLAMA_MAX_LOADED_MODELS: '1'
+      OLLAMA_CONTEXT_LENGTH: '8192'
+      OLLAMA_KEEP_ALIVE: 2m
+    volumes: ['./models/reviewer:/models']
+    networks: [private]
+    mem_limit: 5g
+    cpus: '3'
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ['/tmp:size=64m,mode=1777', '/root/.ollama:size=4m,mode=0700']
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+  stripe-listener:
+    profiles: [billing]
+    image: stripe/stripe-cli@sha256:4de6c7271dd2d3a7a57316d4dd18b67d077db4d7b9d75e1838193dd1ba5f71f0
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-}
+    command: [listen, --forward-to, 'http://edge:8080/api/v1/billing/webhook', --events, 'checkout.session.completed,checkout.session.async_payment_succeeded']
+    networks: [public]
+    depends_on: [edge]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    restart: unless-stopped
+  edge:
+    image: nginx:1.28-alpine
+    ports: ["127.0.0.1:${WEB_PORT:-3000}:8080"]
+    volumes: ["./deploy/nginx.conf:/etc/nginx/nginx.conf:ro"]
+    networks:
+      public:
+        ipv4_address: 172.30.44.10
+    depends_on: [web, api]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    user: "101:101"
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    restart: unless-stopped
 networks:
   private: {internal: true}
-  public: {}
+  public:
+    ipam:
+      config: [{subnet: 172.30.44.0/24}]
 volumes:
   database: {}
   uploads: {}

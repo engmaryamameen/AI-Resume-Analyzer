@@ -1,0 +1,323 @@
+.preview {
+  color-scheme: light;
+  color: #20232b;
+  background: #fafaf8;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 25px 80px #0003;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 28px;
+  background: #f0f0ed;
+  color: #51565f;
+  font-size: 12px;
+}
+.toolbar > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #282c35;
+  font-weight: 550;
+}
+.sample {
+  font-size: 10px;
+}
+.context {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr;
+  gap: 28px;
+  align-items: center;
+  padding: 28px 32px;
+  border-bottom: 1px solid #e2e3df;
+}
+.context > svg {
+  color: #7c838f;
+}
+.label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  font-weight: 650;
+  color: #626973;
+}
+.context p {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.context p span {
+  color: #68707b;
+  font-weight: 400;
+  margin-left: 5px;
+}
+.roleField select {
+  display: block;
+  width: 100%;
+  max-width: 290px;
+  min-height: 38px;
+  padding: 4px 24px 4px 0;
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d4eac;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+.roleField select:focus-visible {
+  outline: 2px solid #4163cd;
+  outline-offset: 3px;
+}
+.roleField option {
+  background: #fff;
+  color: #20232b;
+}
+.body {
+  display: grid;
+  grid-template-columns: 0.85fr 1.25fr;
+}
+.requirements {
+  padding: 30px 26px 30px 32px;
+  border-right: 1px solid #e2e3df;
+  background: #f5f5f1;
+}
+.roleDescription {
+  font-size: 10px;
+  line-height: 1.8;
+  color: #646b76;
+  margin-top: 10px;
+  min-height: 36px;
+}
+.findings {
+  display: grid;
+  gap: 3px;
+  margin: 21px -10px 22px;
+}
+.findings button {
+  text-align: left;
+  width: 100%;
+  padding: 17px 12px;
+  border-radius: 5px;
+  border-left: 2px solid transparent;
+  transition: background 0.15s;
+}
+.findings button:hover {
+  background: #e9ebed;
+}
+.findings button[aria-pressed="true"] {
+  background: #e9edf8;
+  border-left-color: #4163cd;
+}
+.findingTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 550;
+  margin-bottom: 8px;
+}
+.findingTitle svg {
+  flex-shrink: 0;
+  color: #6b758b;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #59616d;
+}
+.status::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.supported {
+  color: #3658af;
+}
+.partial {
+  color: #885b22;
+}
+.missing {
+  color: #686c75;
+}
+.hint {
+  font-size: 10px;
+  line-height: 1.9;
+  max-width: 240px;
+  color: #646b76;
+}
+.evidence {
+  padding: 30px 36px;
+  min-height: 465px;
+}
+.evidenceHeading {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  font-size: 9px;
+  color: #6a717b;
+}
+.evidence h3 {
+  font-size: 24px;
+  font-weight: 550;
+  letter-spacing: -0.035em;
+  margin: 17px 0 26px;
+}
+.requirement {
+  font-size: 12px;
+  line-height: 1.85;
+  margin: 9px 0 22px;
+}
+.evidence blockquote {
+  font-size: 13px;
+  line-height: 1.9;
+  margin: 10px 0 16px;
+  padding-left: 14px;
+  border-left: 2px solid #849bd9;
+  color: #263348;
+}
+.noEvidence {
+  font-size: 12px;
+  font-style: italic;
+  margin: 12px 0 16px;
+  color: #616975;
+}
+.reasoning {
+  font-size: 11px;
+  line-height: 1.85;
+  color: #5c6471;
+}
+.edit {
+  background: #efefeb;
+  padding: 16px;
+  margin-top: 22px;
+  border-radius: 4px;
+}
+.edit p {
+  font-size: 11px;
+  line-height: 1.85;
+  color: #3c4655;
+  margin-top: 8px;
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #e2e3df;
+  padding: 17px 28px;
+  font-size: 10px;
+  color: #626973;
+}
+.footer a {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  color: #314f9c;
+  font-weight: 550;
+}
+.preview :focus-visible {
+  outline: 2px solid #4163cd;
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .toolbar {
+    padding: 16px 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .context {
+    padding: 22px 20px;
+    gap: 14px;
+  }
+  .context p span {
+    display: block;
+    margin: 5px 0 0;
+  }
+  .body {
+    grid-template-columns: 1fr;
+  }
+  .requirements {
+    padding: 22px 20px;
+    border-right: 0;
+    border-bottom: 1px solid #e2e3df;
+  }
+  .roleDescription {
+    min-height: 0;
+  }
+  .findings {
+    margin: 15px 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .findings button {
+    padding: 12px 9px;
+  }
+  .findingTitle {
+    font-size: 11px;
+    min-height: 34px;
+    align-items: flex-start;
+  }
+  .findingTitle svg {
+    display: none;
+  }
+  .status {
+    font-size: 9px;
+    gap: 5px;
+  }
+  .hint {
+    max-width: none;
+  }
+  .evidence {
+    padding: 24px 22px;
+    min-height: 465px;
+  }
+  .footer {
+    padding: 16px 20px;
+    flex-wrap: wrap;
+  }
+  .sample {
+    font-size: 9px;
+  }
+}
+@media (max-width: 380px) {
+  .context {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .context > svg {
+    display: none;
+  }
+  .context p span {
+    display: inline;
+    margin-left: 4px;
+  }
+  .findings {
+    gap: 3px;
+  }
+  .findings button {
+    padding: 10px 6px;
+  }
+  .findingTitle {
+    font-size: 10px;
+  }
+  .status {
+    font-size: 8px;
+  }
+  .evidence h3 {
+    font-size: 22px;
+  }
+}

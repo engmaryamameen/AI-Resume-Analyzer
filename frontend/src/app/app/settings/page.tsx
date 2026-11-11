@@ -1,11 +1,12 @@
 "use client";
 
+import { SessionList } from "@/features/auth/components/session-list";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ModelStatusPanel } from "@/components/model-status";
 import { Button, Card, Notice, PageHeader, TextField } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authApi } from "@/features/auth/api";
 import { friendlyError } from "@/lib/copy";
 import { useUser } from "@/lib/user-context";
 
@@ -22,7 +23,7 @@ export default function Settings() {
     setBusy(true);
     setError(null);
     try {
-      await api.deleteAccount(password);
+      await authApi.deleteAccount(password);
       router.replace("/");
     } catch (err) {
       // A wrong password is a 403: the session is still good, so stay here and say so.
@@ -36,7 +37,7 @@ export default function Settings() {
       <PageHeader title="Account and privacy">You&apos;re signed in as {user.email}.</PageHeader>
       <div className="space-y-6">
         <Card>
-          <h2 className="font-serif text-xl">Where your data goes</h2>
+          <h2 className="font-sans font-medium text-xl">Where your data goes</h2>
           <p className="mt-1 max-w-prose text-muted">
             Your documents are analyzed on this server. The default reader uses local rules;
             approved local models can be configured separately. No outside AI service receives your
@@ -47,9 +48,10 @@ export default function Settings() {
             .
           </p>
         </Card>
+        <SessionList />
         <ModelStatusPanel />
         <Card>
-          <h2 className="font-serif text-xl">Delete everything</h2>
+          <h2 className="font-sans font-medium text-xl">Delete everything</h2>
           <p className="mt-1 max-w-prose text-muted">
             This permanently removes your account, uploaded files, extracted text, job descriptions
             and all analyses. It can&apos;t be undone, and reports you downloaded stay with you.

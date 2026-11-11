@@ -7,15 +7,24 @@ import pytest
 
 # Settings must be in place before the app module is imported anywhere.
 _TMP = tempfile.mkdtemp(prefix="resume-intel-test-")
-os.environ.update({
-    "APP_ENV": "test",
-    "SECRET_KEY": "test-secret-key-that-is-long-enough-0123456789",
-    "STORAGE_DIR": str(Path(_TMP) / "storage"),
-    "MODEL_DIR": str(Path(_TMP) / "models"),  # empty: tests run the rule-based reading
-    "ML_ENABLED": "false",
-    "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
-    "RATE_LIMIT_DEMO_PER_MINUTE": "1000",
-})
+os.environ.update(
+    {
+        "APP_ENV": "test",
+        "SECRET_KEY": "test-secret-key-that-is-long-enough-0123456789",
+        "STORAGE_DIR": str(Path(_TMP) / "storage"),
+        "MODEL_DIR": str(Path(_TMP) / "models"),  # empty: tests run the rule-based reading
+        "ML_ENABLED": "false",
+        "BILLING_ENABLED": "false",
+        "BILLING_REQUIRE_CREDITS": "false",
+        "REVIEWER_ENABLED": "false",
+        "STRIPE_SECRET_KEY": "",
+        "STRIPE_WEBHOOK_SECRET": "",
+        "SMTP_HOST": "",
+        "SMTP_FROM": "",  # tests never deliver real mail, even if the developer has configured SMTP
+        "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
+        "RATE_LIMIT_DEMO_PER_MINUTE": "1000",
+    }
+)
 if os.environ.get("TEST_DATABASE_URL"):
     os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 
@@ -41,16 +50,23 @@ def client():
 def _requires_db() -> None:
     if not os.environ.get("TEST_DATABASE_URL"):
         pytest.skip("TEST_DATABASE_URL (disposable PostgreSQL) is not set")
+    from sqlalchemy.engine import make_url
+
+    url = make_url(os.environ["TEST_DATABASE_URL"])
+    if url.get_backend_name() != "postgresql" or not (url.database or "").endswith("_test"):
+        pytest.fail(
+            "Refusing destructive fixtures: use a disposable PostgreSQL database ending in _test"
+        )
 
 
 @pytest.fixture
 def db_engine():
     """A fresh schema on a DISPOSABLE database. Never point TEST_DATABASE_URL at real data."""
     _requires_db()
-    from alembic import command
     from alembic.config import Config
     from sqlalchemy import text
 
+    from alembic import command
     from app.db.session import get_engine
 
     engine = get_engine()
@@ -81,7 +97,7 @@ def make_user(client, db_engine):
 
     created: list[TestClient] = []
 
-    def _make(email: str = "user@example.com", password: str = "correct horse battery staple"):
+    def _make(email: str = "user@example.com", password: str = "correct horse battery staple"):  # noqa: S107 - synthetic fixture only
         c = TestClient(app, base_url="http://localhost:8000")
         created.append(c)
         r = c.post("/api/v1/auth/register", json={"email": email, "password": password})

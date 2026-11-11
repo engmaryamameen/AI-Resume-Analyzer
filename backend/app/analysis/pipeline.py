@@ -77,7 +77,7 @@ def _run(
             AnalysisWarning(
                 code="rule_based_reading",
                 severity="info",
-                message="This analysis used the rule-based reading, not learned models. It is more literal and "
+                message="The document and requirement checks used rule-based matching. It is more literal and "
                 "misses paraphrases that the learned models are meant to catch.",
             )
         )
@@ -88,7 +88,7 @@ def _run(
         matches=matches,
         mentions=mentions,
         assessments=[
-            summary.requirement_evidence(requirements, matches),
+            *([summary.requirement_evidence(requirements, matches)] if requirements else []),
             summary.document_structure(doc),
             summary.writing_style(doc),
             summary.extraction_reliability(parse, engine.info),

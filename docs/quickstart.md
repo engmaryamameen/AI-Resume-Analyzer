@@ -1,4 +1,4 @@
-# Run Rolemark
+# Run Rolemaker
 
 ## Docker Compose
 
@@ -104,3 +104,13 @@ and privacy documents before collecting real personal data. Learned-model evalua
 
 Guest policy and retention details are in [security and privacy](security-and-privacy.md#guest-reviews). Browser tests need a fresh
 application database because the guest allowance deliberately survives report deletion and browser resets.
+
+## Startup troubleshooting
+
+`npm run dev` or `pnpm dev` from the repository root forwards to the frontend only; install frontend dependencies first and run the API/worker separately. The complete stack uses Compose.
+
+Docker serves built images and `restart: unless-stopped` resumes running containers after reboot. Stop it with `docker compose stop` before native development. Rebuild after source changes. For legacy network configuration errors, run `docker compose down --remove-orphans` followed by `docker compose up --build -d --wait`. This preserves named volumes; never add `--volumes` when keeping documents/database data. The historic Compose project name remains stable for that reason.
+
+See [environment.md](environment.md) for the complete configuration reference.
+
+Destructive integration fixtures require a disposable PostgreSQL database whose name ends in `_test`; this guard does not replace checking that the database contains no application data.

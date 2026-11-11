@@ -15,9 +15,11 @@ import {
   PageHeader,
   TextArea,
 } from "@/components/ui";
-import { api, ApiError, newIdempotencyKey } from "@/lib/api";
+import { ApiError, newIdempotencyKey } from "@/lib/http/client";
+import { analysesApi } from "@/features/analyses/api";
+import { resumesApi } from "@/features/resumes/api";
 import { RECOMMENDATION_KIND, friendlyError } from "@/lib/copy";
-import { useAsync } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks";
 import type { Recommendation } from "@/lib/types";
 
 interface Saved {
@@ -29,11 +31,10 @@ interface Saved {
 export default function Recommendations() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const analysis = useAsync(() => api.analysis(id), [id]);
+  const analysis = useQuery(["analysis", id], (signal) => analysesApi.analysis(id, signal));
   const documentId = analysis.data?.resume_document_id ?? null;
-  const resume = useAsync(
-    () => (documentId ? api.resume(documentId) : Promise.resolve(null)),
-    [documentId],
+  const resume = useQuery(["resume", documentId], (signal) =>
+    documentId ? resumesApi.resume(documentId, undefined, signal) : Promise.resolve(null),
   );
 
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -43,11 +44,39 @@ export default function Recommendations() {
   const [message, setMessage] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
   const rerunKey = useRef(newIdempotencyKey());
 
-  if (analysis.loading || resume.loading) return <Loading />;
+  if (analysis.loading || resume.loading)
+    return (
+      <>
+        <PageHeader title="Edit résumé" />
+        <Loading />
+      </>
+    );
   if (analysis.error || !analysis.data)
-    return <ErrorState error={analysis.error} onRetry={analysis.reload} />;
-  if (resume.error) return <ErrorState error={resume.error} onRetry={resume.reload} />;
+    return (
+      <>
+        <PageHeader title="Edit résumé" />
+        <ErrorState error={analysis.error} onRetry={analysis.reload} />
+      </>
+    );
+  if (resume.error)
+    return (
+      <>
+        <PageHeader title="Edit résumé" />
+        <ErrorState error={resume.error} onRetry={resume.reload} />
+      </>
+    );
   const run = analysis.data;
+  const recommendations: Recommendation[] = run.review
+    ? run.review.next_steps.map((item) => ({
+        kind: "clarify",
+        requirement_ordinal: null,
+        title: item.title,
+        detail: item.detail,
+        block_id: item.evidence[0]?.block_id ?? null,
+        excerpt: item.evidence[0]?.excerpt ?? null,
+        fill_in: null,
+      }))
+    : run.recommendations;
   const latest = resume.data?.versions.at(-1);
   const current = latest && latest.version_no === run.resume_version_no;
   const blocks = new Map((resume.data?.normalized?.blocks ?? []).map((b) => [b.id, b.text]));
@@ -61,7 +90,7 @@ export default function Recommendations() {
     setBusy(bid);
     setMessage(null);
     try {
-      const v = await api.correctResume(documentId!, {
+      const v = await resumesApi.correctResume(documentId!, {
         base_version_no: latest!.version_no,
         block_edits: { [bid]: after },
       });
@@ -89,7 +118,7 @@ export default function Recommendations() {
     if (!newest) return;
     setRerunning(true);
     try {
-      const next = await api.createAnalysis(newest, run.jd_version_id, rerunKey.current);
+      const next = await analysesApi.createAnalysis(newest, run.jd_version_id, rerunKey.current);
       router.push(`/app/analyses/${next.id}`);
     } catch (e) {
       setMessage({ tone: "bad", text: friendlyError(e) });
@@ -123,9 +152,9 @@ export default function Recommendations() {
           </Notice>
         </div>
       )}
-      {run.recommendations.length === 0 && <Notice>Nothing to suggest for this analysis.</Notice>}
+      {recommendations.length === 0 && <Notice>Nothing to suggest for this analysis.</Notice>}
       <ul className="space-y-4">
-        {run.recommendations.map((rec, i) => {
+        {recommendations.map((rec, i) => {
           const bid = rec.block_id;
           const done = bid ? saved[bid] : undefined;
           return (

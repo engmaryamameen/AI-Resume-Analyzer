@@ -40,7 +40,12 @@ for (const state of ["upload", "limited", "processing"] as const) {
         ).toBeLessThan(56);
       }
       if ([320, 900, 1440].includes(width)) {
-        await page.addScriptTag({ content: axe.source });
+        await page.evaluate((source) => {
+          const script = document.createElement("script");
+          script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+          script.textContent = source;
+          document.head.appendChild(script);
+        }, axe.source);
         const issues = await page.evaluate(async () =>
           (
             await (window as typeof window & { axe: typeof axe }).axe.run(document, {

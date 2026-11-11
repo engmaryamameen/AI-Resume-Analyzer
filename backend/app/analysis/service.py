@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 
 from app.analysis.job_descriptions import get_version_by_id as get_jd_version_by_id
 from app.analysis.pipeline import analyze
+from app.analysis.reviewer import PROMPT_VERSION, review_document
 from app.analysis.schema import AnalysisResult, RequirementDraft
+from app.billing import service as billing
 from app.core.config import PIPELINE_VERSION, Settings, get_settings
 from app.core.errors import Conflict, NotFound, ValidationFailed
 from app.core.metrics import ANALYSIS_ENGINE, ANALYSIS_RESULTS, ANALYSIS_SECONDS
@@ -32,28 +34,38 @@ def create_analysis(
     settings: Settings,
     user_id: uuid.UUID,
     resume_version_id: uuid.UUID,
-    jd_version_id: uuid.UUID,
+    jd_version_id: uuid.UUID | None,
     idempotency_key: str | None,
+    *,
+    charge_credit: bool = True,
 ) -> AnalysisRun:
     resume = get_resume_version_by_id(db, user_id, resume_version_id)
-    job = get_jd_version_by_id(db, user_id, jd_version_id)
+    job = get_jd_version_by_id(db, user_id, jd_version_id) if jd_version_id else None
     if resume.status != "ready":
         raise Conflict("The résumé has not been read successfully yet.", code="version_not_ready")
+
+    if settings.billing_enabled and settings.billing_require_credits and charge_credit:
+        lock_user(db, user_id)
 
     run_id = uuid.uuid4()
     key = idempotency.validate_key(idempotency_key)
     if key:
-        digest = hashlib.sha256(f"{resume.id}:{job.id}".encode()).hexdigest()
+        digest = hashlib.sha256(
+            f"{resume.id}:{job.id if job else 'resume-only'}".encode()
+        ).hexdigest()
         existing = idempotency.claim(db, user_id, "analysis", key, digest, run_id)
         if existing is not None:
             db.rollback()
             return get_run(db, user_id, existing)
 
+    if settings.billing_enabled and settings.billing_require_credits and charge_credit:
+        billing.spend(db, user_id, run_id)
+
     run = AnalysisRun(
         id=run_id,
         user_id=user_id,
         resume_version_id=resume.id,
-        jd_version_id=job.id,
+        jd_version_id=job.id if job else None,
         status="queued",
         pipeline_version=PIPELINE_VERSION,
     )
@@ -88,6 +100,7 @@ class AnalysisWork:
     parseability: Parseability
     requirements: list[RequirementDraft]
     requirement_ids: dict[int, uuid.UUID]
+    job_text: str | None = None
 
 
 @dataclass(frozen=True)
@@ -102,13 +115,18 @@ def prepare_analysis(db: Session, run_id: uuid.UUID) -> AnalysisWork | None:
     if run is None or run.status not in _ACTIVE:
         return None
     resume = db.get(ResumeVersion, run.resume_version_id)
-    job = db.get(JobDescriptionVersion, run.jd_version_id)
-    if resume is None or job is None or resume.normalized is None or resume.parseability is None:
+    job = db.get(JobDescriptionVersion, run.jd_version_id) if run.jd_version_id else None
+    if (
+        resume is None
+        or (run.jd_version_id and job is None)
+        or resume.normalized is None
+        or resume.parseability is None
+    ):
         raise ValidationFailed(
             "The inputs of this analysis are no longer available.", code="inputs_unavailable"
         )
     run.status = "running"
-    rows = list(job.requirements)
+    rows = list(job.requirements) if job else []
     return AnalysisWork(
         document=NormalizedDocument.model_validate(resume.normalized),
         parseability=Parseability.model_validate(resume.parseability),
@@ -126,6 +144,7 @@ def prepare_analysis(db: Session, run_id: uuid.UUID) -> AnalysisWork | None:
             for r in rows
         ],
         requirement_ids={r.ordinal: r.id for r in rows},
+        job_text=job.raw_text if job else None,
     )
 
 
@@ -139,6 +158,8 @@ def compute_analysis(work: AnalysisWork, ctx: JobContext) -> AnalysisOutcome:
         ctx.engine,
         lambda: Budget(settings.ml_max_seconds, ctx.heartbeat),
     )
+    if settings.reviewer_enabled:
+        result.review = review_document(work.document, work.job_text, settings, ctx.heartbeat)
     return AnalysisOutcome(
         result, work.requirement_ids, (datetime.now(UTC) - started).total_seconds()
     )
@@ -166,6 +187,7 @@ def commit_analysis(db: Session, run_id: uuid.UUID, outcome: AnalysisOutcome) ->
         )
     run.assessments = [a.model_dump(mode="json") for a in result.assessments]
     run.summary = {
+        "review": result.review.model_dump(mode="json") if result.review else None,
         "recommendations": [r.model_dump(mode="json") for r in result.recommendations],
         "limitations": result.limitations,
     }
@@ -184,6 +206,7 @@ def mark_analysis_failed(db: Session, run_id: uuid.UUID, code: str) -> None:
     run = db.get(AnalysisRun, run_id)
     if run is not None and run.status in _ACTIVE:
         run.status, run.error_code, run.completed_at = "failed", code[:64], datetime.now(UTC)
+        billing.refund(db, run.user_id, run.id)
         ANALYSIS_RESULTS.labels(outcome="failed").inc()
 
 
@@ -191,6 +214,7 @@ def mark_analysis_cancelled(db: Session, run_id: uuid.UUID) -> None:
     run = db.get(AnalysisRun, run_id)
     if run is not None and run.status in _ACTIVE:
         run.status, run.completed_at = "cancelled", datetime.now(UTC)
+        billing.refund(db, run.user_id, run.id)
         ANALYSIS_RESULTS.labels(outcome="cancelled").inc()
 
 
@@ -213,7 +237,7 @@ def staleness(db: Session, run: AnalysisRun, current_fingerprint: str) -> dict[s
     """A result is current only if it used the latest versions and the models that would be used today."""
     reasons: list[str] = []
     resume = db.get(ResumeVersion, run.resume_version_id)
-    job = db.get(JobDescriptionVersion, run.jd_version_id)
+    job = db.get(JobDescriptionVersion, run.jd_version_id) if run.jd_version_id else None
     if resume is not None:
         latest = db.execute(
             select(ResumeVersion.version_no)
@@ -232,6 +256,22 @@ def staleness(db: Session, run: AnalysisRun, current_fingerprint: str) -> dict[s
         ).scalar_one()
         if latest != job.version_no:
             reasons.append("job_description_version_superseded")
+    reviewed = (run.summary or {}).get("review")
+    settings = get_settings()
+    if (
+        run.status == "succeeded"
+        and settings.reviewer_enabled
+        and (
+            not reviewed
+            or reviewed.get("model") != settings.reviewer_model
+            or reviewed.get("prompt_version") != PROMPT_VERSION
+            or (
+                settings.reviewer_model_digest
+                and reviewed.get("model_digest") != settings.reviewer_model_digest
+            )
+        )
+    ):
+        reasons.append("ai_reviewer_changed")
     if run.status == "succeeded" and (
         run.pipeline_version != PIPELINE_VERSION or run.model_fingerprint != current_fingerprint
     ):

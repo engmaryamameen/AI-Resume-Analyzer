@@ -14,7 +14,9 @@ export default function NotFound() {
         <div className="my-8 text-accent">
           <Icon name="document" size={48} />
         </div>
-        <h1 className="font-serif text-4xl tracking-tight">This page has left the paper trail.</h1>
+        <h1 className="font-sans font-medium text-4xl tracking-tight">
+          This page has left the paper trail.
+        </h1>
         <p className="mt-5 max-w-md text-sm leading-7 text-muted">
           The address may have changed, or this page is no longer available. Your workspace is a
           good place to pick things up.

@@ -74,7 +74,15 @@ def purge_expired(db: Session) -> int:
     return (
         cast(
             CursorResult[Any],
-            db.execute(delete(IdempotencyKey).where(IdempotencyKey.created_at < cutoff)),
+            db.execute(
+                delete(IdempotencyKey).where(
+                    IdempotencyKey.id.in_(
+                        select(IdempotencyKey.id)
+                        .where(IdempotencyKey.created_at < cutoff)
+                        .limit(1000)
+                    )
+                )
+            ),
         ).rowcount
         or 0
     )

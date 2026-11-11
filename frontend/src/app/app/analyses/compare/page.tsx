@@ -6,16 +6,15 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { ComparisonView } from "@/components/comparison-view";
 import { ErrorState, Loading, Notice, PageHeader } from "@/components/ui";
-import { api } from "@/lib/api";
-import { useAsync } from "@/lib/hooks";
+import { analysesApi } from "@/features/analyses/api";
+import { useQuery } from "@/lib/hooks";
 
 function Compare() {
   const q = useSearchParams();
   const base = q.get("base") ?? "";
   const target = q.get("target") ?? "";
-  const cmp = useAsync(
-    () => (base && target ? api.compare(base, target) : Promise.resolve(null)),
-    [base, target],
+  const cmp = useQuery(["compare", base, target], (signal) =>
+    base && target ? analysesApi.compare(base, target, signal) : Promise.resolve(null),
   );
 
   if (!base || !target)
@@ -33,8 +32,20 @@ function Compare() {
         </Notice>
       </>
     );
-  if (cmp.loading) return <Loading />;
-  if (cmp.error || !cmp.data) return <ErrorState error={cmp.error} onRetry={cmp.reload} />;
+  if (cmp.loading)
+    return (
+      <>
+        <PageHeader title="Compare reviews" />
+        <Loading />
+      </>
+    );
+  if (cmp.error || !cmp.data)
+    return (
+      <>
+        <PageHeader title="Compare reviews" />
+        <ErrorState error={cmp.error} onRetry={cmp.reload} />
+      </>
+    );
   return (
     <>
       <PageHeader title="What changed">

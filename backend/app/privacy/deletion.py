@@ -7,8 +7,9 @@ deletion waits for that user's in-flight job to commit instead of racing it (see
 """
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, exists, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
 
@@ -61,6 +62,8 @@ def delete_resume(
     user_id: uuid.UUID,
     document_id: uuid.UUID,
     request_id: str | None,
+    *,
+    inactive_before: datetime | None = None,
 ) -> bool:
     lock_user(db, user_id)
     document = db.execute(
@@ -69,6 +72,16 @@ def delete_resume(
         .with_for_update()
     ).scalar_one_or_none()
     if document is None:
+        db.rollback()
+        return False
+    if inactive_before is not None and db.scalar(
+        select(
+            exists().where(
+                ResumeVersion.document_id == document_id,
+                ResumeVersion.created_at >= inactive_before,
+            )
+        )
+    ):
         db.rollback()
         return False
     keys = list(
@@ -111,7 +124,12 @@ def delete_resume(
 
 
 def delete_job_description(
-    db: Session, user_id: uuid.UUID, job_id: uuid.UUID, request_id: str | None
+    db: Session,
+    user_id: uuid.UUID,
+    job_id: uuid.UUID,
+    request_id: str | None,
+    *,
+    inactive_before: datetime | None = None,
 ) -> bool:
     lock_user(db, user_id)
     job = db.execute(
@@ -120,6 +138,16 @@ def delete_job_description(
         .with_for_update()
     ).scalar_one_or_none()
     if job is None:
+        db.rollback()
+        return False
+    if inactive_before is not None and db.scalar(
+        select(
+            exists().where(
+                JobDescriptionVersion.job_id == job_id,
+                JobDescriptionVersion.created_at >= inactive_before,
+            )
+        )
+    ):
         db.rollback()
         return False
     version_ids = select(JobDescriptionVersion.id).where(JobDescriptionVersion.job_id == job_id)

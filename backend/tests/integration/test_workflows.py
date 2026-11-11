@@ -87,7 +87,9 @@ def test_full_workflow_from_upload_to_report(make_user, run_jobs):
 
 def test_duplicate_upload_with_same_key_creates_one_logical_document(make_user, run_jobs):
     _, c = make_user()
-    a, b = upload(c, "upload-key-0001"), upload(c, "upload-key-0001")
+    files = docx_file()  # Reuse identical bytes: separately built ZIPs have time-dependent metadata.
+    a, b = upload(c, "upload-key-0001", files=files), upload(c, "upload-key-0001", files=files)
+    assert a.status_code == b.status_code == 202, (a.text, b.text)
     assert a.json()["id"] == b.json()["id"]
     assert count(ResumeVersion) == 1 and count(ProcessingJob) == 1
     other = upload(c, "upload-key-0001", files=docx_file("Someone Else\nSKILLS\nGo\n"))

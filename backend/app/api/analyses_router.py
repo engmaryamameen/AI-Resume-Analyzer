@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.analysis import service
+from app.analysis.reviewer import ResumeReview
 from app.analysis.schema import AnalysisWarning, Assessment, EvidenceRef, Recommendation
 from app.api.schemas import (
     AnalysisCreateIn,
@@ -39,7 +40,7 @@ router = APIRouter(prefix="/analyses", tags=["analyses"])
 
 def _out(db: Session, run: AnalysisRun, settings: Settings) -> dict[str, Any]:
     resume = db.get(ResumeVersion, run.resume_version_id)
-    job = db.get(JobDescriptionVersion, run.jd_version_id)
+    job = db.get(JobDescriptionVersion, run.jd_version_id) if run.jd_version_id else None
     latest_resume = (
         db.execute(
             select(ResumeVersion.id)
@@ -186,6 +187,7 @@ def get_analysis(
     summary = run.summary or {}
     return AnalysisDetailOut(
         **_out(db, run, settings),
+        review=ResumeReview.model_validate(summary["review"]) if summary.get("review") else None,
         assessments=[Assessment.model_validate(a) for a in run.assessments]
         if run.assessments
         else None,

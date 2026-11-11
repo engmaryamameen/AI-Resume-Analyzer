@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { QueryActivity } from "@/components/query-activity";
 import { Icon } from "@/components/icon";
 import { useRef, useState } from "react";
 import {
@@ -14,15 +15,16 @@ import {
   PageHeader,
   Pagination,
 } from "@/components/ui";
-import { api, newIdempotencyKey } from "@/lib/api";
+import { newIdempotencyKey } from "@/lib/http/client";
+import { resumesApi } from "@/features/resumes/api";
 import { failureMessage, formatDate, friendlyError } from "@/lib/copy";
-import { useAsync, usePolling } from "@/lib/hooks";
+import { useQuery, usePolling } from "@/lib/hooks";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export default function Resumes() {
   const [offset, setOffset] = useState(0);
-  const list = useAsync(() => api.resumes(offset), [offset]);
+  const list = useQuery(["resumes", offset], (signal) => resumesApi.resumes(offset, signal));
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -46,7 +48,7 @@ export default function Resumes() {
     if (keyRef.current?.file !== file) keyRef.current = { file, key: newIdempotencyKey() };
     setUploading(true);
     try {
-      await api.uploadResume(file, keyRef.current.key);
+      await resumesApi.uploadResume(file, keyRef.current.key);
       list.reload();
     } catch (e) {
       setError(friendlyError(e));
@@ -66,7 +68,7 @@ export default function Resumes() {
     setRemoving(id);
     setError(null);
     try {
-      await api.deleteResume(id);
+      await resumesApi.deleteResume(id);
       if (offset > 0 && list.data?.items.length === 1) setOffset(Math.max(0, offset - 20));
       else list.reload();
     } catch (e) {
@@ -82,6 +84,7 @@ export default function Resumes() {
         Upload a PDF or Word file (up to 5 MB). Text-based files work best; scans and photos
         can&apos;t be read.
       </PageHeader>
+      <QueryActivity active={list.refreshing} />
       <Card className="mb-8 !border-0 !bg-transparent !p-0">
         <div
           className={`upload-zone ${dragging ? "dragging" : ""}`}
@@ -103,7 +106,7 @@ export default function Resumes() {
           }}
         >
           <Icon name="upload" size={30} />
-          <p className="micro-label mb-3">YOUR EXPERIENCE, IN YOUR WORDS</p>
+
           <label htmlFor="resume-file" className="block font-medium">
             Choose a file
           </label>

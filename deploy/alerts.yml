@@ -1,0 +1,33 @@
+groups:
+  - name: resume-analyzer
+    rules:
+      - alert: ResumeApiUnavailable
+        expr: up{job="resume-api"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "API or database scrape is unavailable", runbook: "docs/operations.md#database-outage"}
+      - alert: ResumeBacklogNotProgressing
+        expr: max without (kind) (job_backlog_oldest_seconds) > 300 and job_last_progress_age_seconds > 180
+        for: 3m
+        labels: {severity: critical}
+        annotations: {summary: "Jobs are waiting without worker progress", runbook: "docs/operations.md#worker-outage"}
+      - alert: ResumeExpiredLeases
+        expr: job_expired_leases > 0
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "Worker leases are expiring", runbook: "docs/operations.md#worker-outage"}
+      - alert: ResumeRetryBacklog
+        expr: job_retrying > 10
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Repeated job attempts are accumulating", runbook: "docs/operations.md#worker-outage"}
+      - alert: ResumeStorageLow
+        expr: storage_free_bytes / storage_total_bytes < 0.15
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Upload volume is below 15 percent free", runbook: "docs/operations.md#storage-exhaustion"}
+      - alert: ResumeModelFallback
+        expr: increase(engine_fallbacks_total[10m]) > 3
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "Model inference repeatedly fell back to rules", runbook: "docs/operations.md#model-failures"}

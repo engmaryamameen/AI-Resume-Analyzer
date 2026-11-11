@@ -65,16 +65,23 @@ def compare_runs(
                 "method as well as the résumé.",
             }
         )
+    if bool(base.jd_version_id) != bool(target.jd_version_id):
+        raise Conflict(
+            "Compare two résumé-only reviews or two role-specific reviews.",
+            code="review_modes_differ",
+        )
     jobs = {
         rid: db.get(JobDescriptionVersion, rid)
         for rid in (base.jd_version_id, target.jd_version_id)
+        if rid is not None
     }
-    if jobs[base.jd_version_id].job_id != jobs[target.jd_version_id].job_id:  # type: ignore[union-attr]
+    base_job = jobs.get(base.jd_version_id) if base.jd_version_id else None
+    target_job = jobs.get(target.jd_version_id) if target.jd_version_id else None
+    if base_job and target_job and base_job.job_id != target_job.job_id:
         notes.append(
             {
                 "code": "different_job_descriptions",
-                "message": "These analyses target different job descriptions; differences reflect the "
-                "postings as much as the résumé.",
+                "message": "These reviews target different roles; differences may reflect the role as much as the résumé.",
             }
         )
     elif base.jd_version_id != target.jd_version_id:

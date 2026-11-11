@@ -1,5 +1,5 @@
 import type { IconName } from "@/components/icon";
-import { ApiError } from "./api";
+import { ApiError } from "./http/client";
 import type { EvidenceLabel, MatchStatus, MentionRole, Recommendation } from "./types";
 
 export const STATUS: Record<
@@ -104,6 +104,12 @@ export const ORIGIN_LABEL = {
 } as const;
 
 const MESSAGES: Record<string, string> = {
+  ai_review_unavailable:
+    "The local AI reviewer could not finish a source-checked review. Please try again. A paid review credit is returned on failure.",
+  ai_review_no_text:
+    "Not enough readable résumé text was found for an AI review. Check the extracted document first.",
+  review_modes_differ: "Compare two résumé-only reviews or two role-specific reviews.",
+
   guest_limit:
     "Your free review has been used. Create a free account for another analysis, or return when your 24-hour allowance resets.",
   file_too_large: "That file is over 5 MB. Try exporting a smaller PDF.",
@@ -117,7 +123,9 @@ const MESSAGES: Record<string, string> = {
   invalid_credentials: "That email and password don't match.",
   password_incorrect: "That password isn't right.",
   email_taken: "There's already an account with that email. Try signing in instead.",
-  weak_password: "Please pick a longer, less guessable password (at least 12 characters).",
+  account_not_found:
+    "No account exists with this email address. Check the address or create an account.",
+  weak_password: "Please pick a longer, less guessable password (at least 8 characters).",
   invalid_email: "That email address doesn't look right.",
   rate_limited: "You're going a little fast. Give it a moment and try again.",
   csrf_failed: "Your session has expired. Please sign in again.",
@@ -154,6 +162,10 @@ export const EXTRACTION_FAILURES: Record<string, string> = {
 };
 
 export const ANALYSIS_FAILURES: Record<string, string> = {
+  ai_review_unavailable:
+    "The local AI reviewer could not finish a source-checked review. Try again when the model is ready; failed paid runs return their credit.",
+  ai_review_no_text: "The file did not contain enough readable résumé text for an AI review.",
+
   worker_lost: "The analysis was interrupted on our side. Run it again.",
   inputs_unavailable: "The résumé or job description for this analysis is gone.",
 };

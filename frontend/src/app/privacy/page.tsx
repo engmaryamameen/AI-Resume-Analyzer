@@ -8,10 +8,10 @@ export default function Privacy() {
     <>
       <SiteHeader />
       <main id="main" className="mx-auto max-w-3xl px-4 py-12">
-        <h1 className="font-serif text-4xl">Privacy, in plain terms</h1>
+        <h1 className="font-sans font-medium text-4xl">Privacy, in plain terms</h1>
         <div className="mt-6 space-y-8 text-base leading-relaxed">
           <section aria-labelledby="where">
-            <h2 id="where" className="font-serif text-2xl">
+            <h2 id="where" className="font-sans font-medium text-2xl">
               Where your documents are processed
             </h2>
             <p className="mt-2">
@@ -22,23 +22,23 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="models">
-            <h2 id="models" className="font-serif text-2xl">
+            <h2 id="models" className="font-sans font-medium text-2xl">
               The models
             </h2>
             <p className="mt-2">
-              When learned models are in use, they are open-weight models stored on the same server
-              and run there. Each analysis lists which models were used, where they came from, their
-              exact revision and licence, and whether they were published models used as they are or
-              fine-tuned for this task. If the models aren&apos;t set up, a simpler rule-based
-              reader is used instead, and every result says so.
+              Analysis runs on this server. Optional learned models support requirement matching,
+              and an optional local AI reviewer provides editorial feedback through Ollama. Each
+              report identifies its reading method and the AI model when one is used. Requirement
+              matching can fall back to a clearly labeled rule-based reader. An AI review that
+              cannot pass source validation is reported as a failure.
             </p>
             <p className="mt-2">
-              Models can be wrong. They are checked against labelled examples before being approved,
-              but that doesn&apos;t make them right for every résumé.
+              Models can be wrong. Check the cited passages before making edits. Accuracy has not
+              been independently measured on a representative real-world résumé dataset.
             </p>
           </section>
           <section aria-labelledby="stored">
-            <h2 id="stored" className="font-serif text-2xl">
+            <h2 id="stored" className="font-sans font-medium text-2xl">
               What is stored
             </h2>
             <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -58,7 +58,7 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="logs">
-            <h2 id="logs" className="font-serif text-2xl">
+            <h2 id="logs" className="font-sans font-medium text-2xl">
               What logs contain
             </h2>
             <p className="mt-2">
@@ -68,7 +68,7 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="delete">
-            <h2 id="delete" className="font-serif text-2xl">
+            <h2 id="delete" className="font-sans font-medium text-2xl">
               Deleting things
             </h2>
             <p className="mt-2">
@@ -76,11 +76,14 @@ export default function Privacy() {
               That removes the stored file, the extracted text and every analysis built on it.
               Deleting your account (it asks for your password) removes everything you have stored.
               A short anonymous record that an account was deleted is kept, with no link back to
-              you.
+              you. Copies in existing backups, database recovery logs, or reports you downloaded are
+              separate: deleting live data does not erase those copies. Any operator offering this
+              service must publish and enforce their backup retention period before accepting real
+              personal data.
             </p>
           </section>
           <section aria-labelledby="demo">
-            <h2 id="demo" className="font-serif text-2xl">
+            <h2 id="demo" className="font-sans font-medium text-2xl">
               The demo
             </h2>
             <p className="mt-2">
@@ -88,7 +91,7 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="guest-privacy">
-            <h2 id="guest-privacy" className="font-serif text-2xl">
+            <h2 id="guest-privacy" className="font-sans font-medium text-2xl">
               Guest reviews
             </h2>
             <p className="mt-2">
@@ -98,19 +101,21 @@ export default function Privacy() {
               allowance.
             </p>
             <p className="mt-2">
-              Guest report access expires after 24 hours. Scheduled cleanup removes the documents
-              and results, normally within the following hour. You can delete your guest report
-              sooner from its review panel.
+              Guest report access expires after 24 hours. Scheduled cleanup removes documents and
+              results in batches; a cleanup backlog can delay physical removal. You can delete your
+              guest report sooner from its review panel.
             </p>
           </section>
           <section aria-labelledby="cookies">
-            <h2 id="cookies" className="font-serif text-2xl">
+            <h2 id="cookies" className="font-sans font-medium text-2xl">
               Cookies and tracking
             </h2>
             <p className="mt-2">
               Account cookies keep you signed in and protect against forged requests. A separate
               HttpOnly guest cookie grants access to your temporary guest report. There are no
-              analytics or advertising trackers.
+              analytics or advertising trackers. Account verification and recovery emails use the
+              configured mail provider; your email address and account link are included, but your
+              documents and job descriptions are not.
             </p>
           </section>
         </div>
