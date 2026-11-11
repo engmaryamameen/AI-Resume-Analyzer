@@ -21,7 +21,7 @@ jobs:
           POSTGRES_DB: resume_test
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U resume -d resume_test'
+          --health-cmd "pg_isready -U resume -d resume_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       APP_ENV: test
