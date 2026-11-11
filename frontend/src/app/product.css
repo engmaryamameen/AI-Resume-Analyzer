@@ -73,7 +73,7 @@
   align-items: center;
   gap: 8px;
   color: rgb(var(--muted));
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 550;
 }
 .hero-kicker > span {
@@ -97,7 +97,7 @@
   letter-spacing: -0.045em;
 }
 .review-hero-lead {
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.85;
   color: rgb(var(--muted));
   max-width: 400px;
@@ -108,7 +108,7 @@
   align-items: center;
   gap: 10px;
   margin-top: 24px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 550;
   color: rgb(var(--accent));
 }
@@ -130,7 +130,7 @@
   content: none;
 }
 .review-hero .guest-workspace-heading {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 550;
   padding-bottom: 18px;
   margin-bottom: 22px;
@@ -141,7 +141,7 @@
   background: rgb(var(--raised));
   border-color: rgb(var(--line));
   color: rgb(var(--muted));
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.045em;
   padding: 5px 6px;
   border-radius: 4px;
@@ -156,7 +156,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: 14px;
   white-space: nowrap;
   color: rgb(var(--muted));
 }
@@ -167,7 +167,7 @@
   height: 23px;
   border-radius: 50%;
   border: 1px solid rgb(var(--line));
-  font-size: 10px;
+  font-size: 12px;
   background: rgb(var(--raised) / 0.55);
 }
 .review-steps > button[aria-current] {
@@ -191,7 +191,7 @@
   letter-spacing: -0.035em;
 }
 .review-step-heading p {
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.7;
   color: rgb(var(--muted));
   margin-top: 6px;
@@ -249,7 +249,7 @@
   max-width: 100%;
 }
 .review-hero .guest-upload > p {
-  font-size: 12px;
+  font-size: 14px;
   margin: 6px 0 14px;
 }
 .review-hero .upload-browse {
@@ -260,7 +260,7 @@
   background: rgb(var(--surface));
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 14px;
   color: rgb(var(--accent));
   cursor: pointer;
 }
@@ -277,7 +277,7 @@
 .review-continue {
   border-radius: 7px !important;
   min-height: 46px !important;
-  font-size: 13px !important;
+  font-size: 15px !important;
   margin-top: 18px;
   box-shadow: none !important;
 }
@@ -295,13 +295,13 @@
   border-top: 1px solid rgb(var(--line));
   padding-top: 16px;
   margin-top: 20px;
-  font-size: 10px;
+  font-size: 12px;
   color: rgb(var(--muted));
   line-height: 1.7;
 }
 .review-hero .guest-footnote {
   text-align: center;
-  font-size: 10px;
+  font-size: 12px;
   color: rgb(var(--muted));
   margin-top: 7px;
   line-height: 1.7;
@@ -315,7 +315,7 @@
   border: 1px solid rgb(var(--line));
   border-radius: 7px;
   margin: 18px 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 .review-selected-file > span {
   flex: 1;
@@ -329,7 +329,7 @@
 }
 .review-step-content textarea {
   min-height: 145px;
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.8;
   resize: vertical;
 }
@@ -339,7 +339,7 @@
   justify-content: center;
   gap: 7px;
   margin: 12px auto 0;
-  font-size: 12px;
+  font-size: 14px;
   color: rgb(var(--muted));
 }
 .review-hero[data-result] {
@@ -355,11 +355,11 @@
 }
 .review-result-intro p {
   margin-top: 10px;
-  font-size: 14px;
+  font-size: 16px;
   color: rgb(var(--muted));
 }
 .analysis-report {
-  font-size: 14px;
+  font-size: 16px;
 }
 .analysis-report .report-at-glance {
   border: 0;
@@ -380,7 +380,7 @@
   font-weight: 550;
 }
 .analysis-report .report-at-glance span {
-  font-size: 11px;
+  font-size: 13px;
 }
 .report-tabs {
   display: flex;
@@ -397,7 +397,7 @@
   flex: 1;
   min-width: 0;
   padding: 10px 8px;
-  font-size: 12px;
+  font-size: 14px;
   color: rgb(var(--muted));
   border-radius: 0;
   line-height: 1.5;
@@ -480,14 +480,14 @@
   letter-spacing: 0.075em;
 }
 .improvement-heading h3 {
-  font-size: 15px !important;
+  font-size: 17px !important;
   font-weight: 600 !important;
   line-height: 1.6;
   letter-spacing: -0.02em;
   margin-top: 3px;
 }
 .improvement-detail {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.8;
   color: rgb(var(--muted));
   margin: 10px 0 0 43px;
@@ -502,7 +502,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 12px;
+  font-size: 14px;
   color: rgb(var(--accent));
   cursor: pointer;
   list-style: none;
@@ -524,13 +524,13 @@
   border-left: 2px solid #c8d5ec;
   padding: 12px 14px;
   margin-top: 7px;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.8;
   overflow-wrap: anywhere;
 }
 .improvement-hint {
   color: rgb(var(--muted));
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.75;
   margin-top: 8px;
 }
@@ -572,7 +572,7 @@
 }
 .review-gap-note p {
   color: rgb(var(--muted));
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.8;
   margin-top: 7px;
 }
@@ -588,10 +588,10 @@
   background: rgb(var(--raised) / 0.55);
 }
 .requirement-title h3 {
-  font-size: 14px !important;
+  font-size: 16px !important;
 }
 .requirement-title > span {
-  font-size: 11px;
+  font-size: 13px;
 }
 .requirement-detail {
   background: rgb(var(--raised) / 0.45);
@@ -612,10 +612,10 @@
   border-color: rgb(var(--line));
 }
 .report-disclosure > summary {
-  font-size: 12px;
+  font-size: 14px;
 }
 .report-disclosure > summary h2 {
-  font-size: 13px !important;
+  font-size: 15px !important;
 }
 .demo-panel {
   min-width: 0;
@@ -692,7 +692,7 @@
   }
   .review-hero-lead {
     margin: 18px auto 0;
-    font-size: 14px;
+    font-size: 17px;
   }
   .review-example-link {
     margin-top: 18px;
@@ -707,7 +707,7 @@
   }
   .report-tabs > button {
     background: rgb(var(--raised) / 0.65);
-    font-size: 12px;
+    font-size: 14px;
     padding: 11px 5px;
     border-radius: 0;
     border-bottom: 2px solid transparent;
@@ -724,7 +724,7 @@
     gap: 6px;
   }
   .analysis-report .report-at-glance span {
-    font-size: 10px;
+    font-size: 13px;
   }
   .analysis-report .report-at-glance strong {
     font-size: 20px;
@@ -740,10 +740,10 @@
     margin-left: 0;
   }
   .improvement-heading h3 {
-    font-size: 14px !important;
+    font-size: 17px !important;
   }
   .improvement-detail {
-    font-size: 13px;
+    font-size: 16px;
   }
   .review-gap-note {
     padding: 16px;
@@ -757,29 +757,29 @@
     font-size: 39px;
   }
   .hero-kicker {
-    font-size: 11px;
+    font-size: 14px;
   }
   .review-hero-lead {
-    font-size: 13px;
+    font-size: 17px;
   }
   .review-hero .guest-workspace {
     padding: 20px;
   }
   .review-hero .guest-workspace-heading {
-    font-size: 11px;
+    font-size: 15px;
   }
   .review-hero .guest-allowance {
-    font-size: 7px;
+    font-size: 11px;
   }
   .review-steps > button {
-    font-size: 11px;
+    font-size: 14px;
   }
   .review-step-heading h2 {
     font-size: 19px;
   }
   .review-form-footer,
   .review-hero .guest-footnote {
-    font-size: 9px;
+    font-size: 12px;
   }
   .site-topbar-inner {
     padding-inline: 32px;
@@ -789,7 +789,7 @@
     gap: 12px;
   }
   .site-nav .site-nav-cta {
-    font-size: 11px;
+    font-size: 15px;
     padding: 9px 11px;
     background: #25272e;
     color: #f5f5f2;
@@ -818,7 +818,7 @@
     gap: 9px;
   }
   .site-nav > a {
-    font-size: 11px;
+    font-size: 15px;
   }
   .site-nav .site-nav-cta {
     gap: 6px;
@@ -1003,7 +1003,7 @@
   border: 1px solid #dae5fa;
   border-radius: 5px;
   color: #f5f5f2;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 550;
 }
 .site-nav .site-nav-cta:hover {
@@ -1131,7 +1131,7 @@
     margin: 6px 0 0;
     min-height: 40px;
     padding: 11px;
-    font-size: 13px;
+    font-size: 15px;
     background: #25272e;
     color: #f5f5f2;
     border-radius: 5px;
@@ -1156,7 +1156,7 @@
 .review-result-intro > button {
   flex-shrink: 0;
   margin-top: 24px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .review-result-meta {
   display: flex;
@@ -1165,7 +1165,7 @@
   gap: 10px 20px;
   margin-top: 16px;
   color: rgb(var(--muted));
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.7;
 }
 .review-result-meta > span {
@@ -1217,7 +1217,7 @@
 .evidence-method {
   flex-basis: 100%;
   margin-top: 3px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .evidence-method > summary {
   color: rgb(var(--accent));
@@ -1431,6 +1431,6 @@
   padding-left: 16px;
   list-style: disc;
   color: rgb(var(--muted));
-  font-size: 12px;
+  font-size: 14px;
   line-height: 2.1;
 }

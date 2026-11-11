@@ -7,11 +7,13 @@ import smtplib
 import ssl
 from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
 from typing import Literal
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from app.auth.email_templates import account_email
 from app.core.config import Settings
 from app.core.errors import ServiceUnavailable, ValidationFailed
 from app.core.logging import get_logger
@@ -60,10 +62,14 @@ def issue_token(db: Session, settings: Settings, user: User, purpose: Purpose) -
     return token
 
 
-def deliver(settings: Settings, email: str, subject: str, text: str) -> None:
+def deliver(settings: Settings, email: str, subject: str, text: str, html: str | None = None) -> None:
     message = EmailMessage()
-    message["From"], message["To"], message["Subject"] = settings.smtp_from, email, subject
+    sender_name, sender_address = parseaddr(settings.smtp_from)
+    message["From"] = formataddr((sender_name or "Rolemaker", sender_address))
+    message["To"], message["Subject"] = email, subject
     message.set_content(text)
+    if html is not None:
+        message.add_alternative(html, subtype="html")
     with smtplib.SMTP_SSL(
         settings.smtp_host, settings.smtp_port, timeout=10, context=ssl.create_default_context()
     ) as smtp:
@@ -90,12 +96,8 @@ def send_account_link(settings: Settings, email: str, purpose: Purpose) -> None:
         route = "verify-email" if purpose == "verify_email" else "reset-password"
         # Fragment tokens avoid access logs and Referer. User must explicitly submit the form.
         link = f"{settings.public_app_url.rstrip('/')}/{route}#token={token}"
-        deliver(
-            settings,
-            address,
-            "Verify your email" if purpose == "verify_email" else "Reset your password",
-            f"Open this link within 30 minutes:\n{link}\n\nIf you did not request this, ignore this message.",
-        )
+        content = account_email(purpose, link)
+        deliver(settings, address, content.subject, content.text, content.html)
     except Exception as exc:  # trusted background-task boundary: never expose mailbox or token
         log.error("account_email_failed", extra={"error_type": type(exc).__name__})
 
@@ -145,11 +147,9 @@ def notify_password_reset(settings: Settings, email: str) -> None:
     if not settings.smtp_host or not settings.smtp_from:
         return
     try:
-        deliver(
-            settings,
-            email,
-            "Your password was changed",
-            "Your password was changed and all sessions were signed out. If this was not you, recover your account immediately and secure your mailbox.",
+        content = account_email(
+            "password_changed", f"{settings.public_app_url.rstrip('/')}/forgot-password"
         )
+        deliver(settings, email, content.subject, content.text, content.html)
     except Exception as exc:
         log.error("account_notification_failed", extra={"error_type": type(exc).__name__})

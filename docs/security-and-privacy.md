@@ -131,7 +131,9 @@ Account links use the operator's configured SMTP provider. Only the recipient ad
 link/notification are sent; documents and job descriptions are not included. Tokens are random, hashed
 at rest, expire after 30 minutes and are single use. Verification establishes a mailbox-owner-chosen
 password and revokes all sessions/tokens, including credentials from pre-registration. Recovery does
-the same and sends a notification. No real email is sent by automated tests.
+the same and sends a notification. Account messages include matching HTML and plain-text alternatives,
+with explicit actions and copyable links. Templates use no external images, fonts, or tracking pixels.
+No real email is sent by automated tests.
 
 Expiry denies guest access immediately. Physical cleanup is bounded to 200 workspaces per sweep, so
 a large backlog can delay storage removal beyond the next hourly run. Live deletion does not erase
