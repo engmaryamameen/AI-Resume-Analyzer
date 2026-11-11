@@ -44,11 +44,39 @@ export default function Recommendations() {
   const [message, setMessage] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
   const rerunKey = useRef(newIdempotencyKey());
 
-  if (analysis.loading || resume.loading) return <Loading />;
+  if (analysis.loading || resume.loading)
+    return (
+      <>
+        <PageHeader title="Edit résumé" />
+        <Loading />
+      </>
+    );
   if (analysis.error || !analysis.data)
-    return <ErrorState error={analysis.error} onRetry={analysis.reload} />;
-  if (resume.error) return <ErrorState error={resume.error} onRetry={resume.reload} />;
+    return (
+      <>
+        <PageHeader title="Edit résumé" />
+        <ErrorState error={analysis.error} onRetry={analysis.reload} />
+      </>
+    );
+  if (resume.error)
+    return (
+      <>
+        <PageHeader title="Edit résumé" />
+        <ErrorState error={resume.error} onRetry={resume.reload} />
+      </>
+    );
   const run = analysis.data;
+  const recommendations: Recommendation[] = run.review
+    ? run.review.next_steps.map((item) => ({
+        kind: "clarify",
+        requirement_ordinal: null,
+        title: item.title,
+        detail: item.detail,
+        block_id: item.evidence[0]?.block_id ?? null,
+        excerpt: item.evidence[0]?.excerpt ?? null,
+        fill_in: null,
+      }))
+    : run.recommendations;
   const latest = resume.data?.versions.at(-1);
   const current = latest && latest.version_no === run.resume_version_no;
   const blocks = new Map((resume.data?.normalized?.blocks ?? []).map((b) => [b.id, b.text]));
@@ -124,9 +152,9 @@ export default function Recommendations() {
           </Notice>
         </div>
       )}
-      {run.recommendations.length === 0 && <Notice>Nothing to suggest for this analysis.</Notice>}
+      {recommendations.length === 0 && <Notice>Nothing to suggest for this analysis.</Notice>}
       <ul className="space-y-4">
-        {run.recommendations.map((rec, i) => {
+        {recommendations.map((rec, i) => {
           const bid = rec.block_id;
           const done = bid ? saved[bid] : undefined;
           return (

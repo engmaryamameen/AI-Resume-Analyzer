@@ -8,11 +8,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from app.api.main import app
+from app.core.config import get_settings
 from app.core.ratelimit import limiter
 from app.db.models import GuestAllowance, GuestAnalysis, ProcessingJob, ResumeVersion, User
 from app.db.session import session_scope
 from app.documents.storage import LocalPrivateStore
-from app.core.config import get_settings
 from app.maintenance import run_maintenance
 from tests.helpers import SAMPLE_RESUME, make_docx
 
@@ -162,6 +162,7 @@ def test_maintenance_does_not_reap_guest_while_upload_is_in_progress(
     db_engine, monkeypatch
 ):
     import threading
+
     from app.analysis import job_descriptions
 
     entered = threading.Event()
@@ -196,7 +197,7 @@ def test_maintenance_does_not_reap_guest_while_upload_is_in_progress(
 
 
 def test_maintenance_preserves_unexpired_legacy_incomplete_reservation(client, db_engine):
-    from app.db.models import GuestAnalysis, GuestAllowance
+    from app.db.models import GuestAllowance, GuestAnalysis
 
     settings = get_settings()
     with session_scope() as db:
@@ -302,6 +303,7 @@ def test_orphan_sweep_reconciles_uncommitted_blob_without_removing_referenced_bl
     client, db_engine, monkeypatch
 ):
     import time
+
     from app import maintenance
 
     assert submit(client).status_code == 202
@@ -317,3 +319,21 @@ def test_orphan_sweep_reconciles_uncommitted_blob_without_removing_referenced_bl
     assert removed >= 1
     assert not store.path(orphan).exists()
     assert store.path(referenced).exists()
+
+
+def test_same_payload_key_recovers_private_cookie_after_response_loss(client, db_engine, run_jobs):
+    key = str(uuid.uuid4())
+    document = ("cv.docx", make_docx(SAMPLE_RESUME.splitlines()), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    first = submit(client, key=key, data=document)
+    assert first.status_code == 202
+    client.cookies.clear()  # The server committed but the client never received Set-Cookie.
+    state = client.get(API).json()
+    assert state["status"] == "idle" and state["available"] is False
+    assert client.post(API + "/progress", headers=ORIGIN).status_code == 404
+    recovered = submit(client, key=key, data=document)
+    assert recovered.status_code == 202
+    assert recovered.json()["next_allowed_at"] == first.json()["next_allowed_at"]
+    assert client.cookies.get("mn_guest")
+    assert complete(client, run_jobs).json()["status"] == "succeeded"
+    with session_scope() as db:
+        assert db.scalar(select(func.count()).select_from(GuestAnalysis)) == 1

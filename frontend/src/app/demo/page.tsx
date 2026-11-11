@@ -51,18 +51,15 @@ export default function Demo() {
         </nav>
         <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
-            <span className="demo-kicker">
-              <span className="demo-kicker-dot" /> TAKE A CLOSER LOOK
-            </span>
             <h1 className="mt-4 text-4xl font-semibold tracking-[-.05em] text-ink sm:text-5xl">
-              A review you can explore.
+              See how the review works.
             </h1>
             <p className="mt-4 max-w-xl text-base leading-7 text-muted">
               Try a sample résumé and role. Follow each finding back to the original wording.
             </p>
           </div>
-          <div className="rounded-xl border border-line bg-surface px-4 py-3 text-xs leading-5 text-muted">
-            <strong className="block font-semibold text-ink">Private by design</strong>
+          <div className="text-xs leading-5 text-muted">
+            <strong className="block font-semibold text-ink">Synthetic examples</strong>
             Demo content is synthetic and is not saved.
           </div>
         </div>
@@ -248,12 +245,7 @@ export default function Demo() {
               )}
               {!busy && !result && (
                 <div className="flex min-h-[360px] flex-col items-center justify-center px-4 text-center">
-                  <div className="demo-empty-visual" aria-hidden="true">
-                    <Icon name="document" size={30} />
-                    <span className="demo-empty-line" />
-                    <span className="demo-empty-line short" />
-                    <span className="demo-empty-line" />
-                  </div>
+                  <Icon name="document" size={34} className="text-muted" />
                   <h2 className="mt-8 text-xl font-semibold tracking-tight">
                     Your evidence report will appear here
                   </h2>
@@ -261,11 +253,6 @@ export default function Demo() {
                     Choose a résumé and a target role to examine matched evidence, uncertainties and
                     actionable next steps.
                   </p>
-                  <div className="mt-7 flex flex-wrap justify-center gap-2">
-                    <span className="demo-neutral-tag">Source-linked findings</span>
-                    <span className="demo-neutral-tag">Clear limitations</span>
-                    <span className="demo-neutral-tag">No invented scores</span>
-                  </div>
                 </div>
               )}
             </div>

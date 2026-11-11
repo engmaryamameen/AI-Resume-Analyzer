@@ -24,7 +24,7 @@ export function SessionList() {
   }
   return (
     <Card>
-      <h2 className="font-serif text-xl">Active sessions</h2>
+      <h2 className="font-sans font-medium text-xl">Active sessions</h2>
       {sessions.loading ? (
         <Loading />
       ) : sessions.error ? (

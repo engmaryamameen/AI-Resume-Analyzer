@@ -1,16 +1,16 @@
-# Threat model and portfolio limits
+# Threat model and deployment boundaries
 
 Assets: résumé originals and extracted text; job descriptions; evidence reports; password hashes;
 session/CSRF and account-link tokens; private storage and PostgreSQL. Trusted operators can access
-stored data and backups. This is a local demonstration, not a public hiring decision system.
+stored data and backups. Reports support document editing rather than automated hiring decisions.
 
-| Boundary / attacker | Controls demonstrated | Remaining scope |
+| Boundary / attacker | Controls | Remaining scope |
 |---|---|---|
-| Anonymous browser → ingress | body/time caps, aggregate throttles, XFF replacement, CSP nonce, security headers | TLS and public DNS are not configured |
-| Browser → API | backend authentication/ownership, CSRF for session mutations, Origin checks, input schemas and pagination bounds | mailbox delivery requires user-supplied SMTP |
-| Account recovery attacker | generic responses, per-IP/identity throttles, random hashed tokens, expiry/reissue/single use, reset revokes sessions | mailbox compromise is not solved by email recovery; MFA deferred for local scope |
+| Anonymous browser → ingress | body/time caps, aggregate throttles, XFF replacement, CSP nonce, security headers | configure HTTPS and DNS at the deployment boundary |
+| Browser → API | backend authentication/ownership, CSRF for session mutations, Origin checks, input schemas and pagination bounds | mailbox delivery requires operator-configured SMTP |
+| Account recovery attacker | generic responses, per-IP/identity throttles, random hashed tokens, expiry/reissue/single use, reset revokes sessions | mailbox compromise is not solved by email recovery; MFA is not implemented |
 | Malicious document → extractor | signature/ZIP/PDF validation, resource-limited child, private file modes, bounded output, worker isolation | resource limits are not a complete syscall/filesystem sandbox |
-| Competing/crashed workers | DB leases, heartbeat, SKIP LOCKED, attempt fencing, atomic settlement, deletion ordering | local crash tests are not a production soak |
+| Competing/crashed workers | DB leases, heartbeat, SKIP LOCKED, attempt fencing, atomic settlement, deletion ordering | measure recovery and capacity under the deployed workload |
 | Model artifact supply chain | immutable upstream revisions, SHA-256/size checks, safetensors only, no remote code, offline runtime | independent model accuracy is unmeasured |
 | Logs/backups/operator | content-free bounded logging, pseudonymous quota keys, live deletion and retention | backups/WAL/downloads require separate retention and encryption policies |
 

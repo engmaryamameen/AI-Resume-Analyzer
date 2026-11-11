@@ -26,11 +26,19 @@ export function useQuery<T>(
   }>({ key, data: null, error: null, pending: true });
   const [tick, setTick] = useState(0);
   const pendingRef = useRef(false);
+  const invalidated = useRef(false);
   const loadRef = useRef(queryFn);
   loadRef.current = queryFn;
   useEffect(() => {
     const controller = new AbortController();
     pendingRef.current = true;
+    function settled() {
+      pendingRef.current = false;
+      if (invalidated.current) {
+        invalidated.current = false;
+        setTick((value) => value + 1);
+      }
+    }
     setResult((previous) => ({
       key,
       data: previous.key === key ? previous.data : null,
@@ -45,13 +53,13 @@ export function useQuery<T>(
       .then(
         (data) => {
           if (!controller.signal.aborted) {
-            pendingRef.current = false;
+            settled();
             setResult({ key, data, error: null, pending: false });
           }
         },
         (error) => {
           if (!controller.signal.aborted) {
-            pendingRef.current = false;
+            settled();
             setResult((previous) => ({
               key,
               data: previous.key === key ? previous.data : null,
@@ -64,10 +72,13 @@ export function useQuery<T>(
     return () => {
       controller.abort();
       pendingRef.current = false;
+      invalidated.current = false;
     };
   }, [key, tick]);
   const reload = useCallback(() => {
-    if (!pendingRef.current) setTick((value) => value + 1);
+    // A mutation can finish after this read took its snapshot. Do not lose its invalidation.
+    if (pendingRef.current) invalidated.current = true;
+    else setTick((value) => value + 1);
   }, []);
   const current = result.key === key;
   return {

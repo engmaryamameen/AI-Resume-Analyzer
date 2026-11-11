@@ -54,3 +54,18 @@ describe("response contracts and caller cancellation", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+it("enforces the guest state schema instead of accepting arbitrary objects", async () => {
+  const { validateResponse } = await import("@/lib/contracts");
+  expect(validateResponse("/guest", "GET", 200, {})).toBe(false);
+  expect(validateResponse("/guest", "GET", 200, { available: "invalid", status: 123 })).toBe(false);
+  expect(
+    validateResponse("/guest", "GET", 200, {
+      available: true,
+      status: "idle",
+      next_allowed_at: null,
+      report: null,
+      error_code: null,
+    }),
+  ).toBe(true);
+});

@@ -15,8 +15,9 @@ export function AccountLinkForm({ mode }: { mode: Mode }) {
   const [error, setError] = useState("");
   useEffect(() => {
     const token = new URLSearchParams(window.location.hash.slice(1)).get("token") ?? "";
-    setToken(token);
-    if (token) window.history.replaceState(null, "", window.location.pathname);
+    if (token) setToken(token);
+    if (token)
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
   }, []);
   const title =
     mode === "forgot-password"
@@ -43,7 +44,7 @@ export function AccountLinkForm({ mode }: { mode: Mode }) {
   }
   return (
     <section className="mx-auto max-w-md px-4 py-12">
-      <h1 className="font-serif text-3xl">{title}</h1>
+      <h1 className="font-sans font-medium text-3xl">{title}</h1>
       {done ? (
         <div role="status" className="mt-5 space-y-4">
           <p>

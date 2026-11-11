@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.auth import lifecycle, service
 from app.core.config import get_settings
-from app.core.errors import ValidationFailed
+from app.core.errors import Unauthenticated, ValidationFailed
 from app.db.models import AccountToken, User
 from app.db.models import Session as AuthSession
 from app.db.session import session_scope
@@ -36,9 +36,15 @@ def test_recovery_consumes_token_once_and_revokes_all_sessions(make_user):
         ).status_code
         == 422
     )
-    assert client.post("/api/v1/auth/verify-email", json={"token": verification}).status_code == 422
+    invalidated = client.post(
+        "/api/v1/auth/verify-email",
+        json={"token": verification, "password": "mailbox owner password phrase"},
+    )
+    assert invalidated.status_code == 422
+    assert invalidated.json()["error"]["code"] == "invalid_account_token"
     with session_scope() as db:
         assert db.scalar(select(AuthSession)) is None
+        assert db.scalar(select(AccountToken)) is None
         assert db.scalar(select(User)).email_verified_at is not None
     assert (
         client.post(
@@ -122,7 +128,7 @@ def test_public_registration_does_not_expose_existing_account_or_issue_a_session
 ):
     settings = get_settings()
     monkeypatch.setattr(settings, "app_env", "production")
-    monkeypatch.setattr(settings, "public_app_url", "https://portfolio.example.test")
+    monkeypatch.setattr(settings, "public_app_url", "https://app.example.test")
     monkeypatch.setattr(settings, "smtp_host", "smtp.example.test")
     monkeypatch.setattr(settings, "smtp_from", "accounts@example.test")
     monkeypatch.setattr(lifecycle, "deliver", lambda *_: None)
@@ -188,3 +194,60 @@ def test_verification_replaces_pre_registered_password_and_revokes_attacker_sess
         ).status_code
         == 200
     )
+
+
+@pytest.mark.parametrize("purpose", ["reset_password", "verify_email"])
+def test_credential_verification_and_session_issue_are_one_locked_unit(make_user, purpose):
+    """A real competing connection cannot reset a credential between these two operations."""
+    from sqlalchemy import text
+    from sqlalchemy.exc import OperationalError
+    from sqlalchemy.orm import Session
+
+    from app.db.session import get_engine
+
+    make_user()
+    settings = get_settings()
+    with session_scope() as db:
+        owner = db.scalar(select(User))
+        token = lifecycle.issue_token(db, settings, owner, purpose)
+    with Session(get_engine()) as login, Session(get_engine()) as reset:
+        user = service.authenticate(login, "user@example.com", "correct horse battery staple", None)
+        reset.execute(text("SET LOCAL lock_timeout = '100ms'"))
+        with pytest.raises(OperationalError):
+            lifecycle.consume_token(reset, settings, token, purpose, "a new secure password phrase")
+        reset.rollback()
+        session_token, _ = service.create_session(login, settings, user)
+        lifecycle.consume_token(reset, settings, token, purpose, "a new secure password phrase")
+    with session_scope() as db:
+        assert service.lookup_session(db, settings, session_token) is None
+        with pytest.raises(Unauthenticated) as rejected:
+            service.authenticate(db, "user@example.com", "correct horse battery staple", None)
+        assert getattr(rejected.value, "code", None) == "invalid_credentials"
+        assert service.authenticate(db, "user@example.com", "a new secure password phrase", None)
+
+
+def test_account_deletion_rechecks_a_principal_loaded_before_reset(make_user, tmp_path):
+    """Model an in-flight request: authentication ran before the competing reset committed."""
+    from app.api.auth_router import delete_account
+    from app.api.schemas import DeleteAccountIn
+    from app.auth.deps import Principal
+    from app.documents.storage import LocalPrivateStore
+
+    _, client = make_user()
+    settings = get_settings()
+    with session_scope() as db:
+        user, session = service.lookup_session(db, settings, client.cookies.get("rs_session"))
+        principal = Principal(user=user, session=session)
+        token = lifecycle.issue_token(db, settings, user, "reset_password")
+    with session_scope() as db:
+        lifecycle.consume_token(db, settings, token, "reset_password", "new secure password phrase")
+    with session_scope() as db:
+        with pytest.raises(Unauthenticated):
+            delete_account(
+                DeleteAccountIn(password="correct horse battery staple"),
+                principal,
+                db,
+                LocalPrivateStore(tmp_path / "files"),
+            )
+    with session_scope() as db:
+        assert db.scalar(select(User).where(User.id == principal.user.id)) is not None

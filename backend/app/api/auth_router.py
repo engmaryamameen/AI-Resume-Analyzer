@@ -1,5 +1,6 @@
 import hashlib
 import uuid
+from datetime import UTC, datetime
 from typing import Literal, TypedDict
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
@@ -19,10 +20,11 @@ from app.api.schemas import (
 from app.auth import lifecycle, service
 from app.auth.deps import CSRF_COOKIE, SESSION_COOKIE, Principal, current_principal
 from app.core.config import Settings, get_settings
-from app.core.errors import Conflict
+from app.core.errors import Conflict, Unauthenticated
 from app.core.net import client_ip
 from app.core.ratelimit import limiter
 from app.core.security import normalise_email
+from app.db.locks import lock_user
 from app.db.models import AuditEvent, User
 from app.db.models import Session as AuthSession
 from app.db.session import get_db
@@ -134,7 +136,27 @@ def delete_account(
     store: BlobStore = Depends(get_store),
 ) -> Response:
     """Permanently deletes the account and everything it owns. Requires the current password."""
-    service.confirm_password(principal.user, body.password)
+    # Recheck this destructive request after taking the domain's lock order.
+    # Its principal may have been loaded before a competing password reset.
+    lock_user(db, principal.user.id)
+    user = db.scalar(
+        select(User)
+        .where(User.id == principal.user.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    active = db.scalar(
+        select(AuthSession.id)
+        .where(
+            AuthSession.id == principal.session.id,
+            AuthSession.user_id == principal.user.id,
+            AuthSession.expires_at > datetime.now(UTC),
+        )
+        .with_for_update()
+    )
+    if user is None or active is None:
+        raise Unauthenticated("Sign in again before deleting your account.")
+    service.confirm_password(user, body.password)
     deletion.delete_account(db, store, principal.user.id, current_request_id())
     out = Response(status_code=204)
     _clear_cookies(out)

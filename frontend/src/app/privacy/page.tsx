@@ -8,10 +8,10 @@ export default function Privacy() {
     <>
       <SiteHeader />
       <main id="main" className="mx-auto max-w-3xl px-4 py-12">
-        <h1 className="font-serif text-4xl">Privacy, in plain terms</h1>
+        <h1 className="font-sans font-medium text-4xl">Privacy, in plain terms</h1>
         <div className="mt-6 space-y-8 text-base leading-relaxed">
           <section aria-labelledby="where">
-            <h2 id="where" className="font-serif text-2xl">
+            <h2 id="where" className="font-sans font-medium text-2xl">
               Where your documents are processed
             </h2>
             <p className="mt-2">
@@ -22,24 +22,25 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="models">
-            <h2 id="models" className="font-serif text-2xl">
+            <h2 id="models" className="font-sans font-medium text-2xl">
               The models
             </h2>
             <p className="mt-2">
               When learned models are in use, they are open-weight models stored on the same server
               and run there. Each analysis lists which models were used, where they came from, their
               exact revision and licence, and whether they were published models used as they are or
-              fine-tuned for this task. If the models aren&apos;t set up, a simpler rule-based
-              reader is used instead, and every result says so.
+              fine-tuned for this task. Requirement matching can use a clearly labeled rule-based
+              reader when semantic models are unavailable. The optional AI editorial reviewer runs
+              locally and rejects responses that fail source validation; an unsuccessful AI review
+              is reported as a failure.
             </p>
             <p className="mt-2">
-              Models can be wrong. This portfolio demonstrates engineering checks against synthetic
-              and challenge examples. It has no independently labeled real-world benchmark and does
-              not claim measured accuracy on real résumés.
+              Models can be wrong. Check the cited passages before making edits. Accuracy has not
+              been independently measured on a representative real-world résumé dataset.
             </p>
           </section>
           <section aria-labelledby="stored">
-            <h2 id="stored" className="font-serif text-2xl">
+            <h2 id="stored" className="font-sans font-medium text-2xl">
               What is stored
             </h2>
             <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -59,7 +60,7 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="logs">
-            <h2 id="logs" className="font-serif text-2xl">
+            <h2 id="logs" className="font-sans font-medium text-2xl">
               What logs contain
             </h2>
             <p className="mt-2">
@@ -69,7 +70,7 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="delete">
-            <h2 id="delete" className="font-serif text-2xl">
+            <h2 id="delete" className="font-sans font-medium text-2xl">
               Deleting things
             </h2>
             <p className="mt-2">
@@ -84,7 +85,7 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="demo">
-            <h2 id="demo" className="font-serif text-2xl">
+            <h2 id="demo" className="font-sans font-medium text-2xl">
               The demo
             </h2>
             <p className="mt-2">
@@ -92,7 +93,7 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="guest-privacy">
-            <h2 id="guest-privacy" className="font-serif text-2xl">
+            <h2 id="guest-privacy" className="font-sans font-medium text-2xl">
               Guest reviews
             </h2>
             <p className="mt-2">
@@ -108,7 +109,7 @@ export default function Privacy() {
             </p>
           </section>
           <section aria-labelledby="cookies">
-            <h2 id="cookies" className="font-serif text-2xl">
+            <h2 id="cookies" className="font-sans font-medium text-2xl">
               Cookies and tracking
             </h2>
             <p className="mt-2">

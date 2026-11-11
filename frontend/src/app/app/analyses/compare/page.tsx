@@ -32,8 +32,20 @@ function Compare() {
         </Notice>
       </>
     );
-  if (cmp.loading) return <Loading />;
-  if (cmp.error || !cmp.data) return <ErrorState error={cmp.error} onRetry={cmp.reload} />;
+  if (cmp.loading)
+    return (
+      <>
+        <PageHeader title="Compare reviews" />
+        <Loading />
+      </>
+    );
+  if (cmp.error || !cmp.data)
+    return (
+      <>
+        <PageHeader title="Compare reviews" />
+        <ErrorState error={cmp.error} onRetry={cmp.reload} />
+      </>
+    );
   return (
     <>
       <PageHeader title="What changed">

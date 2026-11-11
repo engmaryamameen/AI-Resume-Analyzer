@@ -41,27 +41,36 @@ function NewAnalysis() {
   const [error, setError] = useState<string | null>(null);
   const key = useRef<{ selection: string; value: string } | null>(null); // Same payload retries share a key; a changed selection gets a new key.
 
-  if (resumes.loading || jobs.loading) return <Loading />;
-  const failed = resumes.error || jobs.error;
+  if (resumes.loading)
+    return (
+      <>
+        <PageHeader title="New analysis" />
+        <Loading label="Loading your documents and roles…" />
+      </>
+    );
+  const failed = resumes.error;
   if (failed)
     return (
-      <ErrorState
-        error={failed}
-        onRetry={() => {
-          resumes.reload();
-          jobs.reload();
-        }}
-      />
+      <>
+        <PageHeader title="New analysis" />
+        <ErrorState
+          error={failed}
+          onRetry={() => {
+            resumes.reload();
+            jobs.reload();
+          }}
+        />
+      </>
     );
   const ready = resumes.data!.items.filter((r) => r.latest_version.status === "ready");
-  if (resumes.data!.total === 0 || jobs.data!.total === 0) {
+  if (resumes.data!.total === 0) {
     return (
       <>
         <PageHeader title="New analysis">
-          Choose a résumé and a target role to review together.
+          Choose a résumé. Add a target role only if you want a role-specific review.
         </PageHeader>
         <EmptyState
-          title="You'll need one of each first"
+          title="Start with a résumé"
           action={
             <div className="flex gap-3">
               <Link className="text-accent underline" href="/app/resumes">
@@ -73,7 +82,7 @@ function NewAnalysis() {
             </div>
           }
         >
-          An analysis compares a résumé that has been read successfully with a job description.
+          Upload a résumé first. A job description is optional.
         </EmptyState>
       </>
     );
@@ -81,14 +90,18 @@ function NewAnalysis() {
 
   async function start(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || !resumeVersion || !jobVersion) return;
+    if (busy || !resumeVersion) return;
     const selection = JSON.stringify([resumeVersion, jobVersion]);
     if (key.current?.selection !== selection)
       key.current = { selection, value: newIdempotencyKey() };
     setBusy(true);
     setError(null);
     try {
-      const run = await analysesApi.createAnalysis(resumeVersion, jobVersion, key.current.value);
+      const run = await analysesApi.createAnalysis(
+        resumeVersion,
+        jobVersion || null,
+        key.current.value,
+      );
       router.push(`/app/analyses/${run.id}`);
     } catch (err) {
       setError(friendlyError(err));
@@ -98,7 +111,9 @@ function NewAnalysis() {
 
   return (
     <>
-      <PageHeader title="New analysis">Pick the résumé and the job to compare.</PageHeader>
+      <PageHeader title="New analysis">
+        Review your résumé on its own, or add a job description for context.
+      </PageHeader>
       <Card>
         <form onSubmit={start} className="space-y-5">
           <div aria-label="Résumé choices">
@@ -140,38 +155,46 @@ function NewAnalysis() {
               onChange={setResumeOffset}
             />
           </div>
+          {!!jobs.error && (
+            <Notice tone="warn">
+              Target roles could not be loaded. You can still review the résumé on its own.{" "}
+              <button type="button" className="underline" onClick={jobs.reload}>
+                Retry loading roles
+              </button>
+            </Notice>
+          )}
           <div aria-label="Target-role choices">
             <label htmlFor="job" className="block font-medium">
-              Job description
+              Job description (optional)
             </label>
             <Select
               id="job"
-              required
               value={jobVersion}
               disabled={busy}
               onChange={(value) => {
                 setJobVersion(value);
-                const j = jobs.data!.items.find((item) => item.latest_version.id === value);
+                const j = (jobs.data?.items ?? []).find((item) => item.latest_version.id === value);
                 setJobLabel(j ? `${j.title} (version ${j.latest_version.version_no})` : "");
               }}
               className="mt-1 min-h-[44px] w-full rounded-lg border border-line bg-surface px-3"
             >
-              <option value="">Choose one…</option>
-              {jobVersion && !jobs.data!.items.some((j) => j.latest_version.id === jobVersion) && (
-                <option value={jobVersion}>
-                  {jobLabel || "Selected target-role version from role review"}
-                </option>
-              )}
-              {jobs.data!.items.map((j) => (
+              <option value="">No target role — résumé-only review</option>
+              {jobVersion &&
+                !(jobs.data?.items ?? []).some((j) => j.latest_version.id === jobVersion) && (
+                  <option value={jobVersion}>
+                    {jobLabel || "Selected target-role version from role review"}
+                  </option>
+                )}
+              {(jobs.data?.items ?? []).map((j) => (
                 <option key={j.id} value={j.latest_version.id}>
                   {j.title} (version {j.latest_version.version_no})
                 </option>
               ))}
             </Select>
-            <Pagination offset={jobOffset} total={jobs.data!.total} onChange={setJobOffset} />
+            <Pagination offset={jobOffset} total={jobs.data?.total ?? 0} onChange={setJobOffset} />
           </div>
           {error && <Notice tone="bad">{error}</Notice>}
-          <Button type="submit" busy={busy} disabled={!resumeVersion || !jobVersion}>
+          <Button type="submit" busy={busy} disabled={!resumeVersion}>
             Start analysis
           </Button>
         </form>

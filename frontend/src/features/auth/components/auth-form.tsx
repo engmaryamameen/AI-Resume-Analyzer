@@ -23,17 +23,18 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   return (
     <div className="auth-layout">
       <aside className="auth-story">
-        <span className="micro-label">MAKE ROOM FOR YOUR NEXT MOVE</span>
+        <span className="micro-label">RÉSUMÉ WORKSPACE</span>
         <h2>
           Your experience.
-          <br />A little more <em>direction.</em>
+          <br />
+          Keep the context.
         </h2>
         <p>
           Keep your résumés, target roles, and thoughtful revisions in one place. Pick up wherever
           you left off.
         </p>
         <div className="auth-annotation">
-          <span className="auth-annotation-number">A CLOSER READING</span>
+          <span className="auth-annotation-number">EXAMPLE RÉSUMÉ PASSAGE</span>
           <blockquote>
             “Built internal services in Python and FastAPI for billing operations.”
           </blockquote>
@@ -51,13 +52,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </div>
       </aside>
       <section className="auth-form-panel">
-        <span className="micro-label">YOUR PRIVATE WORKSPACE</span>
-        <h1 className="font-serif text-3xl mt-5">
+        <h1 className="font-sans font-medium text-3xl mt-5">
           {isRegister ? "Create your account" : "Welcome back"}
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted">
           {isRegister
-            ? "Make room for your experience. Start with an email and a password."
+            ? "Save your documents, keep versions, and compare your reviews."
             : "Pick up where you left off. Your documents and findings are waiting."}
         </p>
         <form onSubmit={submit} className="mt-5 space-y-4" noValidate>

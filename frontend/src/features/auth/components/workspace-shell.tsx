@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button, ErrorState, Loading } from "@/components/ui";
 import { Icon, type IconName } from "@/components/icon";
 import { Brand } from "@/components/site-header";
@@ -17,6 +17,7 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/app/resumes", label: "Résumés", icon: "document" },
   { href: "/app/jobs", label: "Target roles", icon: "briefcase" },
   { href: "/app/analyses", label: "Review history", icon: "history" },
+  { href: "/app/billing", label: "Review credits", icon: "briefcase" },
   { href: "/app/settings", label: "Settings", icon: "settings" },
 ];
 
@@ -45,6 +46,10 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   if (error && !user)
     return (
       <main id="main" className="mx-auto max-w-5xl px-4 py-8">
+        <Brand />
+        <h1 className="mt-8 mb-5 text-2xl font-medium tracking-tight">
+          Unable to open your workspace
+        </h1>
         <ErrorState
           error={error}
           onRetry={() => {
@@ -57,6 +62,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   if (!user)
     return (
       <main id="main" className="mx-auto max-w-5xl px-4">
+        <Brand />
+        <h1 className="mt-8 mb-5 text-2xl font-medium tracking-tight">Opening your workspace</h1>
         <Loading label="Checking your session…" />
       </main>
     );
@@ -64,7 +71,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   if (user.email_verification_required && !user.email_verified_at)
     return (
       <main id="main" className="mx-auto max-w-md px-4 py-12">
-        <h1 className="font-serif text-3xl">Verify your email</h1>
+        <h1 className="font-sans font-medium text-3xl">Verify your email</h1>
         <p className="my-5">Open the email link to activate your workspace.</p>
         <Link href="/verify-email" className="text-accent underline">
           Request another verification email
@@ -75,17 +82,21 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
 
   return (
     <UserContext.Provider value={{ user, setUser }}>
-      <div className="workspace-shell rolemark-workspace min-h-screen lg:flex">
+      <div className="workspace-shell product-workspace min-h-screen lg:flex">
         <AppSidebar path={path} user={user} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between border-b border-line bg-surface/70 px-6 py-4 lg:px-10">
             <span className="text-xs font-bold uppercase tracking-[.12em] text-muted">
               Workspace <span className="mx-2 opacity-40">/</span>{" "}
-              {NAV.find(({ href }) => href !== "/app" && path.startsWith(href))?.label ??
-                "Overview"}
+              {path === "/app/analyses/new"
+                ? "New analysis"
+                : path === "/app/analyses/compare"
+                  ? "Compare reviews"
+                  : (NAV.find(({ href }) => href !== "/app" && path.startsWith(href))?.label ??
+                    "Overview")}
             </span>
             <span className="inline-flex items-center gap-2 text-xs font-semibold text-muted">
-              <span className="h-2 w-2 rounded-full bg-accent" /> Local processing
+              Processed on this server
             </span>
           </div>
           <main id="main" className="mx-auto w-full max-w-7xl px-5 py-9 lg:px-10 lg:py-11">
@@ -98,52 +109,78 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
 }
 
 function AppSidebar({ path, user }: { path: string; user: User }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigationId = useId();
+  const toggle = useRef<HTMLButtonElement>(null);
   return (
-    <aside className="border-b border-line bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[252px] lg:shrink-0 lg:flex-col lg:border-b-0 lg:border-r">
-      <div className="px-6 py-6">
+    <aside
+      className="workspace-sidebar border-b border-line bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[252px] lg:shrink-0 lg:flex-col lg:border-b-0 lg:border-r"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && menuOpen) {
+          setMenuOpen(false);
+          toggle.current?.focus();
+        }
+      }}
+    >
+      <div className="workspace-sidebar-heading">
         <Brand />
-      </div>
-      <div className="px-4 pb-2 pt-2 text-[10px] font-extrabold uppercase tracking-[.18em] text-muted">
-        Workspace
-      </div>
-      <nav aria-label="Workspace" className="flex flex-wrap gap-1 px-3 pb-4 lg:block lg:space-y-1">
-        {NAV.map(({ href, label, icon }) => {
-          const active = href === "/app" ? path === href : path.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className="app-nav-link"
-            >
-              <span className="workspace-nav-icon">
-                <Icon name={icon} size={20} />
-              </span>
-              <span>{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="hidden px-3 lg:block">
-        <Link
-          href="/app/analyses/new"
-          className="flex min-h-[43px] items-center justify-center gap-2 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+        <button
+          ref={toggle}
+          type="button"
+          className="workspace-menu-toggle"
+          aria-expanded={menuOpen}
+          aria-controls={navigationId}
+          onClick={() => setMenuOpen(!menuOpen)}
         >
-          <span className="workspace-create-icon">
-            <Icon name="plus" size={17} />
-          </span>{" "}
-          New analysis
-        </Link>
+          {menuOpen ? "Close" : "Menu"}
+          <Icon name={menuOpen ? "x" : "menu"} size={18} />
+        </button>
       </div>
-      <div className="mt-auto hidden border-t border-line px-4 py-5 lg:block">
-        <div className="rounded-md border border-line bg-raised p-3">
-          <p className="truncate text-xs font-bold">{user.email}</p>
-          <p className="mt-1 text-[11px] text-muted">Private workspace</p>
+      <div id={navigationId} className="workspace-navigation" data-open={menuOpen}>
+        <nav
+          aria-label="Workspace"
+          className="space-y-1 px-3 pb-4"
+          onClick={(event) => {
+            if ((event.target as Element).closest("a")) setMenuOpen(false);
+          }}
+        >
+          {NAV.map(({ href, label, icon }) => {
+            const active =
+              href === "/app"
+                ? path === href
+                : path.startsWith(href) && path !== "/app/analyses/new";
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className="app-nav-link"
+              >
+                <span className="workspace-nav-icon">
+                  <Icon name={icon} size={19} />
+                </span>
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="px-3 pb-5">
+          <Link
+            href="/app/analyses/new"
+            aria-current={path === "/app/analyses/new" ? "page" : undefined}
+            onClick={() => setMenuOpen(false)}
+            className="flex min-h-[43px] items-center justify-center gap-2 rounded-md bg-[#eeeee9] px-3 py-2 text-sm font-medium text-[#23242b] hover:opacity-90"
+          >
+            <Icon name="plus" size={17} /> New analysis
+          </Link>
         </div>
-        <SignOutButton className="mt-2 w-full" />
-      </div>
-      <div className="px-4 pb-3 lg:hidden">
-        <SignOutButton />
+        <div className="mt-auto border-t border-line px-4 py-5">
+          <div className="px-2 py-3">
+            <p className="truncate text-xs font-medium">{user.email}</p>
+            <p className="mt-1 text-[11px] text-muted">Private workspace</p>
+          </div>
+          <SignOutButton className="mt-2 w-full" />
+        </div>
       </div>
     </aside>
   );

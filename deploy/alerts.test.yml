@@ -5,10 +5,14 @@ tests:
     input_series:
       - series: 'up{job="resume-api"}'
         values: '0+0x10'
-      - series: 'job_backlog_oldest_seconds{kind="run_analysis"}'
+      - series: 'job_backlog_oldest_seconds{kind="run_analysis",job="resume-api",instance="api:8000"}'
         values: '600+60x10'
-      - series: 'job_last_progress_age_seconds'
+      - series: 'job_last_progress_age_seconds{job="resume-api",instance="api:8000"}'
         values: '600+60x10'
+      - series: 'job_backlog_oldest_seconds{kind="run_analysis",job="resume-api",instance="progressing:8000"}'
+        values: '600+60x10'
+      - series: 'job_last_progress_age_seconds{job="resume-api",instance="progressing:8000"}'
+        values: '0+0x10'
       - series: 'storage_free_bytes'
         values: '10+0x10'
       - series: 'storage_total_bytes'
@@ -22,7 +26,7 @@ tests:
       - eval_time: 6m
         alertname: ResumeBacklogNotProgressing
         exp_alerts:
-          - exp_labels: {severity: critical}
+          - exp_labels: {severity: critical, job: resume-api, instance: "api:8000"}
             exp_annotations: {summary: "Jobs are waiting without worker progress", runbook: "docs/operations.md#worker-outage"}
       - eval_time: 6m
         alertname: ResumeStorageLow

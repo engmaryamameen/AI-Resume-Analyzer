@@ -13,18 +13,27 @@ export default function Overview() {
   const resumes = useQuery(["resumes"], (signal) => resumesApi.resumes(0, signal));
   const jobs = useQuery(["jobs"], (signal) => jobDescriptionsApi.jobs(0, signal));
   const runs = useQuery(["analyses"], (signal) => analysesApi.analyses(0, signal));
-  if (resumes.loading || jobs.loading || runs.loading) return <Loading />;
+  if (resumes.loading || jobs.loading || runs.loading)
+    return (
+      <>
+        <PageHeader title="Your workspace" />
+        <Loading label="Loading your workspace…" />
+      </>
+    );
   const error = resumes.error || jobs.error || runs.error;
   if (error)
     return (
-      <ErrorState
-        error={error}
-        onRetry={() => {
-          resumes.reload();
-          jobs.reload();
-          runs.reload();
-        }}
-      />
+      <>
+        <PageHeader title="Your workspace" />
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            resumes.reload();
+            jobs.reload();
+            runs.reload();
+          }}
+        />
+      </>
     );
   const steps = [
     {
@@ -35,8 +44,8 @@ export default function Overview() {
       icon: "document",
     },
     {
-      name: "Bring a target role",
-      detail: "Paste a job description and refine its requirements.",
+      name: "Add a target role (optional)",
+      detail: "Add a job description when you want a role-specific review.",
       href: "/app/jobs",
       done: jobs.data!.total > 0,
       icon: "briefcase",
@@ -75,7 +84,7 @@ export default function Overview() {
   return (
     <div className="workspace-overview">
       <PageHeader
-        title="Your next move, in focus."
+        title="Your workspace"
         actions={
           <ButtonLink href="/app/analyses/new">
             <Icon name="plus" size={16} /> New analysis
@@ -91,7 +100,7 @@ export default function Overview() {
               <span>{s.label}</span>
               <Icon name={s.icon} size={18} />
             </div>
-            <strong>{s.value.toString().padStart(2, "0")}</strong>
+            <strong>{s.value.toString()}</strong>
             <div className="stat-bottom">
               <span>{s.note}</span>
               <Icon name="arrow" size={16} />
@@ -102,7 +111,6 @@ export default function Overview() {
       {steps.some((s) => !s.done) && (
         <section className="workspace-guide" aria-labelledby="guide">
           <div className="guide-intro">
-            <span className="micro-label">YOUR NEXT CHAPTER</span>
             <h2 id="guide">
               From document
               <br />
@@ -137,7 +145,6 @@ export default function Overview() {
       <section className="mt-10" aria-labelledby="recent">
         <div className="section-heading">
           <div>
-            <span className="micro-label">THE PAPER TRAIL</span>
             <h2 id="recent">Recent analyses</h2>
           </div>
           <Link href="/app/analyses">
@@ -180,7 +187,7 @@ export default function Overview() {
           <div className="activity-empty">
             <Icon name="history" size={28} />
             <div>
-              <h3>A fresh start.</h3>
+              <h3>No analyses yet.</h3>
               <p>
                 Your comparisons will appear here, with the exact document versions that produced
                 them.

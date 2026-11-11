@@ -89,3 +89,41 @@ it("does not let a polling reload continually abort a slow current query", async
   });
   expect(result.current.data).toBe("finished");
 });
+
+it("coalesces mutation invalidations while an older list read is pending", async () => {
+  const old = deferred<string[]>();
+  let calls = 0;
+  const { result } = renderHook(() =>
+    useQuery(["list"], async () => (++calls === 1 ? old.promise : ["uploaded résumé"])),
+  );
+  await waitFor(() => expect(calls).toBe(1));
+  act(() => {
+    result.current.reload();
+    result.current.reload();
+  });
+  expect(calls).toBe(1);
+  await act(async () => {
+    old.resolve([]);
+  });
+  await waitFor(() => expect(result.current.data).toEqual(["uploaded résumé"]));
+  expect(calls).toBe(2);
+});
+
+it("does not discard a queued invalidation when the old read fails", async () => {
+  let rejectOld!: (error: Error) => void;
+  let calls = 0;
+  const old = new Promise<string>((_, reject) => {
+    rejectOld = reject;
+  });
+  const { result } = renderHook(() =>
+    useQuery(["recover"], () => (++calls === 1 ? old : Promise.resolve("fresh"))),
+  );
+  await waitFor(() => expect(calls).toBe(1));
+  act(() => result.current.reload());
+  await act(async () => {
+    rejectOld(new Error("stale read failed"));
+  });
+  await waitFor(() => expect(result.current.data).toBe("fresh"));
+  expect(calls).toBe(2);
+  expect(result.current.error).toBeNull();
+});

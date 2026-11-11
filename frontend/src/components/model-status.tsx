@@ -4,14 +4,14 @@ import { systemApi } from "@/features/system/api";
 import { ORIGIN_LABEL } from "@/lib/copy";
 import { useQuery } from "@/lib/hooks";
 import type { ModelStatus } from "@/lib/types";
-import { Badge, Card } from "./ui";
+import { Badge, Card, ErrorState, Loading } from "./ui";
 
 export function ModelStatusView({ status }: { status: ModelStatus }) {
   const semantic = status.available_method === "semantic";
   return (
     <Card as="section">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-serif text-xl">Reading method</h2>
+        <h2 className="font-sans font-medium text-xl">Reading method</h2>
         <Badge tone="plain">
           {semantic
             ? "Local semantic models"
@@ -20,12 +20,19 @@ export function ModelStatusView({ status }: { status: ModelStatus }) {
               : "Local rules"}
         </Badge>
       </div>
+      {status.reviewer_enabled && (
+        <p className="mt-3 text-sm leading-7">
+          Local AI résumé review is configured with <strong>{status.reviewer_model}</strong>. It
+          writes source-linked feedback; the evidence-matching method below is separate. Each
+          completed report records the model that ran.
+        </p>
+      )}
       <p className="mt-2 max-w-prose text-sm leading-7 text-muted">
         {semantic
           ? "Pretrained models on this server compare the meaning of requirements and résumé passages. Rules handle entities and dates. Each report records the method actually used."
           : status.learned_models_approved
             ? "Approved local models are configured on this server. Each report identifies the method that completed its review, including any fallback to local rules."
-            : "This installation uses the local rule-based reader. It compares your wording and surrounding context with the role’s requirements, and may miss paraphrases."}
+            : "The document and requirement checks use the local rule-based reader. It compares your wording and surrounding context with the role’s requirements, and may miss paraphrases."}
       </p>
       <p className="mt-2 text-sm text-muted">Your documents stay on this server.</p>
       <details className="mt-4 text-sm">
@@ -51,5 +58,15 @@ export function ModelStatusView({ status }: { status: ModelStatus }) {
 
 export function ModelStatusPanel() {
   const status = useQuery(["modelStatus"], (signal) => systemApi.modelStatus(signal));
-  return status.data ? <ModelStatusView status={status.data} /> : null;
+  if (status.data) return <ModelStatusView status={status.data} />;
+  return (
+    <Card>
+      <h2 className="text-xl font-medium">Reading method</h2>
+      {status.error ? (
+        <ErrorState error={status.error} onRetry={status.reload} />
+      ) : (
+        <Loading label="Checking the available reading method…" />
+      )}
+    </Card>
+  );
 }

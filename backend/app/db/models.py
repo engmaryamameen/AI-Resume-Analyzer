@@ -236,10 +236,10 @@ class AnalysisRun(Base):
     resume_version_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("resume_versions.id", ondelete="CASCADE"), nullable=False
     )
-    jd_version_id: Mapped[uuid.UUID] = mapped_column(
+    jd_version_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("job_description_versions.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     status: Mapped[str] = mapped_column(String(12), nullable=False)
     pipeline_version: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -395,3 +395,31 @@ class GuestAnalysis(Base):
     )
     created_at: Mapped[datetime] = _created()
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class BillingOrder(Base):
+    __tablename__ = "billing_orders"
+    __table_args__ = (UniqueConstraint("user_id", "request_key", name="uq_billing_request"),)
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    request_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    stripe_session_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    paid: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    created_at: Mapped[datetime] = _created()
+
+
+class CreditEntry(Base):
+    __tablename__ = "credit_entries"
+    __table_args__ = (
+        UniqueConstraint("user_id", "kind", "reference_id", name="uq_credit_reference"),
+        CheckConstraint(
+            "(kind = 'purchase' AND amount = 5) OR (kind = 'review' AND amount = -1) OR (kind = 'refund' AND amount = 1)",
+            name="ck_credit_amount",
+        ),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    reference_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = _created()

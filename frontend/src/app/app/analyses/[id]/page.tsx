@@ -26,8 +26,20 @@ export default function AnalysisPage() {
   const active = a.data?.status === "queued" || a.data?.status === "running";
   usePolling(active, a.reload);
 
-  if (a.loading) return <Loading />;
-  if (a.error || !a.data) return <ErrorState error={a.error} onRetry={a.reload} />;
+  if (a.loading)
+    return (
+      <>
+        <PageHeader title="Analysis" />
+        <Loading />
+      </>
+    );
+  if (a.error || !a.data)
+    return (
+      <>
+        <PageHeader title="Analysis" />
+        <ErrorState error={a.error} onRetry={a.reload} />
+      </>
+    );
   const run = a.data;
 
   async function cancel() {
@@ -50,17 +62,21 @@ export default function AnalysisPage() {
         actions={
           run.status === "succeeded" ? (
             <>
-              <ButtonLink href={`/app/analyses/${id}/recommendations`}>Suggestions</ButtonLink>
-              {(["md", "csv", "json"] as const).map((f) => (
-                <a
-                  key={f}
-                  href={analysesApi.reportUrl(id, f)}
-                  download
-                  className="inline-flex min-h-[44px] items-center rounded-lg border border-line bg-surface px-4 text-sm hover:bg-raised"
-                >
-                  Download {f === "md" ? "Markdown" : f.toUpperCase()}
-                </a>
-              ))}
+              <ButtonLink href={`/app/analyses/${id}/recommendations`}>Edit résumé</ButtonLink>
+              <div className="flex min-h-[44px] flex-wrap items-center gap-4 px-2 text-xs">
+                <span className="text-muted">Export</span>
+                {(["md", "csv", "json"] as const).map((format) => (
+                  <a
+                    key={format}
+                    href={analysesApi.reportUrl(id, format)}
+                    download
+                    aria-label={`Download ${format === "md" ? "Markdown" : format.toUpperCase()} report`}
+                    className="inline-flex min-h-[44px] items-center text-accent underline decoration-line underline-offset-4 hover:decoration-accent"
+                  >
+                    {format === "md" ? "Markdown" : format.toUpperCase()}
+                  </a>
+                ))}
+              </div>
             </>
           ) : undefined
         }
@@ -116,6 +132,7 @@ export default function AnalysisPage() {
       </div>
       {run.status === "succeeded" && (
         <AnalysisResults
+          review={run.review}
           engine={run.engine}
           assessments={run.assessments}
           warnings={run.warnings}

@@ -106,7 +106,7 @@ export default function Resumes() {
           }}
         >
           <Icon name="upload" size={30} />
-          <p className="micro-label mb-3">YOUR EXPERIENCE, IN YOUR WORDS</p>
+
           <label htmlFor="resume-file" className="block font-medium">
             Choose a file
           </label>

@@ -6,7 +6,7 @@ export const analysesApi = {
     request<Page<Analysis>>(`/analyses?limit=20&offset=${offset}`, { signal }),
   analysis: (id: string, signal?: AbortSignal) =>
     request<AnalysisDetail>(`/analyses/${id}`, { signal }),
-  createAnalysis: (resume_version_id: string, jd_version_id: string, key: string) =>
+  createAnalysis: (resume_version_id: string, jd_version_id: string | null, key: string) =>
     request<Analysis>("/analyses", {
       method: "POST",
       json: { resume_version_id, jd_version_id },

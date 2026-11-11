@@ -62,8 +62,20 @@ export default function JobDetail() {
     setFocus(null);
   }, [job.data]);
 
-  if (job.loading) return <Loading />;
-  if (job.error || !job.data) return <ErrorState error={job.error} onRetry={job.reload} />;
+  if (job.loading)
+    return (
+      <>
+        <PageHeader title="Target role" />
+        <Loading />
+      </>
+    );
+  if (job.error || !job.data)
+    return (
+      <>
+        <PageHeader title="Target role" />
+        <ErrorState error={job.error} onRetry={job.reload} />
+      </>
+    );
   const j = job.data;
   const latestNo = j.versions.at(-1)!.version_no;
   const viewing = version !== undefined && version !== latestNo;
@@ -286,7 +298,7 @@ export default function JobDetail() {
       )}
 
       <section className="mt-10" aria-labelledby="posting">
-        <h2 id="posting" className="font-serif text-2xl">
+        <h2 id="posting" className="font-sans font-medium text-2xl">
           The original posting
         </h2>
         <pre className="mt-3 whitespace-pre-wrap rounded-xl border border-line bg-surface p-4 text-sm">
@@ -305,7 +317,7 @@ export default function JobDetail() {
       </section>
 
       <section className="mt-10" aria-labelledby="jv">
-        <h2 id="jv" className="font-serif text-2xl">
+        <h2 id="jv" className="font-sans font-medium text-2xl">
           Versions
         </h2>
         <ul className="mt-2 space-y-1 text-sm">

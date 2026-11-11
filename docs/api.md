@@ -34,7 +34,7 @@ REST over JSON, mounted at `/api/v1`. With `APP_ENV` other than production, inte
 | `POST /job-descriptions`, `GET /job-descriptions`, `GET /job-descriptions/{id}?version=` | create from text, list, detail with requirements and warnings |
 | `PUT /job-descriptions/{id}/requirements` | `{base_version_no, requirements}` → new version |
 | `DELETE /job-descriptions/{id}` | delete |
-| `POST /analyses` | `{resume_version_id, jd_version_id}` → `202` |
+| `POST /analyses` | `{resume_version_id, jd_version_id?}` → `202`; omit or send null for résumé-only review |
 | `GET /analyses`, `GET /analyses/{id}` | list; detail |
 | `POST /analyses/{id}/cancel` | queued: cancelled now; running: flagged, result discarded |
 | `GET /analyses/{id}/report?format=json\|md\|csv` | download |
@@ -67,7 +67,7 @@ content without a source span. Earlier versions and their analyses are unchanged
   "id": "…", "status": "succeeded",
   "resume_version_id": "…", "latest_resume_version_id": "…",
   "jd_version_id": "…", "latest_jd_version_id": "…",
-  "pipeline_version": "pipeline-2",
+  "pipeline_version": "pipeline-3",
   "engine": {"mode": "learned|rules", "models": [{"id", "origin", "base_model", "revision", "license"}],
              "calibrated": false, "fingerprint": "…", "notes": []},
   "staleness": {"is_stale": false, "reasons": []},
@@ -120,7 +120,7 @@ routes; `/auth/me` remains available so verification and sign-out can be present
 GET transport retries network interruptions/502/503/504 at most twice, with abortable backoff and one
 overall timeout. Writes never retry automatically. Preserve an idempotency key for identical payload
 retries; changed file/JD/analysis selections require another key. After uncertain guest submission,
-read guest state before attempting another mutation. A successful prior request can consume the quota
+read guest state and retain the original payload/key. An idle, unavailable quota response without a guest cookie cannot resolve the outcome: explicitly replay the original request to recover its cookie. A successful prior request can consume the quota
 even if its response was lost; changing text does not reset an allowance. Processing responses must be
 polled until a terminal state; acceptance is not analysis completion.
 
@@ -132,3 +132,17 @@ keep the backend's stable code/message/request ID when the envelope is well form
 Registration returns `{user,email_verification_required}`. Local mode returns the created user and
 session cookies. Public mode always returns `user: null` with verification required, for new and
 existing accounts alike, and issues no session. It never fabricates an account identifier.
+
+Guest status, progress, and accepted-upload responses use the concrete `GuestStateOut` schema, including nullable report/error/expiry fields and an enumerated state. Generated client validation rejects missing or mistyped fields.
+
+## Optional test billing
+
+Authenticated `GET /billing` reports configuration, credit balance and pack terms; CSRF-protected `POST /billing/checkout` accepts `Idempotency-Key` and returns a hosted Stripe URL. `POST /billing/webhook` verifies `Stripe-Signature` against raw bytes, with no browser authentication requirement. The server exclusively sets the pack price. Billing is disabled by default; see [billing.md](billing.md) for settlement and failure semantics.
+
+## Optional role and editorial feedback
+
+`jd_version_id` is nullable on analysis creation and responses. A résumé-only review has no requirement matches or requirement-evidence assessment. Guest `job_text` is also optional; a supplied nonempty value must meet normal validation.
+
+Analysis detail includes nullable `review`: `summary`, `strengths`, `concerns`, `next_steps`, `model`, `model_digest`, `prompt_version`, `reviewed_blocks`, `total_blocks`, and `seconds`. Each finding contains a title, detail, and evidence entries with `block_id` and an exact `excerpt`. Invalid model output fails processing with `ai_review_unavailable`.
+
+`GET /system/models` includes reviewer configuration separately from matching-model status. Run provenance, rather than configured status alone, identifies the method actually used. Billing routes and credit semantics are described in [billing](billing.md).

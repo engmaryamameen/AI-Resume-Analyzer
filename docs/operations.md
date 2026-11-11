@@ -1,8 +1,8 @@
 # Local operations and recovery
 
-These runbooks describe observable failure handling for the local portfolio. There is no hosted
-production deployment or production SLA. Do not run destructive drills against a database containing
-real data. The integration suite creates a disposable schema and intentionally destroys its contents.
+These runbooks cover application failures and recovery. Run destructive drills only in an isolated environment without personal documents. The integration suite creates a disposable schema and intentionally destroys its contents.
+
+The optional editorial reviewer follows a separate failure policy: unavailable or invalid output fails the review. Check its private service health, model digest, configured timeout, and source-validation errors. Failure settlement restores charged credits or the guest allowance; do not present baseline checks as generated feedback.
 
 ## Worker outage
 
@@ -33,7 +33,7 @@ infrastructure capacity alert; the application gauge measures the upload volume 
 
 ## Model failures
 
-A failed load or timed-out/OOM inference falls back to rules and records provenance. Check artifact
+A failed semantic matching load or timed-out/OOM matching inference falls back to rules and records provenance. Check artifact
 checksums, immutable revisions, memory and offline smoke check. Do not hide fallback in the UI. Keep
 rules mode available while investigating. Never relax safetensors/checksum/local-only restrictions to
 make a model load. Every optional dependency update must pass the offline smoke and semantic tests.
@@ -77,7 +77,7 @@ Import `deploy/grafana-dashboard.json` and choose a Prometheus datasource. Scrap
 Bearer token from `METRICS_TOKEN` on the private API network; never publish that endpoint or token.
 Database/volume gauges are computed by the API from shared state, so they remain useful across workers.
 Inference/extraction counters are worker-local; scraping only the API does not collect worker counters.
-The optional fallback alert requires a worker metrics collector before use. For this local portfolio,
+The optional fallback alert requires a worker metrics collector before use. For this local installation,
 logs and report provenance are the authoritative demonstration of fallback. Notification routing and
 real failure notifications are deliberately not configured.
 

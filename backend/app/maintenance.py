@@ -69,14 +69,14 @@ def expire_old_data(db: Session, store: BlobStore, retention_days: int) -> dict[
     for document_id, user_id in stale_resumes:
         try:
             counts["resumes"] += deletion.delete_resume(
-                db, store, user_id, document_id, "retention"
+                db, store, user_id, document_id, "retention", inactive_before=cutoff
             )
         except ServiceUnavailable:
             counts["skipped_busy"] += 1  # the user's job is running; the next run will get it
     for job_id, user_id in stale_jobs:
         try:
             counts["job_descriptions"] += deletion.delete_job_description(
-                db, user_id, job_id, "retention"
+                db, user_id, job_id, "retention", inactive_before=cutoff
             )
         except ServiceUnavailable:
             counts["skipped_busy"] += 1

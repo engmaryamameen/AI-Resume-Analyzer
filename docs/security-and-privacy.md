@@ -1,6 +1,6 @@
 # Security and privacy
 
-What is protected, how, and what is deliberately not claimed. The user-facing version of the privacy
+Security boundaries, data handling, and operational responsibilities. The user-facing version of the privacy
 section is the `/privacy` page of the app.
 
 Automated security/workflow tests cover the controls below. They do not constitute a penetration
@@ -24,7 +24,7 @@ returns 403 so a client does not mistake it for being signed out. Administrators
 server (`python -m app.cli grant-admin`); there is no registration-time or request-time path to the role.
 
 **Requests.** Cookies are HttpOnly (session), SameSite=Lax and Secure in production. State-changing requests
-need a matching `X-CSRF-Token` and an allowed `Origin`. Bodies are size-limited as they stream. Every
+need a matching `X-CSRF-Token` and an allowed `Origin`. Bodies are bounded before application dispatch; ingress also limits size and slow clients. Every
 response has a request id, `nosniff`, `no-store`, a `default-src 'none'` content security policy and
 `no-referrer`; production adds HSTS and hides the API docs. Client addresses for rate limiting come from
 `X-Forwarded-For` only when the direct peer is a configured trusted proxy, using the last untrusted hop, so
@@ -74,14 +74,14 @@ Not collected: analytics or advertising scripts, third-party counters, fingerpri
 résumé text in logs. Raw IP addresses are used in memory for rate limiting; guest quotas store only a keyed address hash.
 
 **No third parties.** Documents are never sent to an outside service. Models run on the operator's machine
-from local files. The application has no outbound calls other than to its own database.
+from local files. Optional account email uses the configured SMTP provider for recipient addresses and account messages. Documents are not included. Provisioning downloads model artifacts separately; normal inference makes no external AI calls.
 
 **Training on user data.** The application does not use uploaded documents to train or tune models. Doing
 so would contradict the retention and deletion described here.
 
 | Data | Default retention | Mechanism |
 | --- | --- | --- |
-| Résumés, versions, files, analyses | 90 days without activity (`RETENTION_DAYS`; a placeholder, decide before launch) | `python -m app.cli maintenance`, scheduled daily |
+| Résumés, versions, files, analyses | 90 days without activity (`RETENTION_DAYS`; configure for your retention policy) | `python -m app.cli maintenance`, scheduled daily |
 | Sessions | until expiry (72 h) | maintenance |
 | Idempotency keys | 24 h | maintenance |
 | Finished jobs | 30 days | maintenance |
@@ -123,11 +123,7 @@ allowance. A guest who registers starts a separate workspace; their temporary re
 
 ## Dependency audit policy
 
-CI rejects moderate-or-higher production advisories and high-or-critical advisories anywhere in the
-frontend tree. The pinned ESLint toolchain currently inherits the moderate
-[minimatch advisory](https://github.com/advisories/GHSA-g3hv-75wg-m249). It is development-only; patterns
-come from repository configuration, not résumé uploads. The patched minimatch major changes its API,
-so a compatible lint-tool upgrade remains necessary.
+CI audits pinned runtime, development, and optional ML dependencies. Dependency audit results are time-sensitive: run the configured checks for the exact revision rather than inheriting a historical clean result. The frontend pins a patched minimatch override for its lint dependency tree; container OS scans are a separate release gate.
 
 ## Account email and ownership
 
@@ -141,3 +137,7 @@ Expiry denies guest access immediately. Physical cleanup is bounded to 200 works
 a large backlog can delay storage removal beyond the next hourly run. Live deletion does not erase
 existing backups, WAL, downloaded reports or separately retained logs. Public operation would require
 an explicit backup/deletion-ledger policy and restore rehearsal before accepting real documents.
+
+## Stripe test mode
+
+Optional test checkout uses outbound HTTPS to Stripe. The server sends an opaque order identifier and pack terms, never documents or extracted content. The browser enters Stripe's hosted test checkout; payment data is not collected by Rolemaker. Webhook signatures are timestamp-checked on the original body and paid pack terms are revalidated. Live keys/events are refused. Account deletion removes local order/ledger records but does not control Stripe's provider-side retention. See [billing.md](billing.md).

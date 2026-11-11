@@ -141,7 +141,7 @@ review results; do not rank or screen people with this tool.
 
 ## Independent benchmark boundary
 
-The current portfolio has no consented/licensed, independently annotated real-world holdout. Challenge
+The project has no consented/licensed, independently annotated real-world holdout. Challenge
 scores and the offline three-passage smoke are engineering checks, not real résumé accuracy. Do not
 label model output as an objective probability or promote synthetic measurements into product claims.
 

@@ -23,7 +23,7 @@ export function useGuestAnalysis() {
   const submitted = useRef(false);
   const operation = useRef(false);
   const requestKey = useRef<{ file: File; job: string; key: string } | null>(null);
-  const uncertain = useRef(false);
+  const [uncertain, setUncertain] = useState(false);
   const requestVersion = useRef(0);
   const [clock, setClock] = useState(Date.now());
   const pending =
@@ -88,9 +88,9 @@ export function useGuestAnalysis() {
     ? Math.max(0, new Date(state.next_allowed_at).getTime() - clock)
     : 0;
   const remainingMinutes = Math.ceil(remaining / 60_000);
-  const blocked = state?.available === false && remaining > 0;
+  const blocked = state?.available === false && remaining > 0 && !uncertain;
   function pick(next: File | undefined) {
-    if (!next || busy || pending) return;
+    if (!next || busy || pending || uncertain) return;
     if (!/\.(pdf|docx)$/i.test(next.name) || next.size > 5 * 1024 * 1024) {
       setError("Choose a PDF or DOCX résumé, up to 5 MB.");
       return;
@@ -99,55 +99,40 @@ export function useGuestAnalysis() {
     setError("");
     requestKey.current = null;
   }
-  async function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent, includeJob = true) {
     event.preventDefault();
     if (!file || operation.current || statusLoading || statusError || busy || pending || blocked)
       return;
-    operation.current = true;
-    if (uncertain.current) {
-      dispatch({ type: "submitting" });
-      try {
-        const current = await api.guestStatus();
-        setState(current);
-        if (current.status !== "idle" && current.status !== "failed") return;
-        uncertain.current = false;
-      } catch (error) {
-        setError(friendlyError(error));
-        return;
-      } finally {
-        operation.current = false;
-        dispatch({ type: "finished" });
-      }
-    }
     operation.current = true;
     submitted.current = true;
     const version = ++requestVersion.current;
     dispatch({ type: "submitting" });
     setError("");
+    const jobText = includeJob ? job.trim() : "";
     if (
       !requestKey.current ||
-      requestKey.current.file !== file ||
-      requestKey.current.job !== job.trim()
+      (!uncertain && (requestKey.current.file !== file || requestKey.current.job !== jobText))
     ) {
-      requestKey.current = { file, job: job.trim(), key: newIdempotencyKey() };
+      requestKey.current = { file, job: jobText, key: newIdempotencyKey() };
     }
     try {
-      const result = await api.guestAnalyze(file, job, requestKey.current.key);
+      const input = requestKey.current;
+      const result = await api.guestAnalyze(input.file, input.job, input.key);
+      setUncertain(false);
       if (version === requestVersion.current) setState(result);
     } catch (e) {
       if (version !== requestVersion.current) return;
       setError(friendlyError(e));
-      uncertain.current =
-        e instanceof ApiError && ["network_error", "request_timeout"].includes(e.code);
-      if (
-        e instanceof ApiError &&
-        ["guest_limit", "network_error", "request_timeout"].includes(e.code)
-      ) {
+      const ambiguous = e instanceof ApiError && (e.status === 0 || e.status >= 500);
+      setUncertain(ambiguous);
+      if (ambiguous || (e instanceof ApiError && e.code === "guest_limit")) {
         try {
           const current = await api.guestStatus();
           if (version === requestVersion.current) {
             setState(current);
-            uncertain.current = false;
+            // An idle quota response cannot establish whether our POST committed:
+            // without its cookie only the exact same payload/key can recover it.
+            if (current.status !== "idle") setUncertain(false);
           }
         } catch {
           /* Keep the actionable error visible. */
@@ -204,6 +189,7 @@ export function useGuestAnalysis() {
     pending,
     remainingMinutes,
     blocked,
+    recovering: uncertain,
     pick,
     submit,
     remove,

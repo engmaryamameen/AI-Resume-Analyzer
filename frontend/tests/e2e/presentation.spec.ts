@@ -28,6 +28,12 @@ for (const width of [320, 390, 1440]) {
           ).violations,
       );
       expect(violations, `${route} at ${width}px`).toEqual([]);
+      if (width === 1440 && ["/app", "/app/billing"].includes(route))
+        await page.screenshot({
+          path: test.info().outputPath(route === "/app" ? "workspace.png" : "billing.png"),
+          fullPage: true,
+          animations: "disabled",
+        });
     }
   });
 }
@@ -65,9 +71,12 @@ for (const width of [390, 1440]) {
       "/app/analyses",
       "/app/analyses/new",
       "/app/analyses/compare",
+      "/app/billing",
       "/app/settings",
     ]) {
       await page.goto(route);
+      await expect(page.locator(".workspace-shell")).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: /\S/ })).toHaveCount(0);
       await expect(page.locator("h1")).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -90,6 +99,12 @@ for (const width of [390, 1440]) {
         })),
       );
       expect(violations, `${route} at ${width}px`).toEqual([]);
+      if (width === 1440 && ["/app", "/app/billing"].includes(route))
+        await page.screenshot({
+          path: test.info().outputPath(route === "/app" ? "workspace.png" : "billing.png"),
+          fullPage: true,
+          animations: "disabled",
+        });
     }
   });
 }
@@ -151,7 +166,7 @@ test("long reports begin compact and reveal one requirement's evidence", async (
     true,
   );
   await page.getByRole("tab", { name: "Document insights" }).click();
-  await expect(page.getByRole("heading", { name: /Four readings/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Document checks, at a glance" })).toBeVisible();
   await expect(page.locator(".assessment-metrics[open]")).toHaveCount(0);
   await page.getByRole("tab", { name: "Document insights" }).press("Home");
   await expect(page.getByRole("tab", { name: "Next steps", exact: true })).toBeFocused();
@@ -166,22 +181,18 @@ test("long reports begin compact and reveal one requirement's evidence", async (
   );
 });
 
-test("public navigation supports desktop disclosure and a keyboard-operable mobile menu", async ({
+test("public navigation exposes desktop destinations and a keyboard-operable mobile menu", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/demo");
-  const explore = page.locator(".site-nav-dropdown > summary");
-  await explore.click();
+  const navigation = page.getByRole("navigation", { name: "Main", exact: true });
   await expect(
-    page
-      .getByRole("navigation", { name: "Main", exact: true })
-      .getByRole("link", { name: /View example/ }),
-  ).toBeVisible();
-  await explore.press("Escape");
-  await expect(page.locator(".site-nav-dropdown")).not.toHaveAttribute("open");
-  await expect(explore).toBeFocused();
+    navigation.getByRole("link", { name: "Sample report", exact: true }),
+  ).toHaveAttribute("href", "/demo");
+  await expect(navigation.getByRole("link", { name: "How it works", exact: true })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Privacy", exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("navigation", { name: "Main", exact: true })).toBeHidden();
   const headingTop = (await page.locator("h1").boundingBox())?.y;
@@ -196,7 +207,6 @@ test("public navigation supports desktop disclosure and a keyboard-operable mobi
     "aria-expanded",
     "true",
   );
-  await explore.click();
   await page.evaluate((source) => {
     const script = document.createElement("script");
     script.nonce = document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
@@ -214,14 +224,12 @@ test("public navigation supports desktop disclosure and a keyboard-operable mobi
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await explore.press("Escape");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Open navigation" })).toBeFocused();
   await page.getByRole("button", { name: "Open navigation" }).click();
   await page.mouse.click(380, 500);
   await expect(drawer).toBeHidden();
   await page.getByRole("button", { name: "Open navigation" }).click();
-  await explore.click();
   await page
     .getByRole("navigation", { name: "Main", exact: true })
     .getByRole("link", { name: /^Privacy/ })

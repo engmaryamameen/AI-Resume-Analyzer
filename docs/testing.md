@@ -73,13 +73,9 @@ CI job repeats this with the CPU runtime. These are inference integration checks
 For a provisioned full stack, `E2E_SEMANTIC=1 npm run e2e -- --workers=1` also asserts the actual model
 method on completed guest/account reports. Use a fresh disposable application database.
 
-## Engineering review evidence
+## Failure and isolation coverage
 
-See [local verification](verification.md) for the 2026-11-07 results, environment differences and
-remaining image findings. New regressions cover query identity/cancellation, guest retry payloads,
-account-token concurrency/expiry/pre-registration, registration atomicity, bounded maintenance and real
-worker-process kills. The suite forcibly clears SMTP host/from so a developer's real mailbox settings
-cannot send mail during tests. `E2E_RECORD_VIDEO=1` records synthetic browser journeys for a local demo.
+The suite covers query identity/cancellation, frozen guest retry payloads, account-token concurrency and expiry, registration atomicity, bounded maintenance, and worker-process termination. SMTP host/from are cleared during tests to prevent delivery through developer mailbox settings. `E2E_RECORD_VIDEO=1` records synthetic browser journeys.
 
 Before CI, run both contract checks from the repository root:
 
@@ -91,3 +87,17 @@ node frontend/scripts/compile-contracts.mjs --check
 Regenerate without `--check` after intentional API changes. The generator reads the repository's
 Prettier configuration so formatting checks and drift checks agree. No runtime validator compilation
 or script-eval CSP exception is required.
+
+Destructive integration fixtures require a disposable PostgreSQL database whose name ends in `_test`; this guard does not replace checking that the database contains no application data.
+
+## Concurrency and transport failures
+
+The account tests use separate PostgreSQL connections and a lock timeout to prove reset/verification cannot occur between credential verification and session issuance. Retention tests commit an actual newer version between candidate selection and deletion. The guest API test proves same-key cookie recovery without exposing a report through network identity. Its browser journey forwards the first request to the real API, then aborts the committed response and clears the cookie before asking the UI to recover with the same key. Only the transport fault is injected; extraction and analysis use the actual local worker.
+
+The query tests resolve an older read after a simulated mutation invalidation and require a second non-overlapping read, including when the older read fails. Account-link tests run both modes under React Strict Mode. Prometheus fixtures include real scrape labels and an independently progressing instance.
+
+## Résumé-only reviews and interface behavior
+
+`test_resume_only.py` covers optional job descriptions, exports, comparison boundaries, and reviewer failure settlement. `test_resume_reviewer.py` validates model identity, output schema, exact quotations, and local endpoint restrictions using a controlled transport; these tests do not establish model quality.
+
+`resume-only.spec.ts` exercises account upload, parsing, and review through the running backend. `public-interface.spec.ts` checks desktop navigation, compact footer, intermediate disclosure heights, reduced motion, and list alignment at mobile/tablet/desktop widths. Its controlled guest-availability response isolates presentation from the durable quota.

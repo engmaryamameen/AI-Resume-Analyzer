@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import Link from "next/link";
 import { Select } from "@/components/select";
 import { Icon } from "@/components/icon";
+import { ResumeReviewPanel, ReviewFindings } from "./resume-review";
 import { Pagination } from "@/components/ui";
 import {
   AssessmentCard,
@@ -15,6 +16,7 @@ import { RecommendationList } from "@/features/analyses/components/recommendatio
 import { STATUS, STATUS_ORDER } from "@/lib/copy";
 import type {
   Assessment,
+  AiResumeReview,
   EngineInfo,
   Match,
   MatchStatus,
@@ -25,6 +27,7 @@ import type {
 /** Everything an analysis shows, used for saved analyses and the demo alike. */
 export function AnalysisResults({
   engine,
+  review,
   assessments,
   warnings,
   matches,
@@ -33,6 +36,7 @@ export function AnalysisResults({
   recommendationsHref,
 }: {
   engine: EngineInfo | null;
+  review?: AiResumeReview | null;
   assessments: Assessment[] | null;
   warnings: Signal[];
   matches: Match[];
@@ -47,7 +51,7 @@ export function AnalysisResults({
     { id: "evidence" as const, label: "Evidence", icon: "search" as const },
     { id: "suggestions" as const, label: "Suggestions", icon: "document" as const },
     { id: "insights" as const, label: "Document insights", icon: "grid" as const },
-  ];
+  ].filter((item) => item.id !== "evidence" || matches.length > 0);
   const gapCount = matches.filter(
     (m) => m.status === "no_evidence" || m.status === "contradicted",
   ).length;
@@ -76,33 +80,35 @@ export function AnalysisResults({
   ).filter(([, list]) => list.length > 0);
   return (
     <div className="analysis-report space-y-7">
-      <section className="report-at-glance" aria-label="Analysis at a glance">
-        <div>
-          <Icon name="check" size={18} />
-          <strong>{matches.filter((m) => m.status === "supported").length}</strong>
-          <span>Backed by evidence</span>
-        </div>
-        <div>
-          <Icon name="search" size={18} />
-          <strong>
-            {
-              matches.filter((m) => m.status === "mentioned_only" || m.status === "insufficient")
-                .length
-            }
-          </strong>
-          <span>Need a closer look</span>
-        </div>
-        <div>
-          <Icon name="document" size={18} />
-          <strong>
-            {
-              matches.filter((m) => m.status === "no_evidence" || m.status === "contradicted")
-                .length
-            }
-          </strong>
-          <span>Missing or conflicting</span>
-        </div>
-      </section>
+      {matches.length > 0 && !review && (
+        <section className="report-at-glance" aria-label="Analysis at a glance">
+          <div>
+            <Icon name="check" size={18} />
+            <strong>{matches.filter((m) => m.status === "supported").length}</strong>
+            <span>Backed by evidence</span>
+          </div>
+          <div>
+            <Icon name="search" size={18} />
+            <strong>
+              {
+                matches.filter((m) => m.status === "mentioned_only" || m.status === "insufficient")
+                  .length
+              }
+            </strong>
+            <span>Need a closer look</span>
+          </div>
+          <div>
+            <Icon name="document" size={18} />
+            <strong>
+              {
+                matches.filter((m) => m.status === "no_evidence" || m.status === "contradicted")
+                  .length
+              }
+            </strong>
+            <span>Missing or conflicting</span>
+          </div>
+        </section>
+      )}
       <Warnings warnings={warnings.filter((w) => w.severity !== "info")} />
       <div className="report-tabs" role="tablist" aria-label="Review sections">
         {tabs.map((item, index) => (
@@ -136,8 +142,8 @@ export function AnalysisResults({
           >
             <Icon name={item.icon} size={15} />
             {item.label}
-            {item.id === "suggestions" && recommendations.length > 0 && (
-              <span>{recommendations.length}</span>
+            {item.id === "suggestions" && (recommendations.length > 0 || review) && (
+              <span>{review ? review.next_steps.length : recommendations.length}</span>
             )}
           </button>
         ))}
@@ -149,61 +155,65 @@ export function AnalysisResults({
         aria-labelledby={`${tabsId}-overview`}
         tabIndex={0}
       >
-        <section className="next-steps" aria-labelledby={`${tabsId}-next-heading`}>
-          <div className="next-steps-heading">
-            <span className="improvement-label">YOUR EDITING PLAN</span>
-            <h2 id={`${tabsId}-next-heading`}>
-              {recommendations.length
-                ? "Start with these improvements"
-                : "Your review, in perspective"}
-            </h2>
-            <p>
-              {recommendations.length
-                ? "Make one useful edit at a time. These suggestions come from the wording in your résumé."
-                : "No specific edits were identified by this reader. Check the evidence and any gaps before deciding what to change."}
-            </p>
-          </div>
-          <RecommendationList
-            items={recommendations.slice(0, 3)}
-            editHref={recommendationsHref}
-            compact
-          />
-          {recommendations.length > 3 && (
-            <button
-              type="button"
-              className="report-next-link"
-              onClick={() => setTab("suggestions")}
-            >
-              View all {recommendations.length} suggestions <Icon name="arrow" size={15} />
-            </button>
-          )}
-          {matches.some((m) => m.status === "no_evidence" || m.status === "contradicted") && (
-            <div className="review-gap-note">
-              <Icon name="search" size={20} />
-              <div>
-                <h3>Check what the reader couldn’t find</h3>
-                <p>
-                  {gapCount} {gapCount === 1 ? "requirement has" : "requirements have"} missing or
-                  conflicting evidence. A gap in the text does not mean you lack the experience. Add
-                  relevant examples only if they are accurate.
-                </p>
-                <button
-                  type="button"
-                  className="report-next-link"
-                  onClick={() => {
-                    setFilter("all");
-                    setKind("all");
-                    setQuery("");
-                    setPage(0);
-                    setTab("evidence");
-                  }}
-                >
-                  Review the requirements <Icon name="arrow" size={14} />
-                </button>
-              </div>
+        {review ? (
+          <ResumeReviewPanel review={review} editHref={recommendationsHref} />
+        ) : (
+          <section className="next-steps" aria-labelledby={`${tabsId}-next-heading`}>
+            <div className="next-steps-heading">
+              <span className="improvement-label">YOUR EDITING PLAN</span>
+              <h2 id={`${tabsId}-next-heading`}>
+                {recommendations.length
+                  ? "Start with these improvements"
+                  : "Your review, in perspective"}
+              </h2>
+              <p>
+                {recommendations.length
+                  ? "Make one useful edit at a time. These suggestions come from the wording in your résumé."
+                  : "No specific edits were identified by this reader. Check the evidence and any gaps before deciding what to change."}
+              </p>
             </div>
-          )}
-        </section>
+            <RecommendationList
+              items={recommendations.slice(0, 3)}
+              editHref={recommendationsHref}
+              compact
+            />
+            {recommendations.length > 3 && (
+              <button
+                type="button"
+                className="report-next-link"
+                onClick={() => setTab("suggestions")}
+              >
+                View all {recommendations.length} suggestions <Icon name="arrow" size={15} />
+              </button>
+            )}
+            {matches.some((m) => m.status === "no_evidence" || m.status === "contradicted") && (
+              <div className="review-gap-note">
+                <Icon name="search" size={20} />
+                <div>
+                  <h3>Check what the reader couldn’t find</h3>
+                  <p>
+                    {gapCount} {gapCount === 1 ? "requirement has" : "requirements have"} missing or
+                    conflicting evidence. A gap in the text does not mean you lack the experience.
+                    Add relevant examples only if they are accurate.
+                  </p>
+                  <button
+                    type="button"
+                    className="report-next-link"
+                    onClick={() => {
+                      setFilter("all");
+                      setKind("all");
+                      setQuery("");
+                      setPage(0);
+                      setTab("evidence");
+                    }}
+                  >
+                    Review the requirements <Icon name="arrow" size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
       </div>
       <div
         hidden={tab !== "insights"}
@@ -214,8 +224,8 @@ export function AnalysisResults({
       >
         {assessments && (
           <section aria-labelledby="readings">
-            <h2 id="readings" className="font-serif text-2xl">
-              Four readings, at a glance
+            <h2 id="readings" className="font-sans font-medium text-2xl">
+              Document checks, at a glance
             </h2>
             <p className="mt-1 max-w-prose text-sm text-muted">
               These describe what was found. None of them is a grade, and they aren&apos;t combined
@@ -237,7 +247,7 @@ export function AnalysisResults({
         tabIndex={0}
       >
         <section aria-labelledby="reqs">
-          <h2 id="reqs" className="font-serif text-2xl">
+          <h2 id="reqs" className="font-sans font-medium text-2xl">
             Requirement by requirement
           </h2>
           {matches.length > 0 && (
@@ -358,48 +368,52 @@ export function AnalysisResults({
         aria-labelledby={`${tabsId}-suggestions`}
         tabIndex={0}
       >
-        <section aria-labelledby="recs">
-          <h2 id="recs" className="font-serif text-2xl">
-            Suggestions
-          </h2>
-          <p className="mt-1 max-w-prose text-sm text-muted">
-            Use these as an editing checklist. Open a guide to see your original wording and a
-            structure you can fill in with true details.
-          </p>
-          <div className="mt-3">
-            <RecommendationList
-              items={recommendations.slice(0, allSuggestions ? undefined : 3)}
-              editHref={recommendationsHref}
-              compact
-            />
-            {recommendations.length > 3 && (
-              <p className="mt-3">
-                {recommendationsHref ? (
-                  <Link href={recommendationsHref} className="text-accent underline">
-                    See all {recommendations.length} suggestions
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    className="report-text-button"
-                    onClick={() => setAllSuggestions(!allSuggestions)}
-                  >
-                    {allSuggestions
-                      ? "Show fewer suggestions"
-                      : `See all ${recommendations.length} suggestions`}
-                    <Icon name="chevronDown" size={14} />
-                  </button>
-                )}
-              </p>
-            )}
-          </div>
-        </section>
+        {review ? (
+          <ReviewFindings title="Your editing priorities" items={review.next_steps} />
+        ) : (
+          <section aria-labelledby="recs">
+            <h2 id="recs" className="font-sans font-medium text-2xl">
+              Suggestions
+            </h2>
+            <p className="mt-1 max-w-prose text-sm text-muted">
+              Use these as an editing checklist. Open a guide to see your original wording and a
+              structure you can fill in with true details.
+            </p>
+            <div className="mt-3">
+              <RecommendationList
+                items={recommendations.slice(0, allSuggestions ? undefined : 3)}
+                editHref={recommendationsHref}
+                compact
+              />
+              {recommendations.length > 3 && (
+                <p className="mt-3">
+                  {recommendationsHref ? (
+                    <Link href={recommendationsHref} className="text-accent underline">
+                      See all {recommendations.length} suggestions
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      className="report-text-button"
+                      onClick={() => setAllSuggestions(!allSuggestions)}
+                    >
+                      {allSuggestions
+                        ? "Show fewer suggestions"
+                        : `See all ${recommendations.length} suggestions`}
+                      <Icon name="chevronDown" size={14} />
+                    </button>
+                  )}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
       </div>
       <details className="report-disclosure">
         <summary>
           <span>
             <Icon name="shield" size={18} />
-            <h2>How this was read</h2>
+            <h2>{review ? "Document and evidence checks" : "How this was read"}</h2>
           </span>
           <span>
             {engine && engine.mode !== "rules" ? "Local models" : "Rule-based reading"}
@@ -407,7 +421,16 @@ export function AnalysisResults({
           </span>
         </summary>
         <div>
-          <EnginePanel engine={engine} title="Processing details" />
+          {review && (
+            <p className="mb-4 text-sm leading-7 text-muted">
+              The written AI review above was generated locally by {review.model}. These separate
+              checks describe document extraction and requirement matching.
+            </p>
+          )}
+          <EnginePanel
+            engine={engine}
+            title={review ? "Evidence matching details" : "Processing details"}
+          />
           <Warnings warnings={warnings.filter((w) => w.severity === "info")} />
         </div>
       </details>

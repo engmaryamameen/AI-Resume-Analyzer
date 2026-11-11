@@ -1,19 +1,19 @@
 import { expect, test } from "@playwright/test";
 import { selectOption } from "./select-option";
 
-const password = "synthetic portfolio regression passphrase";
-async function register(page: import("@playwright/test").Page) {
+const testPassword = "synthetic workspace regression passphrase";
+async function createTestAccount(page: import("@playwright/test").Page) {
   await page.goto("/register");
   await page
     .getByLabel("Email")
-    .fill(`portfolio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.test`);
-  await page.getByLabel("Password", { exact: true }).fill(password);
+    .fill(`workspace-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.test`);
+  await page.getByLabel("Password", { exact: true }).fill(testPassword);
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await expect(page).toHaveURL(/\/app$/);
 }
-async function removeAccount(page: import("@playwright/test").Page) {
+async function deleteTestAccount(page: import("@playwright/test").Page) {
   await page.goto("/app/settings");
-  await page.getByLabel("Your password").fill(password);
+  await page.getByLabel("Your password").fill(testPassword);
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Delete my account and data" }).click();
   await expect(page).toHaveURL("/");
@@ -22,7 +22,7 @@ async function removeAccount(page: import("@playwright/test").Page) {
 test("analysis choices paginate without submitting, preserve selection, and bind retry keys to inputs", async ({
   page,
 }) => {
-  await register(page);
+  await createTestAccount(page);
   try {
     const now = "2026-10-31T09:00:00Z";
     const records = Array.from({ length: 21 }, (_, i) => ({
@@ -72,9 +72,12 @@ test("analysis choices paginate without submitting, preserve selection, and bind
     await page.goto("/app/analyses/new");
     const resume = page.getByRole("combobox", { name: "Résumé", exact: true });
     await selectOption(resume, { index: 1 });
-    await selectOption(page.getByRole("combobox", { name: "Job description", exact: true }), {
-      index: 1,
-    });
+    await selectOption(
+      page.getByRole("combobox", { name: "Job description (optional)", exact: true }),
+      {
+        index: 1,
+      },
+    );
     await page
       .locator('[aria-label="Résumé choices"]')
       .getByRole("button", { name: "Next", exact: true })
@@ -86,7 +89,7 @@ test("analysis choices paginate without submitting, preserve selection, and bind
       .getByRole("button", { name: "Previous", exact: true })
       .click();
     await expect(resume).toHaveText(/Résumé 21/);
-    const job = page.getByRole("combobox", { name: "Job description", exact: true });
+    const job = page.getByRole("combobox", { name: "Job description (optional)", exact: true });
     await selectOption(job, { index: 1 });
     const start = page.getByRole("button", { name: "Start analysis", exact: true });
     await start.click();
@@ -105,17 +108,17 @@ test("analysis choices paginate without submitting, preserve selection, and bind
     expect(attempts[2]!.key).not.toBe(attempts[0]!.key);
     expect(attempts[2]!.payload.jd_version_id).toBe("jv-2");
   } finally {
-    await removeAccount(page);
+    await deleteTestAccount(page);
   }
 });
 
 test("requirement edits reject invalid experience years and blank requirements before saving", async ({
   page,
 }) => {
-  await register(page);
+  await createTestAccount(page);
   try {
     await page.goto("/app/jobs");
-    await page.getByLabel("Role name").fill("Synthetic engineering review");
+    await page.getByLabel("Role name").fill("Backend engineer");
     await page
       .getByLabel("Job description")
       .fill(
@@ -132,12 +135,12 @@ test("requirement edits reject invalid experience years and blank requirements b
     await page.getByRole("button", { name: "Save changes", exact: true }).click();
     await expect(page.getByRole("main").getByRole("alert")).toContainText("remove the empty row");
   } finally {
-    await removeAccount(page);
+    await deleteTestAccount(page);
   }
 });
 
 test("a failed sign-out keeps the workspace visible and explains the error", async ({ page }) => {
-  await register(page);
+  await createTestAccount(page);
   try {
     await page.route("**/api/v1/auth/logout", (route) =>
       route.fulfill({
@@ -157,6 +160,6 @@ test("a failed sign-out keeps the workspace visible and explains the error", asy
     expect((await page.request.get("/api/v1/auth/me")).status()).toBe(200);
     await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
   } finally {
-    await removeAccount(page);
+    await deleteTestAccount(page);
   }
 });

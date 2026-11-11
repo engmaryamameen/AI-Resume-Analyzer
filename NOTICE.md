@@ -10,9 +10,8 @@ provisions them must follow those licences, including the notices they require. 
 hand-written datasets in `ml/data` are original and contain no real personal data.
 
 Third-party runtime dependencies are declared in `backend/pyproject.toml` and `frontend/package.json` and
-keep their own licences. A generated dependency licence inventory has not been produced yet; create one
-from the resolved lockfiles when you build the environment.
+keep their own licences. Consult the resolved lockfiles and installed package notices for their licence terms.
 
-Self-hosted fonts in `frontend/public/fonts/`: Inter (Rasmus Andersson) and Source Serif 4
-(Adobe) are distributed under the SIL Open Font License 1.1. Their full copyright and licence
-notices are included alongside the WOFF2 files. No remote font provider is contacted at runtime.
+The self-hosted Inter font (Rasmus Andersson) in `frontend/public/fonts/` is distributed under the SIL Open Font License 1.1. Its full copyright and licence notice is included alongside the WOFF2 file. No remote font provider is contacted at runtime.
+
+The résumé-review image in `frontend/public/images/resume-review.webp` is illustrative. It does not depict a customer or testimonial. No third-party customer logos, endorsements, or testimonials are included.

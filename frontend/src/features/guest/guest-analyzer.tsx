@@ -6,7 +6,8 @@ import { Icon } from "@/components/icon";
 import { Button, ButtonLink, ErrorState, Loading, Notice, TextArea } from "@/components/ui";
 import { useGuestAnalysis } from "./use-guest-analysis";
 
-export function GuestAnalyzer() {
+export function GuestAnalyzer({ headingLevel = 1 }: { headingLevel?: 1 | 2 }) {
+  const Heading = headingLevel === 1 ? "h1" : "h2";
   const {
     state,
     file,
@@ -26,6 +27,7 @@ export function GuestAnalyzer() {
     pending,
     remainingMinutes,
     blocked,
+    recovering,
     pick,
     submit,
     remove,
@@ -54,9 +56,9 @@ export function GuestAnalyzer() {
         <div className="review-result-intro">
           <div>
             <span className="micro-label">YOUR REVIEW IS READY</span>
-            <h1 id="guest-title" ref={resultHeading} tabIndex={-1}>
+            <Heading id="guest-title" ref={resultHeading} tabIndex={-1}>
               Your résumé review
-            </h1>
+            </Heading>
             <p>Start with your editing plan, then explore the evidence behind each finding.</p>
             <div className="review-result-meta">
               <span>
@@ -68,9 +70,11 @@ export function GuestAnalyzer() {
                 {formatDateTime(state.report.completed_at ?? state.report.created_at)}
               </span>
               <span>
-                {state.report.engine && state.report.engine.mode !== "rules"
-                  ? "Local models"
-                  : "Local rule-based reader"}
+                {state.report.review
+                  ? `AI résumé review · ${state.report.review.model}`
+                  : state.report.engine && state.report.engine.mode !== "rules"
+                    ? "Local models"
+                    : "Local rule-based reader"}
               </span>
               <span>Guest report · available for 24 hours</span>
             </div>
@@ -81,43 +85,29 @@ export function GuestAnalyzer() {
         </div>
       ) : (
         <div className="review-hero-copy">
-          <span className="hero-kicker">
-            <span /> A little clarity for your next move
-          </span>
-          <h1 id="guest-title">
-            Your experience.
-            <br />
-            <em>Its next chapter.</em>
-          </h1>
+          <span className="hero-kicker">Try the analyzer</span>
+          <Heading id="guest-title">Review your résumé.</Heading>
           <p className="review-hero-lead">
-            See how your résumé reads against the role you want. Find what’s clear, what’s missing,
-            and where to focus.
+            Upload your résumé for a general review, or add a job description for a targeted review.
+            Inspect the evidence behind each finding before deciding what to change.
           </p>
-          <div className="review-hero-trust">
-            <span>
-              <Icon name="shield" size={15} /> Privately processed
-            </span>
-            <span>
-              <Icon name="check" size={15} />{" "}
-              {blocked ? "More reviews with an account" : "First review free"}
-            </span>
-          </div>
+          <ul className="review-requirements">
+            <li>
+              <Icon name="check" size={16} />
+              <span>Text-based PDF or DOCX, up to 5 MB.</span>
+            </li>
+            <li>
+              <Icon name="check" size={16} />
+              <span>Optional: a job description for a role-specific review.</span>
+            </li>
+            <li>
+              <Icon name="check" size={16} />
+              <span>One guest review per network every 24 hours.</span>
+            </li>
+          </ul>
           <Link className="review-example-link" href="/demo">
-            See an example first <Icon name="arrow" size={16} />
+            Explore the working demo <Icon name="arrow" size={16} />
           </Link>
-          <div className="hero-margin-note">
-            <span className="micro-label">THE DIFFERENCE IS IN THE DETAILS</span>
-            <div>
-              <span>“Python”</span>
-              <Icon name="arrow" size={19} />
-              <span>
-                “Built billing APIs
-                <br />
-                in Python.”
-              </span>
-            </div>
-            <p>Your experience, with a little more context.</p>
-          </div>
         </div>
       )}
       <div className="guest-workspace">
@@ -134,6 +124,14 @@ export function GuestAnalyzer() {
             <span className="guest-allowance">
               {blocked ? "24-HOUR RESET" : pending ? "LOCAL PROCESSING" : "NO ACCOUNT NEEDED"}
             </span>
+          </div>
+        )}
+        {recovering && (
+          <div className="mb-4">
+            <Notice title="Recover your existing review">
+              The response was interrupted. Retry the original request below to recover its private
+              access. Your selected file and job description are kept for this retry.
+            </Notice>
           </div>
         )}
         {!!error && (
@@ -154,8 +152,8 @@ export function GuestAnalyzer() {
               {state?.status === "extracting" ? "Reading your résumé" : "Following the evidence"}
             </h2>
             <p>
-              Your document is being processed privately by the local worker. This usually takes a
-              few moments.
+              Your document is being processed privately by the local worker. A local AI review can
+              take a few minutes.
             </p>
             <div className="guest-progress-track">
               <span />
@@ -258,29 +256,44 @@ export function GuestAnalyzer() {
                     type="file"
                     aria-label="Your résumé file"
                     accept=".pdf,.docx"
-                    disabled={busy}
+                    disabled={busy || recovering}
                     onChange={(e) => pick(e.target.files?.[0])}
                   />
                 </div>
                 <Button
                   type="button"
                   className="review-continue w-full"
-                  disabled={!file || busy}
-                  onClick={() => setStep(2)}
+                  busy={busy}
+                  disabled={!file || recovering}
+                  onClick={(event) => submit(event, false)}
                 >
-                  Continue to target role <Icon name="arrow" size={16} />
+                  Review without a job description <Icon name="arrow" size={16} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="review-continue w-full"
+                  disabled={!file || busy}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setStep(2);
+                  }}
+                >
+                  Add a target role (optional) <Icon name="arrow" size={16} />
                 </Button>
               </div>
             ) : (
               <div className="review-step-content">
                 <div className="review-step-heading">
-                  <h2>Where would you like to go?</h2>
-                  <p>Paste the job description for the role you have in mind.</p>
+                  <h2>Add context, if you have a role in mind.</h2>
+                  <p>
+                    A job description is optional. Leave it blank to review your résumé on its own.
+                  </p>
                 </div>
                 <div className="review-selected-file">
                   <Icon name="document" size={17} />
                   <span>{file?.name}</span>
-                  <button type="button" onClick={() => setStep(1)} disabled={busy}>
+                  <button type="button" onClick={() => setStep(1)} disabled={busy || recovering}>
                     Change
                   </button>
                 </div>
@@ -288,9 +301,8 @@ export function GuestAnalyzer() {
                   label="Target job description"
                   rows={6}
                   maxLength={20000}
-                  minLength={40}
-                  required
-                  disabled={busy}
+                  minLength={job.trim() ? 40 : undefined}
+                  disabled={busy || recovering}
                   placeholder="Paste the role’s responsibilities and requirements…"
                   value={job}
                   onChange={(e) => {
@@ -301,15 +313,16 @@ export function GuestAnalyzer() {
                   type="submit"
                   className="review-continue w-full"
                   busy={busy}
-                  disabled={!file || job.trim().length < 40}
+                  disabled={!file || (job.trim().length > 0 && job.trim().length < 40)}
                 >
-                  Analyze my résumé for free <Icon name="arrow" size={16} />
+                  {recovering ? "Recover my existing review" : "Analyze my résumé for free"}{" "}
+                  <Icon name="arrow" size={16} />
                 </Button>
                 <button
                   type="button"
                   className="review-back"
                   onClick={() => setStep(1)}
-                  disabled={busy}
+                  disabled={busy || recovering}
                 >
                   <Icon name="arrowLeft" size={14} /> Back to your résumé
                 </button>

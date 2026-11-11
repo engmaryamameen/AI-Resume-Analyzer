@@ -42,6 +42,20 @@ const completed: GuestState = {
 afterEach(() => vi.restoreAllMocks());
 
 describe("guest review state and report clarity", () => {
+  it("opens optional role context without submitting the résumé", async () => {
+    vi.spyOn(api, "guestStatus").mockResolvedValue(idle);
+    const analyze = vi.spyOn(api, "guestAnalyze").mockResolvedValue(idle);
+    const user = userEvent.setup();
+    render(<GuestAnalyzer />);
+    await user.upload(
+      await screen.findByLabelText("Your résumé file"),
+      new File(["synthetic document"], "resume.pdf", { type: "application/pdf" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add a target role (optional)" }));
+    expect(await screen.findByLabelText("Target job description")).toBeEnabled();
+    expect(analyze).not.toHaveBeenCalled();
+  });
+
   it("shows a recoverable service error instead of implying that a free review is available", async () => {
     vi.spyOn(api, "guestStatus")
       .mockRejectedValueOnce(new Error("offline"))
@@ -51,6 +65,21 @@ describe("guest review state and report clarity", () => {
     expect(screen.queryByLabelText("Your résumé file")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByLabelText("Your résumé file")).toBeInTheDocument();
+  });
+
+  it("preserves the page heading when the analyzer is embedded in the landing page", async () => {
+    vi.spyOn(api, "guestStatus").mockResolvedValue(idle);
+    render(
+      <main>
+        <h1>Résumé analysis</h1>
+        <GuestAnalyzer headingLevel={2} />
+      </main>,
+    );
+    expect(await screen.findByLabelText("Your résumé file")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(
+      screen.getByRole("heading", { name: "Review your résumé.", level: 2 }),
+    ).toBeInTheDocument();
   });
 
   it("uses one report heading with provenance and the correct editing-plan introduction", async () => {
@@ -129,6 +158,8 @@ describe("guest request identity", () => {
     vi.spyOn(api, "guestStatus").mockResolvedValue(idle);
     const analyze = vi
       .spyOn(api, "guestAnalyze")
+      .mockRejectedValueOnce(new ApiError(0, "network_error", "offline"))
+      .mockRejectedValueOnce(new ApiError(422, "invalid_upload", "invalid document"))
       .mockRejectedValue(new ApiError(0, "network_error", "offline"));
     const { result } = renderHook(() => useGuestAnalysis());
     await waitFor(() => expect(result.current.statusLoading).toBe(false));
@@ -150,4 +181,41 @@ describe("guest request identity", () => {
     });
     expect(analyze.mock.calls[2]?.[2]).not.toBe(analyze.mock.calls[1]?.[2]);
   });
+});
+
+it("recovers an accepted guest POST after its response and cookie are lost", async () => {
+  const { renderHook } = await import("@testing-library/react");
+  const { useGuestAnalysis } = await import("@/features/guest/use-guest-analysis");
+  const { ApiError } = await import("@/lib/http/client");
+  vi.spyOn(api, "guestStatus")
+    .mockResolvedValueOnce(idle)
+    .mockResolvedValue({
+      ...idle,
+      available: false,
+      next_allowed_at: new Date(Date.now() + 86400000).toISOString(),
+    });
+  const post = vi
+    .spyOn(api, "guestAnalyze")
+    .mockRejectedValueOnce(new ApiError(0, "network_error", "response lost"))
+    .mockResolvedValue({ ...idle, status: "extracting", available: false });
+  const { result } = renderHook(() => useGuestAnalysis());
+  await waitFor(() => expect(result.current.statusLoading).toBe(false));
+  const file = new File(["synthetic"], "resume.docx");
+  act(() => {
+    result.current.pick(file);
+    result.current.setJob("Build and operate Python APIs for a platform team.");
+  });
+  const event = { preventDefault() {} } as React.FormEvent;
+  await act(async () => {
+    await result.current.submit(event);
+  });
+  expect(result.current.recovering).toBe(true);
+  expect(result.current.blocked).toBe(false);
+  act(() => result.current.setJob("This edit must not replace the uncertain original request."));
+  await act(async () => {
+    await result.current.submit(event);
+  });
+  expect(post.mock.calls[1]).toEqual(post.mock.calls[0]);
+  expect(result.current.recovering).toBe(false);
+  expect(result.current.pending).toBe(true);
 });

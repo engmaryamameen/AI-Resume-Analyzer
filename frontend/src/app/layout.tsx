@@ -1,11 +1,15 @@
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import "./globals.css";
-import "./rolemark.css";
+import "./product.css";
+import "./theme.css";
 import { BRAND } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: { default: `${BRAND.name} · Your next move, in focus`, template: `%s · ${BRAND.name}` },
+  title: {
+    default: `${BRAND.name} · Résumé feedback, with evidence`,
+    template: `%s · ${BRAND.name}`,
+  },
   description: BRAND.description,
 };
 

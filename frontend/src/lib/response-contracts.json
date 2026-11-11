@@ -22,9 +22,16 @@
       "AnalysisCreateIn": {
         "properties": {
           "jd_version_id": {
-            "format": "uuid",
-            "title": "Jd Version Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jd Version Id"
           },
           "resume_version_id": {
             "format": "uuid",
@@ -32,7 +39,7 @@
             "type": "string"
           }
         },
-        "required": ["resume_version_id", "jd_version_id"],
+        "required": ["resume_version_id"],
         "title": "AnalysisCreateIn",
         "type": "object"
       },
@@ -96,9 +103,16 @@
             "type": "string"
           },
           "jd_version_id": {
-            "format": "uuid",
-            "title": "Jd Version Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jd Version Id"
           },
           "latest_jd_version_id": {
             "anyOf": [
@@ -184,6 +198,16 @@
             ],
             "title": "Resume Version No"
           },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResumeReview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "staleness": {
             "$ref": "#/components/schemas/Staleness"
           },
@@ -205,7 +229,6 @@
           "resume_version_id",
           "resume_document_id",
           "resume_version_no",
-          "jd_version_id",
           "latest_resume_version_id",
           "latest_jd_version_id",
           "pipeline_version",
@@ -270,9 +293,16 @@
             "type": "string"
           },
           "jd_version_id": {
-            "format": "uuid",
-            "title": "Jd Version Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jd Version Id"
           },
           "latest_jd_version_id": {
             "anyOf": [
@@ -344,7 +374,6 @@
           "resume_version_id",
           "resume_document_id",
           "resume_version_no",
-          "jd_version_id",
           "latest_resume_version_id",
           "latest_jd_version_id",
           "pipeline_version",
@@ -417,6 +446,46 @@
         "title": "Assessment",
         "type": "object"
       },
+      "BillingStatus": {
+        "properties": {
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "currency": {
+            "default": "usd",
+            "title": "Currency",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "pack_cents": {
+            "default": 500,
+            "title": "Pack Cents",
+            "type": "integer"
+          },
+          "pack_credits": {
+            "default": 5,
+            "title": "Pack Credits",
+            "type": "integer"
+          },
+          "require_credits": {
+            "default": false,
+            "title": "Require Credits",
+            "type": "boolean"
+          },
+          "test_mode": {
+            "default": true,
+            "title": "Test Mode",
+            "type": "boolean"
+          }
+        },
+        "required": ["enabled", "credits"],
+        "title": "BillingStatus",
+        "type": "object"
+      },
       "Body_start_api_v1_guest_analyze_post": {
         "properties": {
           "file": {
@@ -425,11 +494,12 @@
             "type": "string"
           },
           "job_text": {
+            "default": "",
             "title": "Job Text",
             "type": "string"
           }
         },
-        "required": ["file", "job_text"],
+        "required": ["file"],
         "title": "Body_start_api_v1_guest_analyze_post",
         "type": "object"
       },
@@ -443,6 +513,17 @@
         },
         "required": ["file"],
         "title": "Body_upload_resume_api_v1_resumes_post",
+        "type": "object"
+      },
+      "CheckoutOut": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": ["url"],
+        "title": "CheckoutOut",
         "type": "object"
       },
       "ContactCorrection": {
@@ -787,6 +868,55 @@
         "title": "EvidenceRef",
         "type": "object"
       },
+      "GuestStateOut": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "next_allowed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Allowed At"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisDetailOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": ["idle", "preparing", "extracting", "analyzing", "succeeded", "failed"],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": ["available", "next_allowed_at", "status", "report", "error_code"],
+        "title": "GuestStateOut",
+        "type": "object"
+      },
       "JobCreateIn": {
         "properties": {
           "text": {
@@ -1116,6 +1246,22 @@
           "note": {
             "title": "Note",
             "type": "string"
+          },
+          "reviewer_enabled": {
+            "default": false,
+            "title": "Reviewer Enabled",
+            "type": "boolean"
+          },
+          "reviewer_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Model"
           }
         },
         "required": ["learned_models_approved", "models", "note"],
@@ -1499,6 +1645,82 @@
         "title": "ResumeOut",
         "type": "object"
       },
+      "ResumeReview": {
+        "additionalProperties": false,
+        "properties": {
+          "concerns": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewFinding"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Concerns",
+            "type": "array"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "model_digest": {
+            "title": "Model Digest",
+            "type": "string"
+          },
+          "next_steps": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewFinding"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Next Steps",
+            "type": "array"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "reviewed_blocks": {
+            "title": "Reviewed Blocks",
+            "type": "integer"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "number"
+          },
+          "strengths": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewFinding"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Strengths",
+            "type": "array"
+          },
+          "summary": {
+            "maxLength": 1400,
+            "minLength": 40,
+            "title": "Summary",
+            "type": "string"
+          },
+          "total_blocks": {
+            "title": "Total Blocks",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "summary",
+          "strengths",
+          "concerns",
+          "next_steps",
+          "model",
+          "model_digest",
+          "prompt_version",
+          "reviewed_blocks",
+          "total_blocks",
+          "seconds"
+        ],
+        "title": "ResumeReview",
+        "type": "object"
+      },
       "ResumeVersionOut": {
         "properties": {
           "created_at": {
@@ -1557,6 +1779,55 @@
           "created_at"
         ],
         "title": "ResumeVersionOut",
+        "type": "object"
+      },
+      "ReviewCitation": {
+        "additionalProperties": false,
+        "properties": {
+          "block_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Block Id",
+            "type": "string"
+          },
+          "excerpt": {
+            "maxLength": 400,
+            "minLength": 12,
+            "title": "Excerpt",
+            "type": "string"
+          }
+        },
+        "required": ["block_id", "excerpt"],
+        "title": "ReviewCitation",
+        "type": "object"
+      },
+      "ReviewFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "maxLength": 700,
+            "minLength": 20,
+            "title": "Detail",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewCitation"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 140,
+            "minLength": 5,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["title", "detail", "evidence"],
+        "title": "ReviewFinding",
         "type": "object"
       },
       "SessionOut": {
@@ -1676,6 +1947,22 @@
         },
         "title": "Response Sessions Api V1 Auth Sessions Get",
         "type": "array"
+      },
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/billing",
+      "schema": {
+        "$ref": "#/components/schemas/BillingStatus"
+      },
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/billing/checkout",
+      "schema": {
+        "$ref": "#/components/schemas/CheckoutOut"
       },
       "status": 200
     },
@@ -1837,9 +2124,7 @@
       "method": "GET",
       "path": "/guest",
       "schema": {
-        "additionalProperties": true,
-        "title": "Response Status Api V1 Guest Get",
-        "type": "object"
+        "$ref": "#/components/schemas/GuestStateOut"
       },
       "status": 200
     },
@@ -1847,9 +2132,7 @@
       "method": "POST",
       "path": "/guest/progress",
       "schema": {
-        "additionalProperties": true,
-        "title": "Response Progress Api V1 Guest Progress Post",
-        "type": "object"
+        "$ref": "#/components/schemas/GuestStateOut"
       },
       "status": 200
     },
@@ -1857,9 +2140,7 @@
       "method": "POST",
       "path": "/guest/analyze",
       "schema": {
-        "additionalProperties": true,
-        "title": "Response Start Api V1 Guest Analyze Post",
-        "type": "object"
+        "$ref": "#/components/schemas/GuestStateOut"
       },
       "status": 202
     }

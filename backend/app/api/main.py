@@ -15,6 +15,7 @@ from app.api.jobs_router import router as jobs_router
 from app.api.resumes_router import router as resumes_router
 from app.api.schemas import ErrorResponse
 from app.api.system_router import router as system_router
+from app.billing.router import router as billing_router
 from app.core.config import Settings, get_settings
 from app.core.errors import Forbidden, NotFound, ServiceUnavailable, install_error_handlers
 from app.core.logging import configure_logging
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
 
     for r in (
         auth_router,
+        billing_router,
         resumes_router,
         jobs_router,
         analyses_router,
